@@ -1,7 +1,7 @@
 from tempfile import TemporaryDirectory
 
 import pytest
-from text_generation_server.generator import NeuronGenerator
+from text_generation_server.generator import NeuronGenerator, TpuModelForCausalLM
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
@@ -10,21 +10,20 @@ from text_generation_server.pb.generate_pb2 import (
 )
 from transformers import AutoTokenizer
 
-from optimum.neuron import NeuronModelForCausalLM
-
 
 MODEL_ID = "gpt2"
 BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
-NUM_CORES = 2
 
 
 @pytest.fixture(scope="module")
 def model_path():
     with TemporaryDirectory() as tmpdir:
         AutoTokenizer.from_pretrained(MODEL_ID).save_pretrained(tmpdir)
-        model = NeuronModelForCausalLM.from_pretrained(
-            MODEL_ID, export=True, batch_size=BATCH_SIZE, sequence_length=SEQUENCE_LENGTH, num_cores=NUM_CORES
+        model = TpuModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            batch_size=BATCH_SIZE,
+            sequence_length=SEQUENCE_LENGTH,
         )
         model.save_pretrained(tmpdir)
         yield tmpdir
@@ -83,7 +82,7 @@ def create_request(
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
     generator = NeuronGenerator.from_pretrained(model_path)
-    assert generator.model.batch_size >= batch_size
+    assert generator.model.config.batch_size >= batch_size
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
@@ -127,7 +126,7 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
-    for _ in range(max_new_tokens - 1):
+    for i in range(max_new_tokens - 1):
         assert next_batch.size == 1
         assert next_batch.max_tokens == 1024
         assert len(generations) == 1
@@ -143,7 +142,7 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
 
 def test_decode_multiple(model_path):
     generator = NeuronGenerator.from_pretrained(model_path)
-    assert generator.model.batch_size > 1
+    assert generator.model.config.batch_size > 1
     input_text = "Once upon a time"
     max_new_tokens = 20
     # Prefill a single request, remembering the generated token
