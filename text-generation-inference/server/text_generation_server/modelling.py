@@ -15,9 +15,12 @@
 """TpuModelForXXX classes for inference on TPU devices using the same API as
 Transformers."""
 
-from os import PathLike
+from os import PathLike, environ
 from typing import Any
 
+import torch
+import torch_xla.core.xla_model as xm
+from loguru import logger
 from transformers import AutoModelForCausalLM
 
 
@@ -43,4 +46,14 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
             model.config.batch_size = batch_size
         if sequence_length is not None or getattr(model.config, "sequence_length", None) is None:
             model.config.sequence_length = sequence_length
+
+        if "PJRT_DEVICE" not in environ:
+            logger.warning("PJRT_DEVICE environment variable not found. Setting it to 'TPU'.")
+            environ["PJRT_DEVICE"] = "TPU"
+        dev = xm.xla_device()
+        # Do eval, move model to device and compile
+        model.to(dev)
+        model.eval()
+        model = torch.compile(model, backend="openxla_eval")
+
         return model

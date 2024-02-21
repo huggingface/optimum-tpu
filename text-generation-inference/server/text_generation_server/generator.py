@@ -441,6 +441,11 @@ class TpuGenerator(Generator):
         # Obtain position ids using attention mask.
         position_ids = (attention_mask.cumsum(-1) - 1).masked_fill(attention_mask == 0, 0)
         position_ids = position_ids[:, -input_ids.shape[-1] :]
+        # Move input params to device
+        input_ids = input_ids.to(self.model.device)
+        attention_mask = attention_mask.to(self.model.device)
+        position_ids = position_ids.to(self.model.device)
+        # Forward
         outputs = self.model(
             input_ids,
             past_key_values=self.past_key_values,
