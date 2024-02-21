@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "text-generation-server"
 version = "VERSION"
-authors = [{name="David Corvoysier", email="david@huggingface.co" }]
-description = "TGI compatible inference server for AWS Neuronx platforms"
+authors = [{name="Alvaro Moran", email="alvaro.moran@huggingface.co" }]
+description = "TGI compatible inference server for Google TPU platforms"
 dependencies = [
     'protobuf > 3.20.1, < 4',
     'grpcio == 1.57.0',
@@ -14,7 +14,8 @@ dependencies = [
     'grpcio-reflection == 1.48.2',
     'grpc-interceptor == 0.15.2',
     'typer == 0.6.1',
-    'safetensors == 0.3.2',
+    'safetensors == 0.4.2',
+    'transformers == 4.38.0',
     'loguru == 0.6.0'
 ]
 
