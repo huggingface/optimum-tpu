@@ -1,10 +1,9 @@
-# Text-generation-inference docker image for AWS inferentia2
+# Text-generation-inference docker image for Pytorch/XLA
 
 This docker image integrates into a base image:
 
-- the AWS Neuron SDK for Inferentia2,
 - the [Text Generation Inference](https://github.com/huggingface/text-generation-inference) launcher and scheduling front-end,
-- a neuron specific inference server for text-generation.
+- an XLA specific inference server for text-generation.
 
 ## Features
 
@@ -30,92 +29,34 @@ Please refer to [this reference documentation](https://github.com/huggingface/te
 
 ## Deploy the service
 
-The service is launched simply by running the neuronx-tgi container with two sets of parameters:
+The service is launched simply by running the tpu-tgi container with two sets of parameters:
 
 ```
-docker run <system_parameters> ghcr.io/huggingface/neuronx-tgi:latest <service_parameters>
+docker run <system_parameters> ghcr.io/huggingface/tpu-tgi:latest <service_parameters>
 ```
 
 - system parameters are used to map ports, volumes and devices between the host and the service,
 - service parameters are forwarded to the `text-generation-launcher`.
 
-When deploying a service, you will need a working Neuron model. The NeuronX TGI service supports two main modes of operation:
-
-- you can either deploy the service on a model that has already been exported to Neuron,
-- or alternatively you can take advantage of the Neuron Model Cache to export your own model.
-
 ### Common system parameters
-
-Whenever you launch a TGI service, we highly recommend you to mount a shared volume mounted as `/data` in the container: this is where
-the models will be cached to speed up further instantiations of the service.
-
-Note also that all neuron devices have to be explicitly made visible to the container.
 
 Finally, you might want to export the `HF_TOKEN` if you want to access gated repository.
 
-Here is an example of a service instantiation:
+Here is an example of a service instantiation on a single host TPU:
 
 ```
 docker run -p 8080:80 \
+       --net=host --privileged \
        -v $(pwd)/data:/data \
-       --device=/dev/neuron0 \
        -e HF_TOKEN=${HF_TOKEN} \
-       ghcr.io/huggingface/neuronx-tgi:latest \
-       <service_parameters>
-```
-
-If your instance has 12 neuron devices, the launch command becomes:
-
-```
-docker run -p 8080:80 \
-       -v $(pwd)/data:/data \
-       --device=/dev/neuron0 \
-       --device=/dev/neuron1 \
-       --device=/dev/neuron2 \
-       --device=/dev/neuron3 \
-       --device=/dev/neuron4 \
-       --device=/dev/neuron5 \
-       --device=/dev/neuron6 \
-       --device=/dev/neuron7 \
-       --device=/dev/neuron8 \
-       --device=/dev/neuron9 \
-       --device=/dev/neuron10 \
-       --device=/dev/neuron11 \
-       -e HF_TOKEN=${HF_TOKEN} \
-       ghcr.io/huggingface/neuronx-tgi:latest \
+       ghcr.io/huggingface/tpu-tgi:latest \
        <service_parameters>
 ```
 
 
-### Using a neuron model from the 🤗 [HuggingFace Hub](https://huggingface.co/aws-neuron) (recommended)
 
-There are plenty of already exported neuron models on the hub, under the [aws-neuron](https://huggingface.co/aws-neuron) organization.
+### Using a standard model from the 🤗 [HuggingFace Hub](https://huggingface.co/models)
 
-The snippet below shows how you can deploy a service from a hub neuron model:
-
-```
-docker run -p 8080:80 \
-       -v $(pwd)/data:/data \
-       --device=/dev/neuron0 \
-       -e HF_TOKEN=${HF_TOKEN} \
-       ghcr.io/huggingface/neuronx-tgi:latest \
-       --model-id aws-neuron/Llama-2-7b-hf-neuron-budget \
-       --max-concurrent-requests 1 \
-       --max-input-length 1024 \
-       --max-total-tokens 2048 \
-       --max-batch-prefill-tokens 1024 \
-       --max-batch-total-tokens 2048
-```
-
-### Using a standard model from the 🤗 [HuggingFace Hub](https://huggingface.co/aws-neuron)
-
-
-We maintain a Neuron Model Cache of the most popular architecture and deployment parameters under [aws-neuron/optimum-neuron-cache](https://huggingface.co/aws-neuron/optimum-neuron-cache).
-
-If you just want to try the service quickly using a model that has not bee exported yet, it is thus still
-possible to export it dynamically, pending some conditions:
-- you must specify the export parameters when launching the service (or use default parameters),
-- the model configuration must be cached.
 
 The snippet below shows how you can deploy a service from a hub standard model:
 
@@ -126,10 +67,8 @@ docker run -p 8080:80 \
        -e HF_TOKEN=${HF_TOKEN} \
        -e HF_BATCH_SIZE=1 \
        -e HF_SEQUENCE_LENGTH=1024 \
-       -e HF_AUTO_CAST_TYPE="fp16" \
-       -e HF_NUM_CORES=2 \
        ghcr.io/huggingface/neuronx-tgi:latest \
-       --model-id aws-neuron/Llama-2-7b-hf-neuron-budget \
+       --model-id mistralai/Mistral-7B-v0.1 \
        --max-concurrent-requests 1 \
        --max-input-length 512 \
        --max-total-tokens 1024 \
@@ -137,25 +76,13 @@ docker run -p 8080:80 \
        --max-batch-total-tokens 1024
 ```
 
-### Using a model exported to a local path
-
-Alternatively, you can first [export the model to neuron format](https://huggingface.co/docs/optimum-neuron/main/en/guides/models#configuring-the-export-of-a-generative-model) locally, and deploy the service inside the shared volume:
-
-```
-docker run -p 8080:80 \
-       -v $(pwd)/data:/data \
-       --device=/dev/neuron0 \
-       ghcr.io/huggingface/neuronx-tgi:latest \
-       --model-id /data/<neuron_model_path> \
-       ...
-```
 
 ### Choosing service parameters
 
 Use the following command to list the available service parameters:
 
 ```
-docker run ghcr.io/huggingface/neuronx-tgi --help
+docker run ghcr.io/huggingface/tpu-tgi --help
 ```
 
 The configuration of an inference endpoint is always a compromise between throughput and latency: serving more requests in parallel will allow a higher throughput, but it will increase the latency.
@@ -179,9 +106,7 @@ As seen in the previous paragraph, neuron model static batch size has a direct i
 Please refer to [text-generation-inference](https://github.com/huggingface/text-generation-inference) for optimization hints.
 
 Note that the main constraint is to be able to fit the model for the specified `batch_size` within the total device memory available
-on your instance (16GB per neuron core, with 2 cores per device).
-
-All neuron models on the 🤗 [HuggingFace Hub](https://huggingface.co/aws-neuron) include the number of cores required to run them.
+on your instance.
 
 ## Query the service
 
@@ -206,5 +131,5 @@ curl 127.0.0.1:8080/generate_stream \
 The image must be built from the top directory
 
 ```
-make neuronx-tgi
+make tpu-tgi
 ```

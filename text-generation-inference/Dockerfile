@@ -8,7 +8,7 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.71-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.75-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
@@ -74,8 +74,8 @@ COPY --from=tgi /tgi/proto proto
 RUN pip3 install -r server/build-requirements.txt
 RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSION} make -C server gen-server
 
-# Neuron base image (used for deployment)
-FROM base AS neuron
+# TPU base image (used for deployment)
+FROM base AS tpu_base
 
 # Install system prerequisites
 RUN apt-get update -y \
@@ -85,34 +85,23 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-RUN echo "deb https://apt.repos.neuron.amazonaws.com jammy main" > /etc/apt/sources.list.d/neuron.list
-RUN wget -qO - https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add -
+# Update pip
+RUN pip install --upgrade pip
 
-# Install neuronx packages
-RUN apt-get update -y \
- && apt-get install -y --no-install-recommends \
-    aws-neuronx-dkms=2.15.9.0 \
-    aws-neuronx-collectives=2.19.7.0-530fb3064 \
-    aws-neuronx-runtime-lib=2.19.5.0-97e2d271b \
-    aws-neuronx-tools=2.16.1.0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-ENV PATH="/opt/bin/:/opt/aws/neuron/bin:${PATH}"
-
-RUN pip3 install \
-    neuronx-cc==2.12.68.0 \
-    torch-neuronx==1.13.1.1.13.0 \
-    transformers-neuronx==0.9.474 \
-    --extra-index-url=https://pip.repos.neuron.amazonaws.com
+# Install Torch and XLA packages for TPU
+RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install HuggingFace packages
-RUN pip3 install \
-    hf_transfer
+ARG TRANSFORMERS='4.38.0'
+ARG ACCELERATE='0.27.2'
+ARG SAFETENSORS='0.4.2'
 
-# Install optimum-neuron
-COPY dist/optimum-neuron-${VERSION}.tar.gz optimum-neuron.tar.gz
-RUN pip3 install optimum-neuron.tar.gz
+RUN pip3 install \
+    hf_transfer \
+    safetensors==${SAFETENSORS} \
+    transformers[sklearn,sentencepiece,vision]==${TRANSFORMERS} \
+    accelerate==${ACCELERATE}
+
 
 # TGI base env
 ENV HUGGINGFACE_HUB_CACHE=/data \
@@ -127,16 +116,16 @@ COPY --from=builder /usr/src/target/release/text-generation-launcher /usr/local/
 COPY --from=pyserver /pyserver/build/dist dist
 RUN pip install dist/text-generation-server*.tar.gz
 
-# AWS Sagemaker compatible image
-FROM neuron as sagemaker
+# TPU compatible image
+FROM tpu_base as sagemaker
 
-COPY text-generation-inference/sagemaker-entrypoint.sh entrypoint.sh
+COPY text-generation-inference/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
 
 # Final image
-FROM neuron
+FROM tpu_base
 
 ENTRYPOINT ["text-generation-launcher"]
 CMD ["--json-output"]
