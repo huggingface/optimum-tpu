@@ -62,12 +62,12 @@ The snippet below shows how you can deploy a service from a hub standard model:
 
 ```
 docker run -p 8080:80 \
+       --net=host --privileged \
        -v $(pwd)/data:/data \
-       --device=/dev/neuron0 \
        -e HF_TOKEN=${HF_TOKEN} \
        -e HF_BATCH_SIZE=1 \
        -e HF_SEQUENCE_LENGTH=1024 \
-       ghcr.io/huggingface/neuronx-tgi:latest \
+       ghcr.io/huggingface/tpu-tgi:latest \
        --model-id mistralai/Mistral-7B-v0.1 \
        --max-concurrent-requests 1 \
        --max-input-length 512 \
@@ -87,7 +87,7 @@ docker run ghcr.io/huggingface/tpu-tgi --help
 
 The configuration of an inference endpoint is always a compromise between throughput and latency: serving more requests in parallel will allow a higher throughput, but it will increase the latency.
 
-The neuron models have static input dimensions `[batch_size, max_length]`.
+The models for now work with static input dimensions `[batch_size, max_length]`.
 
 It leads to a maximum number of tokens of `max_tokens = batch_size * max_length`.
 
@@ -101,7 +101,7 @@ This adds several restrictions to the following parameters:
 
 ### Choosing the correct batch size
 
-As seen in the previous paragraph, neuron model static batch size has a direct influence on the endpoint latency and throughput.
+As seen in the previous paragraph, model static batch size has a direct influence on the endpoint latency and throughput.
 
 Please refer to [text-generation-inference](https://github.com/huggingface/text-generation-inference) for optimization hints.
 

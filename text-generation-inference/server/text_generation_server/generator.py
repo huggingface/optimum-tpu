@@ -24,8 +24,8 @@ from .pb.generate_pb2 import (
 from .token_selector import TokenSelector
 
 
-# Disable optimum-neuron warnings as it seems to block the server after a while
-optimum_logger = logging.getLogger("optimum.neuron")
+# Disable optimum-tpu warnings as it seems to block the server after a while
+optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
 
@@ -172,7 +172,7 @@ class Slot:
                 The new input_ids to use to generate the next token.
             attention_mask: (`torch.LongTensor`):
                 The new attention_mask to use to generate the next token.
-            selector: (`optimum.neuron.generation.TokenSelector`):
+            selector: (`TokenSelector`):
                 An object implementing the updated token selection logic.
         """
         self._tokens = input_ids.clone()
@@ -282,8 +282,8 @@ class Slot:
         return self._generation_config.max_length
 
 
-class NeuronGenerator(Generator):
-    """A Generator for Neuron models."""
+class TpuGenerator(Generator):
+    """A Generator for models running on TPU."""
 
     def __init__(
         self,
@@ -535,16 +535,16 @@ class NeuronGenerator(Generator):
         cls,
         model_path: str,
     ):
-        """Instantiate a NeuronGenerator.
+        """Instantiate a TpuGenerator.
 
         Args:
             model_path (`str`):
-                The path to a local neuron model. This path must also contain a Tokenizer.
+                The path to a local model. This path must also contain a Tokenizer.
 
         Returns:
-            A NeuronGenerator.
+            A TpuGenerator.
         """
-        logger.info("Loading model on neuron devices (this can take a few minutes).")
+        logger.info("Loading model (this can take a few minutes).")
         start = time.time()
         model = TpuModelForCausalLM.from_pretrained(model_path)
         end = time.time()

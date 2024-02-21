@@ -1,7 +1,7 @@
 from tempfile import TemporaryDirectory
 
 import pytest
-from text_generation_server.generator import NeuronGenerator, TpuModelForCausalLM
+from text_generation_server.generator import TpuGenerator, TpuModelForCausalLM
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
@@ -30,7 +30,7 @@ def model_path():
 
 
 def test_info(model_path):
-    generator = NeuronGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path)
     info = generator.info
     assert info.requires_padding is True
     assert info.device_type == "xla"
@@ -81,7 +81,7 @@ def create_request(
 )
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
-    generator = NeuronGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path)
     assert generator.model.config.batch_size >= batch_size
     requests = []
     max_new_tokens = 20
@@ -121,7 +121,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
     ids=["greedy", "sample"],
 )
 def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, model_path):
-    generator = NeuronGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path)
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=do_sample)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
@@ -141,7 +141,7 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
 
 
 def test_decode_multiple(model_path):
-    generator = NeuronGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path)
     assert generator.model.config.batch_size > 1
     input_text = "Once upon a time"
     max_new_tokens = 20

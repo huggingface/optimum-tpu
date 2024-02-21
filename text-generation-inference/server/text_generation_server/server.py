@@ -6,7 +6,7 @@ from grpc import aio
 from grpc_reflection.v1alpha import reflection
 from loguru import logger
 
-from .generator import Generator, NeuronGenerator
+from .generator import Generator, TpuGenerator
 from .interceptor import ExceptionInterceptor
 from .pb import generate_pb2, generate_pb2_grpc
 
@@ -58,7 +58,7 @@ def serve(
         server_urls = [local_url]
 
         try:
-            generator = NeuronGenerator.from_pretrained(model_path)
+            generator = TpuGenerator.from_pretrained(model_path)
         except Exception:
             logger.exception("Error when initializing model")
             raise
