@@ -1,7 +1,7 @@
 
 VERSION := "0.0.1"
 
-TGI_VERSION ?= 1.4.0
+TGI_VERSION ?= 1.4.2
 
 tpu-tgi:
 	docker build --rm -f text-generation-inference/Dockerfile \

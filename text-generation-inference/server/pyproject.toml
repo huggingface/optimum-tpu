@@ -8,10 +8,10 @@ version = "VERSION"
 authors = [{name="Alvaro Moran", email="alvaro.moran@huggingface.co" }]
 description = "TGI compatible inference server for Google TPU platforms"
 dependencies = [
-    'protobuf > 3.20.1, < 4',
-    'grpcio == 1.57.0',
-    'grpcio-status == 1.48.2',
-    'grpcio-reflection == 1.48.2',
+    'protobuf > 3.20.1, < 5',
+    'grpcio == 1.62.0',
+    'grpcio-status == 1.62.0',
+    'grpcio-reflection == 1.62.0',
     'grpc-interceptor == 0.15.2',
     'typer == 0.6.1',
     'safetensors == 0.4.2',
