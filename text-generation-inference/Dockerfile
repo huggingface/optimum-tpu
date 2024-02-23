@@ -92,15 +92,15 @@ RUN pip install --upgrade pip
 RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install HuggingFace packages
-ARG TRANSFORMERS='4.38.0'
-ARG ACCELERATE='0.27.2'
-ARG SAFETENSORS='0.4.2'
+ARG TRANSFORMERS_VERSION='4.38.0'
+ARG ACCELERATE_VERSION='0.27.2'
+ARG SAFETENSORS_VERSION='0.4.2'
 
 RUN pip3 install \
     hf_transfer \
-    safetensors==${SAFETENSORS} \
-    transformers[sklearn,sentencepiece,vision]==${TRANSFORMERS} \
-    accelerate==${ACCELERATE}
+    safetensors==${SAFETENSORS_VERSION} \
+    transformers[sklearn,sentencepiece,vision]==${TRANSFORMERS_VERSION} \
+    accelerate==${ACCELERATE_VERSION}
 
 
 # TGI base env
