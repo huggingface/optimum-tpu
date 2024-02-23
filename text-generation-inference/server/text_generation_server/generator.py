@@ -10,7 +10,7 @@ from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
 
-from .modelling import TpuModelForCausalLM
+from .modeling import TpuModelForCausalLM
 from .pb.generate_pb2 import (
     Batch,
     CachedBatch,

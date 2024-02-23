@@ -4,7 +4,7 @@ from typing import Optional
 
 from loguru import logger
 
-from .modelling import TpuModelForCausalLM
+from .modeling import TpuModelForCausalLM
 
 
 def get_export_kwargs_from_env():
