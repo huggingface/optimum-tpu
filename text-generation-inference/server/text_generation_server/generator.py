@@ -326,7 +326,7 @@ class TpuGenerator(Generator):
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
         self.prefill(batch)
-        return self.model.config.batch_size * self.model.config.max_length
+        return self.model.config.batch_size * self.model.config.n_positions
 
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
         """Prefill new requests.
@@ -363,7 +363,7 @@ class TpuGenerator(Generator):
         # Tokenize with padding
         padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True)
         #  If needed truncate sequences to fit into the static dimensions
-        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.max_length)
+        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.n_positions)
         input_ids = padded_inputs.input_ids[:, :seq_length]
         attention_mask = padded_inputs.attention_mask[:, :seq_length]
         # Pause previously active slots during generation and store their last token.
