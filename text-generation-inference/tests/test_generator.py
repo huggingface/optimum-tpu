@@ -65,29 +65,31 @@ def create_request(
 
 
 @pytest.mark.parametrize(
-    "input_text, token_id, token_text",
+    "input_text, token_id, token_text, do_sample",
     [
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             383,
             " The",
+            False,
         ],
         [
-            "Once upon a time,",
-            262,
-            " the",
+            "It was a bright cold day in April, and the clocks were striking thirteen.",
+            198,
+            "\n",
+            True,
         ],
     ],
-    ids=["short", "long"],
+    ids=["greedy", "sample"],
 )
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
-def test_prefill(input_text, token_id, token_text, batch_size, model_path):
+def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
     generator = TpuGenerator.from_pretrained(model_path)
     assert generator.model.config.batch_size >= batch_size
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
-        requests.append(create_request(id=0, inputs=input_text, do_sample=False, max_new_tokens=max_new_tokens))
+        requests.append(create_request(id=0, inputs=input_text, do_sample=do_sample, max_new_tokens=max_new_tokens))
     # Let's be pessimistic when estimating max_tokens
     batch_size * (len(input_text) + max_new_tokens)
     batch = Batch(id=0, requests=requests, size=batch_size, max_tokens=batch_size * SEQUENCE_LENGTH)
@@ -105,24 +107,26 @@ def test_prefill(input_text, token_id, token_text, batch_size, model_path):
 
 @pytest.mark.xfail(reason="XLA compilation leads to different generation")
 @pytest.mark.parametrize(
-    "input_text, max_new_tokens, generated_text",
+    "input_text, max_new_tokens, generated_text, do_sample",
     [
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
             " The sun was setting, and the wind was blowing. The sun was setting, and the wind was",
+            False,
         ],
         [
-            "Once upon a time,",
+            "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            " the world was a place of great beauty and great danger. The world was a place of great danger",
+            "\n\nAt 11:45 a.m. a small group of friends gathered outside the hotel to",
+            True,
         ],
     ],
-    ids=["text1", "text2"],
+    ids=["greedy", "sample"],
 )
-def test_decode_single(input_text, max_new_tokens, generated_text, model_path):
+def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, model_path):
     generator = TpuGenerator.from_pretrained(model_path)
-    request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
+    request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=do_sample)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
