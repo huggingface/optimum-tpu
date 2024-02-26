@@ -92,7 +92,7 @@ RUN pip install --upgrade pip
 RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install HuggingFace packages
-ARG TRANSFORMERS_VERSION='4.38.0'
+ARG TRANSFORMERS_VERSION='4.38.1'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
