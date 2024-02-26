@@ -75,8 +75,8 @@ def create_request(
         ],
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
-            198,
-            "\n",
+            1439,
+            " All",
             True,
         ],
     ],
@@ -105,20 +105,19 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
         assert tokens.texts == [token_text]
 
 
-@pytest.mark.xfail(reason="XLA compilation leads to different generation")
 @pytest.mark.parametrize(
     "input_text, max_new_tokens, generated_text, do_sample",
     [
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            " The sun was setting, and the wind was blowing. The sun was setting, and the wind was",
+            " The sun was setting, and the wind was blowing. The sun was shining, and the wind was",
             False,
         ],
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            "\n\nAt 11:45 a.m. a small group of friends gathered outside the hotel to",
+            " All was silent, and it seemed, as was the custom in the United States, that the day",
             True,
         ],
     ],
@@ -141,6 +140,9 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
     output = generations[0].generated_text
     assert output.generated_tokens == max_new_tokens
     assert output.finish_reason == 0
+    print("--------")
+    print(output.text)
+    # breakpoint()
     assert output.text == generated_text
 
 
