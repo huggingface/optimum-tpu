@@ -80,6 +80,7 @@ FROM base AS tpu_base
 # Install system prerequisites
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
+    libpython3.10 \
     gnupg2 \
     wget \
     && rm -rf /var/lib/apt/lists/* \
@@ -117,7 +118,7 @@ COPY --from=pyserver /pyserver/build/dist dist
 RUN pip install dist/text-generation-server*.tar.gz
 
 # TPU compatible image
-FROM tpu_base as sagemaker
+FROM tpu_base as tpu_entrypoint
 
 COPY text-generation-inference/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
