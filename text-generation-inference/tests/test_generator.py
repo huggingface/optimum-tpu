@@ -140,9 +140,6 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
     output = generations[0].generated_text
     assert output.generated_tokens == max_new_tokens
     assert output.finish_reason == 0
-    print("--------")
-    print(output.text)
-    # breakpoint()
     assert output.text == generated_text
 
 
