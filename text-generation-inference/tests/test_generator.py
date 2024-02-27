@@ -11,7 +11,7 @@ from text_generation_server.pb.generate_pb2 import (
 from transformers import AutoTokenizer
 
 
-MODEL_ID = "gpt2"
+MODEL_ID = "openai-community/gpt2"
 BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
 

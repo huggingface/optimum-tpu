@@ -5,7 +5,7 @@ from text_generation_server.pb.generate_pb2 import Request
 from transformers import AutoTokenizer, GenerationConfig
 
 
-TOKENIZERS = ["NousResearch/Llama-2-7b-hf", "gpt2"]
+TOKENIZERS = ["NousResearch/Llama-2-7b-hf", "openai-community/gpt2"]
 
 
 @pytest.fixture(params=TOKENIZERS)
