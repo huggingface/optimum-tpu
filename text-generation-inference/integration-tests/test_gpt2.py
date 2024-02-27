@@ -1,32 +1,19 @@
 import os
 
-import huggingface_hub
 import Levenshtein
 import pytest
 
 
-MODEL_ID = "gpt2"
-NEURON_MODEL_ID = "aws-neuron/gpt2-neuronx-bs4-seqlen1024"
+MODEL_ID = "openai-community/gpt2"
 BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
-NUM_CORES = 2
 
 
-@pytest.fixture(scope="module", params=["hub-neuron", "hub", "local-neuron"])
-def model_name_or_path(request, data_volume):
-    if request.param == "hub":
-        os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
-        os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
-        os.environ["HF_NUM_CORES"] = str(NUM_CORES)
-        yield MODEL_ID
-    elif request.param == "hub-neuron":
-        yield NEURON_MODEL_ID
-    else:
-        model_dir = f"gpt2-neuron-{BATCH_SIZE}x{SEQUENCE_LENGTH}x{NUM_CORES}"
-        local_path = os.path.join(data_volume, model_dir)
-        huggingface_hub.snapshot_download(NEURON_MODEL_ID, local_dir=local_path)
-        # Return the path of the model inside the mounted volume
-        yield os.path.join("/data", model_dir)
+@pytest.fixture(scope="module")
+def model_name_or_path():
+    os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
+    os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
+    yield MODEL_ID
 
 
 @pytest.fixture(scope="module")
@@ -51,7 +38,7 @@ async def test_model_single_request(tgi_client):
         decoder_input_details=True,
     )
     assert response.details.generated_tokens == 17
-    assert response.generated_text == "\n\nDeep learning is a new field of research that has been around for a while"
+    assert response.generated_text == "\n\nDeep learning is a technique that allows you to learn something from a set of"
 
     # Greedy bounded with input
     response = await tgi_client.generate(
@@ -63,7 +50,7 @@ async def test_model_single_request(tgi_client):
     assert response.details.generated_tokens == 17
     assert (
         response.generated_text
-        == "What is Deep Learning?\n\nDeep learning is a new field of research that has been around for a while"
+        == "What is Deep Learning?\n\nDeep learning is a technique that allows you to learn something from a set of"
     )
 
     # Sampling
@@ -73,11 +60,11 @@ async def test_model_single_request(tgi_client):
         top_k=50,
         top_p=0.9,
         repetition_penalty=1.2,
-        max_new_tokens=1000,
+        max_new_tokens=100,
         seed=42,
         decoder_input_details=True,
     )
-    assert "The purpose of the current post is" in response.generated_text
+    assert 'The deep neural networks that we create are essentially "miniature" neural networks that can easily be trained' in response.generated_text
 
 
 @pytest.mark.asyncio
@@ -91,7 +78,7 @@ async def test_model_multiple_requests(tgi_client, generate_load):
     )
 
     assert len(responses) == 4
-    expected = "\n\nDeep learning is a new field of research that has been around for a while"
+    expected = "\n\nDeep learning is a technique that allows you to learn something from a set of"
     for r in responses:
         assert r.details.generated_tokens == 17
         # Compute the similarity with the expectation using the levenshtein distance

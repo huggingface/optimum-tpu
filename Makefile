@@ -39,4 +39,8 @@ tgi_test: tgi_server
 	python -m pip install pytest
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \
 	                               -exec python -m pip install --force-reinstall {} \;
-	python -m pytest -s text-generation-inference/tests
+	python -m pytest -sv text-generation-inference/tests
+
+tgi_docker_test: tpu-tgi
+	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
+	python -m pytest -sv text-generation-inference/integration-tests

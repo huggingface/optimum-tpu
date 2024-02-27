@@ -1,7 +1,6 @@
 import asyncio
 import contextlib
 import os
-import random
 import shlex
 import subprocess
 import sys
@@ -17,7 +16,7 @@ from text_generation import AsyncClient
 from text_generation.types import Response
 
 
-DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "neuronx-tgi:latest")
+DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "tpu-tgi:latest")
 HUGGING_FACE_HUB_TOKEN = os.getenv("HUGGING_FACE_HUB_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
 
@@ -85,7 +84,9 @@ def launcher(event_loop, data_volume):
         model_id: str,
         trust_remote_code: bool = False,
     ):
-        port = random.randint(8000, 10_000)
+        # TODO: consider finding out how to forward a port in the container instead of leaving it to 80.
+        #For now this is necessary because TPU dockers require to run with net=host and privileged mode.
+        port = 80
 
         args = ["--model-id", model_id, "--env"]
 
@@ -108,7 +109,7 @@ def launcher(event_loop, data_volume):
         if HUGGING_FACE_HUB_TOKEN is not None:
             env["HUGGING_FACE_HUB_TOKEN"] = HUGGING_FACE_HUB_TOKEN
 
-        for var in ["HF_BATCH_SIZE", "HF_SEQUENCE_LENGTH", "HF_AUTOCAST_TYPE", "HF_NUM_CORES"]:
+        for var in ["HF_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
             if var in os.environ:
                 env[var] = os.environ[var]
 
@@ -121,10 +122,10 @@ def launcher(event_loop, data_volume):
             environment=env,
             auto_remove=False,
             detach=True,
-            devices=["/dev/neuron0"],
             volumes=volumes,
-            ports={"80/tcp": port},
             shm_size="1G",
+            privileged=True,
+            network_mode="host",
         )
 
         yield ContainerLauncherHandle(client, container.name, port)
