@@ -2,10 +2,11 @@ import os
 import time
 from pathlib import Path
 from typing import Optional
+
+from huggingface_hub import snapshot_download
 from loguru import logger
 from transformers import AutoConfig
 from transformers.utils import SAFE_WEIGHTS_INDEX_NAME
-from huggingface_hub import snapshot_download
 
 
 def get_export_kwargs_from_env():
