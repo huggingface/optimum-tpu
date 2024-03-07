@@ -31,7 +31,8 @@ def tokenizer(request):
     ids=["spaces", "chinese-utf8", "emojis"],
 )
 def test_decode_streaming(tokenizer, input_text, generated_text):
-    slot = Slot(0, tokenizer)
+    # Note: device used is cpu to make it faster
+    slot = Slot(0, tokenizer, "cpu")
     request = Request(id=0, inputs=input_text)
     slot.assign(request, GenerationConfig())
     assert slot.cached_text == input_text
