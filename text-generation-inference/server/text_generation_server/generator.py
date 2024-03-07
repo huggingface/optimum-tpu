@@ -326,7 +326,7 @@ class TpuGenerator(Generator):
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
         self.prefill(batch)
-        return self.model.config.batch_size * self.model.config.n_positions
+        return self.model.config.batch_size * self.model.config.sequence_length
 
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
         """Prefill new requests.
@@ -363,7 +363,7 @@ class TpuGenerator(Generator):
         # Tokenize with padding
         padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True)
         #  If needed truncate sequences to fit into the static dimensions
-        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.n_positions)
+        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.sequence_length)
         input_ids = padded_inputs.input_ids[:, :seq_length]
         attention_mask = padded_inputs.attention_mask[:, :seq_length]
         # Pause previously active slots during generation and store their last token.
@@ -377,7 +377,11 @@ class TpuGenerator(Generator):
                 slot_input_ids = input_ids[i : i + 1, :]
                 # Padded input ids are also required to set logits processors and stopping criterias
                 selector = TokenSelector.create(
-                    slot_input_ids, slot.generation_config, self.model, self.model.config.n_positions, seed=slot.seed
+                    slot_input_ids,
+                    slot.generation_config,
+                    self.model,
+                    self.model.config.sequence_length,
+                    seed=slot.seed,
                 )
                 slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
                 slot_attention_mask = attention_mask[i]
@@ -507,7 +511,7 @@ class TpuGenerator(Generator):
 
     def _cached_batch(self, batch_id: int, request_ids: List):
         size = len(request_ids)
-        max_tokens = size * self.model.config.n_positions
+        max_tokens = size * self.model.config.sequence_length
         return CachedBatch(id=batch_id, request_ids=request_ids, size=size, max_tokens=max_tokens)
 
     def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
