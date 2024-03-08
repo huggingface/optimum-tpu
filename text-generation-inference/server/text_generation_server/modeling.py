@@ -65,7 +65,8 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
 
         # Do eval, and compile
         model.eval()
-        if device == "xla":
+        if device == "xla" and "DBG_COMPILE" in environ:
             model = torch.compile(model, backend="openxla_eval")
+            logger.debug("Model compiled.")
 
         return model

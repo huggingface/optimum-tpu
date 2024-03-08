@@ -6,6 +6,7 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 import torch
+import torch_xla.core.xla_model as xm
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
@@ -460,6 +461,9 @@ class TpuGenerator(Generator):
         )
         # Save KV cache
         self.past_key_values = outputs.past_key_values
+        # Barrier for XLA model
+        xm.mark_step(wait=False)
+
         generations = []
         active_slots = False
         for i, slot in enumerate(self.slots):
