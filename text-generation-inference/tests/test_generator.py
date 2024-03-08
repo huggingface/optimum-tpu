@@ -1,14 +1,13 @@
-from tempfile import TemporaryDirectory
-
 import pytest
-from text_generation_server.generator import TpuGenerator, TpuModelForCausalLM
+import os
+from text_generation_server.generator import TpuGenerator
+from text_generation_server.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
     Request,
     StoppingCriteriaParameters,
 )
-from transformers import AutoTokenizer
 
 
 MODEL_ID = "openai-community/gpt2"
@@ -18,18 +17,11 @@ SEQUENCE_LENGTH = 1024
 
 @pytest.fixture(scope="module")
 def model_path():
-    with TemporaryDirectory() as tmpdir:
-        AutoTokenizer.from_pretrained(MODEL_ID).save_pretrained(tmpdir)
-        model = TpuModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            batch_size=BATCH_SIZE,
-            sequence_length=SEQUENCE_LENGTH,
-        )
-        # Move model to cpu before saving.
-        # TODO: later on this should be handled by TpuModelForCausalLM
-        model.to("cpu")
-        model.save_pretrained(tmpdir)
-        yield tmpdir
+    # Add variables to environment so they can be used in TpuModelForCausalLM
+    os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
+    os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
+    path = fetch_model(MODEL_ID)
+    return path
 
 
 def test_info(model_path):
