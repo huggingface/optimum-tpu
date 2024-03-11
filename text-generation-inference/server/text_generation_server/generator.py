@@ -329,6 +329,7 @@ class TpuGenerator(Generator):
         self.prefill(batch)
         return self.model.config.batch_size * self.model.config.sequence_length
 
+    @torch.no_grad
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
         """Prefill new requests.
 
@@ -401,6 +402,7 @@ class TpuGenerator(Generator):
         logger.debug("Model ready for decoding")
         return generation, next_batch
 
+    @torch.no_grad
     def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
         """Decode the specified prefilled requests.
 
