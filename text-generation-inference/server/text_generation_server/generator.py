@@ -393,10 +393,14 @@ class TpuGenerator(Generator):
                 slot.reset(slot_input_ids, slot_attention_mask, selector)
         # Clear KV cache
         self.past_key_values = None
+        # Obtain position ids using attention mask.
+        position_ids = (attention_mask.cumsum(-1) - 1).masked_fill(attention_mask == 0, 0)
+        position_ids = position_ids[:, -input_ids.shape[-1] :]
+
         # Pause previously active slots during generation.
         # The KV cache of paused slots will be prefilled during generation but new tokens
         # will be ignored, as they have already been generated and sent back in the last decode.
-        generation, next_batch = self._generate_token(batch.id, input_ids, attention_mask)
+        generation, next_batch = self._generate_token(batch.id, input_ids, attention_mask=attention_mask, position_ids=position_ids)
         # Reactivate previously active slots for the next decode, and append
         # back their next token.
         for slot, next_token in zip(active_slots, next_tokens):
@@ -426,6 +430,11 @@ class TpuGenerator(Generator):
         # Reconstruct input_ids and attention_mask from slots
         input_ids = None
         attention_mask = None
+        position_ids = torch.zeros(
+            [self.model.config.batch_size, 1],
+            dtype=torch.int64,
+            device=self.model.device,
+        )
         for i, slot in enumerate(self.slots):
             if slot.state != Slot.State.EMPTY:
                 if input_ids is None:
@@ -446,25 +455,21 @@ class TpuGenerator(Generator):
                         device=self.model.device,
                     )
                 attention_mask[i, :] = slot.attention_mask
+                position_ids[i, 0] = slot.generated_tokens
         if input_ids is None:
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
-        return self._generate_token(next_batch_id, input_ids, attention_mask)
+
+        return self._generate_token(next_batch_id, input_ids, attention_mask=attention_mask, position_ids=position_ids)
 
     def _generate_token(
-        self, next_batch_id: int, input_ids: torch.LongTensor, attention_mask: Optional[torch.LongTensor] = None
-    ) -> Tuple[List[Generation], CachedBatch]:
-        # Obtain position ids using attention mask.
-        position_ids = (attention_mask.cumsum(-1) - 1).masked_fill(attention_mask == 0, 0)
-        position_ids = position_ids[:, -input_ids.shape[-1] :]
-
+        self, next_batch_id: int, input_ids: torch.LongTensor, **forward_extra_params) -> Tuple[List[Generation], CachedBatch]:
         # Forward
         outputs = self.model(
             input_ids,
             past_key_values=self.past_key_values,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
             return_dict=True,
             use_cache=True,
+            **forward_extra_params,
         )
         # Save KV cache
         self.past_key_values = outputs.past_key_values
