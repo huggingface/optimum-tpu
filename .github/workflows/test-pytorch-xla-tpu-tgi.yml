@@ -32,4 +32,6 @@ jobs:
         run: python -c "import torch_xla.core.xla_model as xm; assert xm.xla_device().type == 'xla', 'XLA device not available'"
 
       - name: Build and test TGI server
-        run: make tgi_test
+        run: |
+          pip install accelerate==0.27.2
+          HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tgi_test
