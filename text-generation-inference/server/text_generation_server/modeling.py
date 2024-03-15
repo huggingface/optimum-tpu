@@ -62,11 +62,7 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
             model.config.batch_size = batch_size
         if sequence_length is not None or getattr(model.config, "sequence_length", None) is None:
             model.config.sequence_length = sequence_length
-
-        # Do eval, and compile
+        # Do eval
         model.eval()
-        if device == "xla" and "DBG_COMPILE" in environ:
-            model = torch.compile(model, backend="openxla_eval")
-            logger.debug("Model compiled.")
 
         return model

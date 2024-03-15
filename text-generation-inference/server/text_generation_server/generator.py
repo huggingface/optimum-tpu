@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+import os
 from abc import ABC
 from enum import Enum
 from typing import List, Optional, Tuple
@@ -304,6 +305,12 @@ class TpuGenerator(Generator):
         tokenizer: PreTrainedTokenizerBase,
     ):
         self.model = model
+        if model.device.type == "xla" and "DBG_COMPILE" in os.environ:
+            self.model_one_token = torch.compile(model, backend="openxla")
+            logger.debug("Model compiled for decoding")
+        else:
+            self.model_one_token = model
+
         # Specify padding options for decoder-only architecture
         tokenizer.pad_token_id = tokenizer.eos_token_id
         tokenizer.padding_side = "left"
@@ -426,7 +433,7 @@ class TpuGenerator(Generator):
             # Reset/clear KV cache
             self.past_key_values = None
         generation, next_batch = self._generate_token(
-            batch.id, input_ids, attention_mask=attention_mask, position_ids=position_ids, **extra_args
+            batch.id, input_ids, self.model, attention_mask=attention_mask, position_ids=position_ids, **extra_args
         )
 
         # Reactivate previously active slots for the next decode, and append
@@ -494,15 +501,17 @@ class TpuGenerator(Generator):
         else:
             extra_args["attention_mask"] = attention_mask
             extra_args["past_key_values"] = self.past_key_values
-        return self._generate_token(next_batch_id, input_ids, position_ids=position_ids, **extra_args)
+        return self._generate_token(
+            next_batch_id, input_ids, self.model_one_token, position_ids=position_ids, **extra_args
+        )
 
     def _generate_token(
-        self, next_batch_id: int, input_ids: torch.LongTensor, **forward_extra_params
+        self, next_batch_id: int, input_ids: torch.LongTensor, model: torch.nn.Module, **forward_extra_params
     ) -> Tuple[List[Generation], CachedBatch]:
         # Add barrier to allow next graph step to always be the same
         xm.mark_step()
         # Forward
-        outputs = self.model(
+        outputs = model(
             input_ids,
             return_dict=True,
             use_cache=True,
