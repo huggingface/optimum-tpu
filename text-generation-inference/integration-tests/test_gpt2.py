@@ -38,7 +38,9 @@ async def test_model_single_request(tgi_client):
         decoder_input_details=True,
     )
     assert response.details.generated_tokens == 17
-    assert response.generated_text == "\n\nDeep learning is a technique that allows you to learn something from a set of"
+    assert (
+        response.generated_text == "\n\nDeep learning is a technique that allows you to learn something from a set of"
+    )
 
     # Greedy bounded with input
     response = await tgi_client.generate(
@@ -64,7 +66,10 @@ async def test_model_single_request(tgi_client):
         seed=42,
         decoder_input_details=True,
     )
-    assert 'The deep neural networks that we create are essentially "miniature" neural networks that can easily be trained' in response.generated_text
+    assert (
+        'The deep neural networks that we create are essentially "miniature" neural networks that can easily be trained'
+        in response.generated_text
+    )
 
 
 @pytest.mark.asyncio

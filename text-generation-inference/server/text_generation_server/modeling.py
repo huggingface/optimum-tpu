@@ -19,9 +19,9 @@ from os import PathLike, environ
 from typing import Any
 
 import torch
-import torch_xla.core.xla_model as xm
 from loguru import logger
 from transformers import AutoModelForCausalLM
+from transformers.utils import is_accelerate_available
 
 
 # TODO: For now TpuModelForCausalLM is just a shallow wrapper of
@@ -38,7 +38,23 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
         *model_args: Any,
         **kwargs: Any,
     ):
-        model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        if "PJRT_DEVICE" not in environ:
+            logger.info("PJRT_DEVICE environment variable not found. Setting it to 'TPU'.")
+            environ["PJRT_DEVICE"] = "TPU"
+        if "DBG_DEVICE" in environ:
+            device = environ["DBG_DEVICE"]
+            logger.debug(f"Device set to: {device}")
+        else:
+            device = "xla"
+        if is_accelerate_available():
+            model = AutoModelForCausalLM.from_pretrained(
+                pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
+            )
+        else:
+            model = AutoModelForCausalLM.from_pretrained(
+                pretrained_model_name_or_path, *model_args, **kwargs
+            )
+            model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
             model.config.task = task
@@ -47,13 +63,10 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
         if sequence_length is not None or getattr(model.config, "sequence_length", None) is None:
             model.config.sequence_length = sequence_length
 
-        if "PJRT_DEVICE" not in environ:
-            logger.warning("PJRT_DEVICE environment variable not found. Setting it to 'TPU'.")
-            environ["PJRT_DEVICE"] = "TPU"
-        dev = xm.xla_device()
-        # Do eval, move model to device and compile
-        model.to(dev)
+        # Do eval, and compile
         model.eval()
-        model = torch.compile(model, backend="openxla_eval")
+        if device == "xla" and "DBG_COMPILE" in environ:
+            model = torch.compile(model, backend="openxla_eval")
+            logger.debug("Model compiled.")
 
         return model

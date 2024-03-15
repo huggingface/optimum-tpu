@@ -85,7 +85,7 @@ def launcher(event_loop, data_volume):
         trust_remote_code: bool = False,
     ):
         # TODO: consider finding out how to forward a port in the container instead of leaving it to 80.
-        #For now this is necessary because TPU dockers require to run with net=host and privileged mode.
+        # For now this is necessary because TPU dockers require to run with net=host and privileged mode.
         port = 80
 
         args = ["--model-id", model_id, "--env"]
