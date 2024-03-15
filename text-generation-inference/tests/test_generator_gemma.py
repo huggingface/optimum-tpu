@@ -36,6 +36,11 @@ def create_request(
     seed: int = 0,
     repetition_penalty: float = 1.0,
 ):
+    # For these tests we can safely set typical_p to 1.0 (default)
+    typical_p = 1.0
+    if do_sample == False:
+        # Drop top_p parameter to avoid warnings
+        top_p = 1.0
     parameters = NextTokenChooserParameters(
         temperature=temperature,
         top_k=top_k,
@@ -43,6 +48,7 @@ def create_request(
         do_sample=do_sample,
         seed=seed,
         repetition_penalty=repetition_penalty,
+        typical_p=typical_p,
     )
     stopping_parameters = StoppingCriteriaParameters(max_new_tokens=max_new_tokens)
     return Request(id=id, inputs=inputs, parameters=parameters, stopping_parameters=stopping_parameters)
