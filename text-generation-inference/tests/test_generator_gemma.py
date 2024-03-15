@@ -1,5 +1,6 @@
 import pytest
 import os
+from tqdm import tqdm
 from text_generation_server.generator import TpuGenerator
 from text_generation_server.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
@@ -57,7 +58,7 @@ def test_decode_single(model_path):
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
-    for _ in range(max_new_tokens - 1):
+    for _ in tqdm(range(max_new_tokens - 1)):
         assert next_batch.size == 1
         assert next_batch.max_tokens == 1024
         assert len(generations) == 1

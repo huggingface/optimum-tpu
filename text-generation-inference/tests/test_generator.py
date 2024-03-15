@@ -1,5 +1,6 @@
 import pytest
 import os
+from tqdm import tqdm
 from text_generation_server.generator import TpuGenerator
 from text_generation_server.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
@@ -121,7 +122,7 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
-    for i in range(max_new_tokens - 1):
+    for _ in tqdm(range(max_new_tokens - 1), "Decoding tokens"):
         assert next_batch.size == 1
         assert next_batch.max_tokens == 1024
         assert len(generations) == 1
@@ -152,7 +153,7 @@ def test_decode_multiple(model_path):
     assert len(tokens[0]) == 1
     # Decode a few tokens
     gen_tokens = 4
-    for _ in range(gen_tokens - 1):
+    for _ in tqdm(range(gen_tokens - 1), "Decoding tokens"):
         generations, next_batch = generator.decode([next_batch])
         assert len(generations) == 1
         g = generations[0]
@@ -172,7 +173,7 @@ def test_decode_multiple(model_path):
     assert len(tokens[1]) == 1
     # Decode more tokens until we reach the maximum for the first request
     batches = [next_batch, next_batch_1]
-    for _ in range(max_new_tokens - gen_tokens):
+    for _ in tqdm(range(max_new_tokens - gen_tokens), "Decoding tokens (2nd batch)"):
         generations, next_batch = generator.decode(batches)
         for g in generations:
             tokens[g.request_id].append(g.tokens.ids[0])
@@ -189,7 +190,7 @@ def test_decode_multiple(model_path):
             assert output.generated_tokens == max_new_tokens
             generated_text = output.text
     # Continue decoding until the end of the second request
-    for _ in range(gen_tokens - 1):
+    for _ in tqdm(range(gen_tokens - 1), "Decoding tokens (finishing)"):
         generations, next_batch = generator.decode([next_batch])
         assert len(generations) == 1
         g = generations[0]
