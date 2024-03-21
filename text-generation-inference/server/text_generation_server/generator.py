@@ -307,12 +307,6 @@ class TpuGenerator(Generator):
         tokenizer: PreTrainedTokenizerBase,
     ):
         self.model = model
-        if model.device.type == "xla" and "DBG_COMPILE" in os.environ:
-            self.model_one_token = torch.compile(model, backend="openxla")
-            logger.debug("Model compiled for decoding")
-        else:
-            self.model_one_token = model
-
         # Specify padding options for decoder-only architecture
         tokenizer.pad_token_id = tokenizer.eos_token_id
         tokenizer.padding_side = "left"
@@ -328,6 +322,12 @@ class TpuGenerator(Generator):
                 f"Static cache not available for {self.model.__class__.__name__}. Performance will be affected"
             )
             self.use_static_cache = False
+        # compile model when possible to accelerate decoding
+        if model.device.type == "xla" and ("DBG_COMPILE" in os.environ or self.use_static_cache):
+            self.model_one_token = torch.compile(model, backend="openxla")
+            logger.debug("Model compiled for decoding")
+        else:
+            self.model_one_token = model
 
     @property
     def info(self) -> InfoResponse:
