@@ -425,7 +425,6 @@ class TpuGenerator(Generator):
         self.past_key_values = None
         # Obtain position ids using attention mask.
         position_ids = (attention_mask.cumsum(-1) - 1).masked_fill(attention_mask == 0, 0)
-        position_ids = position_ids[:, -input_ids.shape[-1] :]
 
         extra_args = {}
         if self.use_static_cache:
