@@ -47,7 +47,7 @@ def create_request(
 ):
     # For these tests we can safely set typical_p to 1.0 (default)
     typical_p = 1.0
-    if do_sample == False:
+    if not do_sample:
         # Drop top_p parameter to avoid warnings
         top_p = 1.0
     parameters = NextTokenChooserParameters(
