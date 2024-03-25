@@ -18,7 +18,8 @@ concurrency:
 jobs:
   do-the-job:
     name: Run TGI tests
-    runs-on: optimum-tpu
+    #runs-on: optimum-tpu
+    runs-on: tpu-runners-dind
     container:
       # Use an image that works with TPU with Pytorch 2.3.0 (release was not working)
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
