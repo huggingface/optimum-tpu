@@ -116,7 +116,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            " We sat outside the house, drinking coffee, listening to the orchestra playing through the window. We could",
+            " We sat at the front door and watched the clock on a box of yellow paper and found it almost",
             True,
         ],
     ],
