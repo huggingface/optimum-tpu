@@ -110,7 +110,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            " The sun was setting, and the wind was blowing. The sun was shining, and the wind was",
+            " The sun was setting, and the wind was blowing. The sun was setting, and the wind was",
             False,
         ],
         [

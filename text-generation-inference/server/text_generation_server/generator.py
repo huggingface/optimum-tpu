@@ -312,7 +312,10 @@ class TpuGenerator(Generator):
         tokenizer.padding_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
-        self.slots = [Slot(i, tokenizer, self.model.device) for i in range(self.model.config.batch_size)]
+        # Slots are empty to begin with, they will be populated as new batches arrive
+        self.slots = []
+        # Note: this index will _never_ be decremented, and that's fine.
+        self.slot_index = 0
         self.past_key_values = None
         # _setup_cache is specific to some models (e.g.: Gemma and Llama). In those cases it is possible to setup
         # a static cache, otherwise it is not.
@@ -350,6 +353,7 @@ class TpuGenerator(Generator):
             The maximum number of tokens the model supports.
         """
         # Just check that the warmup request parameters match the model capacity
+        # NOTE: later self.model.config.batch_size might become self.model.config.max_batch_size.
         batch_size = self.model.config.batch_size
         if len(batch.requests) > batch_size:
             raise ValueError(
@@ -373,17 +377,20 @@ class TpuGenerator(Generator):
         for slot in self.slots:
             slots[slot.state].append(slot)
         active_slots = slots[Slot.State.READY]
+        # Delete all empty slots, no need to have them anymore
         empty_slots = slots[Slot.State.EMPTY]
-        if len(empty_slots) < len(batch.requests):
-            raise ValueError(
-                f"Cannot prefill {len(batch.requests)} new request(s) with only {len(empty_slots)} empty slots."
-                f"Please align the number of concurrent requests with the static batch size: {self.model.batch_size}."
-            )
+        for slot in empty_slots:
+            self.slots.remove(slot)
         # Assign each request to an empty slot
-        logger.debug(f"Prefilling {len(batch.requests)} new request(s) with {len(empty_slots)} empty slot(s)")
+        logger.debug(f"Prefilling {len(batch.requests)} new request(s) adding to {len(active_slots)} active slot(s)")
+        new_slots = []
         for request in batch.requests:
-            slot = empty_slots.pop()
+            # Dynamically create a new slot for each request
+            slot = Slot(self.slot_index, self.tokenizer, self.model.device)
+            self.slot_index += 1
             slot.assign(request, self.model.generation_config)
+            new_slots.append(slot)
+            self.slots.append(slot)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
         # Reconstruct the full inputs (without padding) as seen by the model.
         # This comprises:
@@ -466,8 +473,9 @@ class TpuGenerator(Generator):
         # Reconstruct input_ids and attention_mask from slots
         input_ids = None
         attention_mask = None
+        batch_size = len(self.slots)
         position_ids = torch.zeros(
-            [self.model.config.batch_size, 1],
+            [batch_size, 1],
             dtype=torch.int64,
             device=self.model.device,
         )
@@ -476,7 +484,7 @@ class TpuGenerator(Generator):
                 if input_ids is None:
                     # Create blank inputs covering all slots (even empty ones)
                     input_ids = torch.full(
-                        [self.model.config.batch_size, 1],
+                        [batch_size, 1],
                         fill_value=self.tokenizer.eos_token_id,
                         dtype=torch.int64,
                         device=self.model.device,
@@ -488,7 +496,7 @@ class TpuGenerator(Generator):
                     if attention_mask is None:
                         # Create default mask covering all slots (even empty ones)
                         attention_mask = torch.zeros(
-                            [self.model.config.batch_size, slot.attention_mask.size(-1)],
+                            [batch_size, slot.attention_mask.size(-1)],
                             dtype=torch.int64,
                             device=self.model.device,
                         )
@@ -550,7 +558,8 @@ class TpuGenerator(Generator):
                     text=slot.generated_text, generated_tokens=slot.generated_tokens, finish_reason=finish_reason
                 )
                 logger.debug(f"Finished generating tokens for request {request_id}")
-                # mark the slot as available
+                # This slot is now empty, it will be removed from the list of
+                # active slots once a new prefill is requested
                 slot.clear()
             else:
                 active_slots = True
