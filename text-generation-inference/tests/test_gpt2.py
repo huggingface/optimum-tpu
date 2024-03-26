@@ -12,14 +12,12 @@ from text_generation_server.pb.generate_pb2 import (
 
 
 MODEL_ID = "openai-community/gpt2"
-BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
 
 
 @pytest.fixture(scope="module")
 def model_path():
     # Add variables to environment so they can be used in TpuModelForCausalLM
-    os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
     os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
     path = fetch_model(MODEL_ID)
     return path
@@ -84,7 +82,6 @@ def create_request(
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
     generator = TpuGenerator.from_pretrained(model_path)
-    assert generator.model.config.batch_size >= batch_size
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
@@ -144,7 +141,6 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
 
 def test_decode_multiple(model_path):
     generator = TpuGenerator.from_pretrained(model_path)
-    assert generator.model.config.batch_size > 1
     input_text = "Once upon a time"
     max_new_tokens = 20
     # Prefill a single request, remembering the generated token

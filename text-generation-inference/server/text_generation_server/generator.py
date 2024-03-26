@@ -354,13 +354,17 @@ class TpuGenerator(Generator):
         """
         # Just check that the warmup request parameters match the model capacity
         # NOTE: later self.model.config.batch_size might become self.model.config.max_batch_size.
-        batch_size = self.model.config.batch_size
+        if self.model.config.batch_size is not None:
+            batch_size = self.model.config.batch_size
+        else:
+            # batch size is not set, just assume it's unlimited and accept all requests
+            batch_size = len(batch.requests)
         if len(batch.requests) > batch_size:
             raise ValueError(
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
         self.prefill(batch)
-        return self.model.config.batch_size * self.model.config.sequence_length
+        return batch_size * self.model.config.sequence_length
 
     @torch.no_grad
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
