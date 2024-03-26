@@ -492,7 +492,7 @@ class TpuGenerator(Generator):
                             dtype=torch.int64,
                             device=self.model.device,
                         )
-                    attention_mask.index_put_([torch.tensor([1])], slot.attention_mask)
+                    attention_mask.index_put_([torch.tensor([i])], slot.attention_mask)
                 position_ids.index_put_([torch.tensor([i])], torch.tensor(slot.cur_position))
         if input_ids is None:
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
