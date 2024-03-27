@@ -387,13 +387,11 @@ class TpuGenerator(Generator):
             self.slots.remove(slot)
         # Assign each request to an empty slot
         logger.debug(f"Prefilling {len(batch.requests)} new request(s) adding to {len(active_slots)} active slot(s)")
-        new_slots = []
         for request in batch.requests:
             # Dynamically create a new slot for each request
             slot = Slot(self.slot_index, self.tokenizer, self.model.device)
             self.slot_index += 1
             slot.assign(request, self.model.generation_config)
-            new_slots.append(slot)
             self.slots.append(slot)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
         # Reconstruct the full inputs (without padding) as seen by the model.
