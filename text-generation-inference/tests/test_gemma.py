@@ -12,14 +12,12 @@ from text_generation_server.pb.generate_pb2 import (
 
 
 MODEL_ID = "google/gemma-2b"
-BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
 
 
 @pytest.fixture(scope="module")
 def model_path():
     # Add variables to environment so they can be used in TpuModelForCausalLM
-    os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
     os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
     path = fetch_model(MODEL_ID)
     return path

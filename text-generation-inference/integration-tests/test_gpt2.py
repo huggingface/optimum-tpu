@@ -5,13 +5,11 @@ import pytest
 
 
 MODEL_ID = "openai-community/gpt2"
-BATCH_SIZE = 4
 SEQUENCE_LENGTH = 1024
 
 
 @pytest.fixture(scope="module")
 def model_name_or_path():
-    os.environ["HF_BATCH_SIZE"] = str(BATCH_SIZE)
     os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
     yield MODEL_ID
 
