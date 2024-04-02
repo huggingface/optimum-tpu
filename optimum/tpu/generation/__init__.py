@@ -13,6 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .logits_process import FusedLogitsWarper
-from .token_selector import TokenSelector
-
+from .logits_process import FusedLogitsWarper  # noqa: F401
+from .token_selector import TokenSelector  # noqa: F401
