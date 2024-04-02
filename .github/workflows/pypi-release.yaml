@@ -10,7 +10,7 @@ env:
 
 jobs:
   upload_package:
-    name: Upload package to PyPi
+    name: Upload package to PyPI
     runs-on: ubuntu-latest
 
     steps:
@@ -25,10 +25,9 @@ jobs:
           rm -rf dist/
 
       - name: Build the wheels
-        run: |
-          python -m build .
+        run: python -m build .
 
-      - name: Upload to PyPi
+      - name: Upload to PyPI
         run: |
           pip install twine
           twine upload dist/* -u __token__ -p "$PYPI_TOKEN"
