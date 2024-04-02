@@ -11,8 +11,9 @@ import torch_xla.core.xla_model as xm
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
 from transformers.generation import GenerationConfig
+from optimum.tpu.modeling import TpuModelForCausalLM
+from optimum.tpu.generation import TokenSelector
 
-from .modeling import TpuModelForCausalLM
 from .pb.generate_pb2 import (
     Batch,
     CachedBatch,
@@ -23,7 +24,6 @@ from .pb.generate_pb2 import (
     Request,
     Tokens,
 )
-from .token_selector import TokenSelector
 
 
 # Disable optimum-tpu warnings as it seems to block the server after a while

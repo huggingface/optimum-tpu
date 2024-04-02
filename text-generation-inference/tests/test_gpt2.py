@@ -2,7 +2,7 @@ import pytest
 import os
 from tqdm import tqdm
 from text_generation_server.generator import TpuGenerator
-from text_generation_server.model import fetch_model
+from optimum.tpu.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
