@@ -14,6 +14,9 @@
 [project]
 name = "optimum-tpu"
 dynamic = ["version"]
+authors=[
+    { name = "HuggingFace Inc. Machine Learning Optimization Team", email = "hardware@huggingface.co"}
+]
 description = "Optimum TPU is the interface between the Hugging Face Transformers library and Google Cloud TPU devices."
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -53,6 +56,9 @@ Issues = "https://github.com/huggingface/optimum-tpu/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "optimum.tpu.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["optimum.tpu"]
 
 [tool.black]
 line-length = 119
