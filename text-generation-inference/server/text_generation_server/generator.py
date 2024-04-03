@@ -11,8 +11,9 @@ import torch_xla.core.xla_model as xm
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
 from transformers.generation import GenerationConfig
+from optimum.tpu.modeling import TpuModelForCausalLM
+from optimum.tpu.generation import TokenSelector
 
-from .modeling import TpuModelForCausalLM
 from .pb.generate_pb2 import (
     Batch,
     CachedBatch,
@@ -23,7 +24,6 @@ from .pb.generate_pb2 import (
     Request,
     Tokens,
 )
-from .token_selector import TokenSelector
 
 
 # Disable optimum-tpu warnings as it seems to block the server after a while
@@ -250,9 +250,7 @@ class Slot:
         Return:
             The corresponding decoded text (if any).
         """
-        self._tokens = torch.cat(
-            [self._tokens, torch.tensor([next_token], dtype=self._tokens.dtype)]
-        )
+        self._tokens = torch.cat([self._tokens, torch.tensor([next_token], dtype=self._tokens.dtype)])
         # Update mask only if it was set previously
         if self._mask is not None:
             self._mask = torch.cat([self._mask, torch.tensor([1], device=self._device, dtype=self._mask.dtype)])
@@ -536,7 +534,9 @@ class TpuGenerator(Generator):
         ret = self._post_generate(outputs, next_batch_id, input_ids)
         return ret
 
-    def _post_generate(self, outputs: Dict, next_batch_id: int, input_ids: torch.LongTensor) -> Tuple[List[Generation], CachedBatch]:
+    def _post_generate(
+        self, outputs: Dict, next_batch_id: int, input_ids: torch.LongTensor
+    ) -> Tuple[List[Generation], CachedBatch]:
         generations = []
         active_slots = False
         for i, slot in enumerate(self.slots):

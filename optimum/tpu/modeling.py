@@ -18,7 +18,6 @@ Transformers."""
 from os import PathLike, environ
 from typing import Any
 
-import torch
 from loguru import logger
 from transformers import AutoModelForCausalLM
 from transformers.utils import is_accelerate_available
@@ -51,9 +50,7 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
                 pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
             )
         else:
-            model = AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path, *model_args, **kwargs
-            )
+            model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
             model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
