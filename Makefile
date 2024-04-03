@@ -71,7 +71,6 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 # Tests
 test_installs:
 	python -m pip install .[tpu,tests]
-# 	python -m pip install git+https://github.com/huggingface/transformers.git
 
 # Stand-alone TGI server for unit tests outside of TGI container
 tgi_server:
