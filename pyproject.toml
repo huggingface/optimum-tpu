@@ -41,12 +41,11 @@ keywords = [
     "google-cloud"
 ]
 
-dependencies = ["transformers == 4.38.1", ]
+dependencies = ["transformers == 4.38.1", "torch-xla>=2.2.0", "torch>=2.2.0"]
 
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
 quality = ["black", "ruff", "isort",]
-tpu = ["wheel", "torch-xla>=2.2.0", "torch>=2.2.0",]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"
