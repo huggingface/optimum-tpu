@@ -69,10 +69,9 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 	python -m twine upload ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 
 # Tests
-
 test_installs:
-	python -m pip install .[tests]
-	python -m pip install git+https://github.com/huggingface/transformers.git
+	python -m pip install .[tpu,tests]
+# 	python -m pip install git+https://github.com/huggingface/transformers.git
 
 # Stand-alone TGI server for unit tests outside of TGI container
 tgi_server:
@@ -80,8 +79,7 @@ tgi_server:
 	make -C text-generation-inference/server clean
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
 
-tgi_test: tgi_server
-	python -m pip install .[tpu,tests]
+tgi_test: test_installs tgi_server
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \
 	                               -exec python -m pip install --force-reinstall {} \;
 	python -m pytest -sv text-generation-inference/tests
