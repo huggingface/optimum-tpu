@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "text-generation-server"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 authors = [{name="Alvaro Moran", email="alvaro.moran@huggingface.co" }]
 description = "TGI compatible inference server for Google TPU platforms"
 dependencies = [
@@ -21,6 +21,9 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["text_generation_server", "text_generation_server.pb"]
+
+[tool.setuptools.dynamic]
+version = {attr = "text_generation_server.version.__version__"}
 
 [project.scripts]
 text-generation-server = 'text_generation_server.cli:app'
