@@ -23,7 +23,7 @@ TGI_VERSION ?= 1.4.2
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 
-VERSION := $(shell gawk 'match($$0, /__version__ = "(.*)"/, a) {print a[1]}' optimum/tpu/version.py)
+VERSION := $(shell awk '/__version__ = "(.*)"/{print $$3}' optimum/tpu/version.py | sed 's/"//g')
 
 PACKAGE_DIST = dist/optimum-tpu-$(VERSION).tar.gz
 PACKAGE_WHEEL = dist/optimum_tpu-$(VERSION)-py3-none-any.whl
@@ -81,7 +81,7 @@ tgi_server:
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
 
 tgi_test: tgi_server
-	python -m pip install .[tpu] pytest
+	python -m pip install .[tpu,tests]
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \
 	                               -exec python -m pip install --force-reinstall {} \;
 	python -m pytest -sv text-generation-inference/tests
