@@ -13,9 +13,10 @@
 #  limitations under the License.
 [project]
 name = "optimum-tpu"
+dynamic = ["version"]
 description = "Optimum TPU is the interface between the Hugging Face Transformers library and Google Cloud TPU devices."
 readme = "README.md"
-license = "LICENSE"
+license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 1 - Pre-Alpha",
     "License :: OSI Approved :: Apache Software License",
@@ -37,7 +38,12 @@ keywords = [
     "google-cloud"
 ]
 
-dynamic = ["version"]
+dependencies = ["transformers == 4.38.1", ]
+
+[project.optional-dependencies]
+tests = ["pytest", "safetensors"]
+quality = ["black", "ruff", "isort",]
+tpu = ["wheel", "torch-xla>=2.2.0", "torch>=2.2.0",]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"
@@ -46,7 +52,7 @@ Repository = "https://github.com/huggingface/optimum-tpu"
 Issues = "https://github.com/huggingface/optimum-tpu/issues"
 
 [tool.setuptools.dynamic]
-version = {attr = "package.__version__"}
+version = {attr = "optimum.tpu.__version__"}
 
 [tool.black]
 line-length = 119
