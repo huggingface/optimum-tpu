@@ -12,4 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__version__ = "0.1.0.dev0"
+from pkg_resources import parse_version
+
+__version__ = "0.1.dev0"
+VERSION = parse_version(__version__)
