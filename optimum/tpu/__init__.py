@@ -13,4 +13,3 @@
 #  limitations under the License.
 
 from .version import __version__, VERSION  # noqa: F401
-

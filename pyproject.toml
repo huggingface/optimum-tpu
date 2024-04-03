@@ -11,6 +11,42 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+[project]
+name = "optimum-tpu"
+description = "Optimum TPU is the interface between the Hugging Face Transformers library and Google Cloud TPU devices."
+readme = "README.md"
+license = "LICENSE"
+classifiers = [
+    "Development Status :: 1 - Pre-Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = [
+    "transformers",
+    "fine-tuning",
+    "inference",
+    "tpu",
+    "cloud-tpu",
+    "gcp",
+    "google-cloud"
+]
+
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://hf.co/hardware"
+Documentation = "https://hf.co/docs/optimum/tpu"
+Repository = "https://github.com/huggingface/optimum-tpu"
+Issues = "https://github.com/huggingface/optimum-tpu/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "package.__version__"}
 
 [tool.black]
 line-length = 119
