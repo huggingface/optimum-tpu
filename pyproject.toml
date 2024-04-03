@@ -41,7 +41,12 @@ keywords = [
     "google-cloud"
 ]
 
-dependencies = ["transformers == 4.38.1", "torch-xla>=2.2.0", "torch>=2.2.0"]
+dependencies = [
+    "transformers == 4.38.1",
+    "torch-xla>=2.2.0",
+    "torch>=2.2.0",
+    "loguru == 0.6.0"
+]
 
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
