@@ -1,0 +1,33 @@
+name: PyPI Release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+env:
+  PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_DIST }}
+
+jobs:
+  upload_package:
+    name: Upload package to PyPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: pip install -U build twine
+
+      - name: Clean
+        run: |
+          rm -rf build/
+          rm -rf dist/
+
+      - name: Build the wheels
+        run: python -m build .
+
+      - name: Upload to PyPI
+        run: |
+          pip install twine
+          twine upload dist/* -u __token__ -p "$PYPI_TOKEN"
