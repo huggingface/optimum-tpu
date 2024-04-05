@@ -1,0 +1,78 @@
+<!---
+Copyright 2024 The HuggingFace Team. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# 🤗 Optimum TPU
+
+Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads runningo on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs).
+
+The API provides the overall same user-experience as Hugging Face transformers with the minimum amount of changes required to target performance for both training and inference.
+
+
+## Installation
+
+Optimum TPU is meant to reduce as much as possible the friction in order to get started.
+As such, we provide a pip installable package to make sure everyone can get easily started.
+
+### Run Cloud TPU with pip
+```bash
+pip install optimum-tpu
+```
+
+### Run Cloud TPU within Docker container
+
+### PyTorch
+```bash
+export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
+export TPUVM_IMAGE_VERSION=8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
+docker pull
+docker run -ti --rm --privileged --network=host ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} bash
+```
+
+From there you can install optimum-tpu through the pip instructions above.
+
+
+<div class="mt-10">
+    <div class="w-full flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-y-4 md:gap-x-5">
+        <a
+            class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg"
+            href="./tutorials/overview"
+        >
+            <div class="w-full text-center bg-gradient-to-br from-blue-500 to-blue-800 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
+                Tutorials
+            </div>
+            <p class="text-gray-700">
+                Practical scenarios to demonstrate typical usages and APIs leveraging Google TPUs
+            </p>
+        </a>
+        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./howto/overview">
+            <div class="w-full text-center bg-gradient-to-br from-red-500 to-red-800 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
+                How-to guides
+            </div>
+            <p class="text-gray-700">
+
+            </p>
+        </a>
+        <a
+            class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg"
+            href="./package_reference/trainer"
+        >
+            <div class="w-full text-center bg-gradient-to-br from-green-500 to-green-800 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
+                Reference
+            </div>
+            <p class="text-gray-700">Technical descriptions of how the classes and methods of Optimum TPU</p>
+        </a>
+    </div>
+</div>
