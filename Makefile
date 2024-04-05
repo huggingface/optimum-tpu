@@ -72,6 +72,9 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 test_installs:
 	python -m pip install .[tpu,tests]
 
+tests: test_installs
+	python -m pytest -sv tests
+
 # Stand-alone TGI server for unit tests outside of TGI container
 tgi_server:
 	python -m pip install -r text-generation-inference/server/build-requirements.txt
