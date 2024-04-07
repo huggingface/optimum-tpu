@@ -34,8 +34,11 @@ in the GCP region `us-west4-a` using the latest `v2-alpha-tpuv5-lite` runtime ve
 
 Of course, feel free to adjust all these parameters to the one that match with your usage and quotas.
 
+Before creating the instance, please make sure to install `gcloud alpha component` as it is required to be able to
+target TPUv5 VMs: `gcloud components install alpha`
+
 ```bash
-gcloud compute tpus tpu-vm create optimum-tpu-get-started \
+gcloud alpha compute tpus tpu-vm create optimum-tpu-get-started \
 --zone=us-west4-a \
 --accelerator-type=v5litepod-8 \
 --version=v2-alpha-tpuv5
