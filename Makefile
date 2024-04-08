@@ -46,8 +46,8 @@ tpu-tgi:
 	docker build --rm -f text-generation-inference/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
-				 -t tpu-tgi:$(VERSION) .
-	docker tag tpu-tgi:$(VERSION) tpu-tgi:latest
+				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi tpu-tgi:latest
 
 # Run code quality checks
 style_check:

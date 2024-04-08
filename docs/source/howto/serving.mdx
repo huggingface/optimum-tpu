@@ -1,3 +1,52 @@
 # Deploying a Text-Generation Inference server on a Google Cloud TPU instance
 
-Stay tuned!
+## Context
+
+Text-Generation-Inference (TGI) is a highly optimized serving engine enabling serving Large Language Models (LLMs) in a way
+that better leverages the underlying hardware, Cloud TPU in this case.
+
+## Deploy TGI on Cloud TPU instance
+
+We assume the reader already has a Cloud TPU instance up and running.
+If this is not the case, please see our guide to deploy one [here](./deploy.mdx)
+
+### Docker Container Build
+
+Optimum-TPU provides a `make tpu-tgi` command at the root level to help you create local docker image.
+
+### Docker Container Run
+
+```
+OPTIMUM_TPU_VERSION=0.1.0b1
+docker run -p 8080:80 \
+       --net=host --privileged \
+       -v $(pwd)/data:/data \
+       -e HF_TOKEN=${HF_TOKEN} \
+       -e HF_BATCH_SIZE=1 \
+       -e HF_SEQUENCE_LENGTH=1024 \
+       huggingface/optimum-tpu:${OPTIMUM_TPU_VERSION}-tgi \
+       --model-id google/gemma-2b \
+       --max-concurrent-requests 4 \
+       --max-input-length 512 \
+       --max-total-tokens 1024 \
+       --max-batch-prefill-tokens 512 \
+       --max-batch-total-tokens 1024
+```
+
+### Executing requests against the service
+
+You can query the model using either the `/generate` or `/generate_stream` routes:
+
+```
+curl 127.0.0.1:8080/generate \
+    -X POST \
+    -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
+    -H 'Content-Type: application/json'
+```
+
+```
+curl 127.0.0.1:8080/generate_stream \
+    -X POST \
+    -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
+    -H 'Content-Type: application/json'
+```
