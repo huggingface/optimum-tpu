@@ -7,7 +7,7 @@ import os
 import platform
 from typing import List
 import torch_xla.core.xla_model as xm
-from optimum.tpu.modeling import TpuModelForCausalLM
+from optimum.tpu.modeling import AutoModelForCausalLM
 from transformers import AutoTokenizer, StaticCache
 
 
@@ -56,7 +56,7 @@ def main():
     model_id = "google/gemma-2b"
     torch_dtype = torch.bfloat16
 
-    model = TpuModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
     device = model.device
     model = model.eval()
 

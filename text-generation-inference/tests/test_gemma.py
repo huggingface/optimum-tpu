@@ -17,7 +17,7 @@ SEQUENCE_LENGTH = 1024
 
 @pytest.fixture(scope="module")
 def model_path():
-    # Add variables to environment so they can be used in TpuModelForCausalLM
+    # Add variables to environment so they can be used in AutoModelForCausalLM
     os.environ["HF_SEQUENCE_LENGTH"] = str(SEQUENCE_LENGTH)
     path = fetch_model(MODEL_ID)
     return path

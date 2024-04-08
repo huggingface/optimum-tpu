@@ -23,8 +23,6 @@ from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 from transformers.utils import is_accelerate_available
 
 
-# TODO: For now TpuModelForCausalLM is just a shallow wrapper of
-# AutoModelForCausalLM, later this could be replaced by a custom class.
 class AutoModelForCausalLM(BaseAutoModelForCausalLM):
 
     @classmethod
