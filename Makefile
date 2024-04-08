@@ -51,11 +51,9 @@ tpu-tgi:
 
 # Run code quality checks
 style_check:
-	black --check .
 	ruff .
 
 style:
-	black .
 	ruff check . --fix
 
 # Utilities to release to PyPi
