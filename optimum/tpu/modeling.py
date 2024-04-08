@@ -22,6 +22,12 @@ from loguru import logger
 from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 from transformers.utils import is_accelerate_available
 
+from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
+
+def config_name_to_class(pretrained_model_name_or_path: str):
+    if "gemma" in pretrained_model_name_or_path:
+        return TpuGemmaForCausalLM
+    return BaseAutoModelForCausalLM
 
 class AutoModelForCausalLM(BaseAutoModelForCausalLM):
 
@@ -43,12 +49,13 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
             logger.debug(f"Device set to: {device}")
         else:
             device = "xla"
+        cls = config_name_to_class(pretrained_model_name_or_path)
         if is_accelerate_available():
-            model = BaseAutoModelForCausalLM.from_pretrained(
+            model = cls.from_pretrained(
                 pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
             )
         else:
-            model = BaseAutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+            model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
             model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
