@@ -50,13 +50,8 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
         else:
             device = "xla"
         cls = config_name_to_class(pretrained_model_name_or_path)
-        if is_accelerate_available():
-            model = cls.from_pretrained(
-                pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
-            )
-        else:
-            model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
-            model.to(device)
+        model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
             model.config.task = task
