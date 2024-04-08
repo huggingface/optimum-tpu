@@ -46,6 +46,7 @@ jobs:
 
       - name: Setup environment
         run: |
+          pip install -U pip
           pip install ".[quality]"
 
       - name: Make documentation
