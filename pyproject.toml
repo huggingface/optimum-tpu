@@ -45,7 +45,7 @@ dependencies = ["transformers == 4.38.1", "torch-xla>=2.2.0", "torch>=2.2.0"]
 
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
-quality = ["black", "ruff", "isort",]
+quality = ["black", "ruff", "isort", "hf_doc_builder @ git+https://github.com/huggingface/doc-builder.git"]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"
