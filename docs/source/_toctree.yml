@@ -1,0 +1,17 @@
+- sections:
+  - local: index
+    title: 🤗 Optimum-TPU
+  - sections:
+    - local: tutorials/overview
+      title: Overview
+    title: Tutorials
+  - sections:
+    - local: howto/overview
+      title: Overview
+    - local: howto/deploy
+      title: Deploying a Google Cloud TPU instance
+    - local: howto/serving
+      title: Deploying a TGI server on a Google Cloud TPU instance
+    title: How-To Guides
+  title: Optimum-TPU
+  isExpanded: true
