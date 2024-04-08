@@ -18,6 +18,7 @@
 import math
 import warnings
 from typing import List, Optional, Tuple, Union
+import re
 
 import torch
 import torch.nn.functional as F
@@ -45,6 +46,7 @@ from transformers.utils import (
 from transformers.utils.import_utils import is_torch_fx_available
 from transformers.models.gemma.configuration_gemma import GemmaConfig
 
+from optimum.tpu.xla_model_parallel import RowParallelLinear, get_model_parallel_rank, get_model_parallel_world_size
 
 if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
@@ -206,8 +208,22 @@ class TpuGemmaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     # Ignore copy
-    def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
+    def __init__(
+        self,
+        config: GemmaConfig,
+        layer_idx: Optional[int] = None,
+        rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+    ):
         super().__init__()
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
         self.config = config
         self.layer_idx = layer_idx
         if layer_idx is None:
@@ -236,7 +252,13 @@ class TpuGemmaAttention(nn.Module):
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
+        self.o_proj = RowParallelLinear(
+            self.num_heads * self.head_dim,
+            self.hidden_size,
+            bias=config.attention_bias,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
         self.rotary_emb = GemmaRotaryEmbedding(
             self.head_dim,
             max_position_embeddings=self.max_position_embeddings,
@@ -595,11 +617,15 @@ GEMMA_ATTENTION_CLASSES = {
 
 # Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with LLAMA->GEMMA,Llama->Gemma
 class TpuGemmaDecoderLayer(nn.Module):
-    def __init__(self, config: GemmaConfig, layer_idx: int):
+    def __init__(self, config: GemmaConfig, layer_idx: int, rank: int = 0, world_size: int = 1):
+        self.rank = rank
+        self.world_size = world_size
         super().__init__()
         self.hidden_size = config.hidden_size
 
-        self.self_attn = GEMMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.self_attn = GEMMA_ATTENTION_CLASSES[config._attn_implementation](
+            config=config, layer_idx=layer_idx, rank=self.rank, world_size=self.world_size
+        )
 
         self.mlp = GemmaMLP(config)
         self.input_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -817,14 +843,25 @@ class TpuGemmaModel(GemmaPreTrainedModel):
         config: GemmaConfig
     """
 
-    def __init__(self, config: GemmaConfig):
+    def __init__(self, config: GemmaConfig, rank: Optional[int] = None, world_size: Optional[int] = None):
         super().__init__(config)
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
-            [TpuGemmaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+            [
+                TpuGemmaDecoderLayer(config, layer_idx, rank, world_size)
+                for layer_idx in range(config.num_hidden_layers)
+            ]
         )
         self.norm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
@@ -1026,14 +1063,47 @@ class TpuGemmaModel(GemmaPreTrainedModel):
 class TpuGemmaForCausalLM(GemmaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config, rank=None, world_size=None):
         super().__init__(config)
-        self.model = TpuGemmaModel(config)
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
+        self.model = TpuGemmaModel(config, rank, world_size)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        # Initialize weights and apply final processing
+        self._register_load_state_dict_pre_hook(self.load_hook)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def load_hook(self, state_dict, _prefix, *_args):
+        num_attn_heads = self.config.num_attention_heads
+        head_dim = self.config.head_dim
+        hidden_size = self.config.hidden_size
+
+        def split(tensor: torch.Tensor, axis: int) -> torch.Tensor:
+            axis_len = tensor.shape[axis]
+            split_len = axis_len // self.world_size
+            split_start = split_len * self.rank
+            split_end = split_start + split_len
+            tensor = torch.moveaxis(tensor, axis, 0)
+            tensor = tensor[split_start:split_end, ...]
+            tensor = torch.moveaxis(tensor, 0, axis)
+            return tensor
+
+        for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.self_attn.o_proj.weight", k):
+                v = v.reshape(hidden_size, num_attn_heads, head_dim)
+                v = split(v, 1)
+                v = v.reshape(hidden_size, -1)
+                # Update state_dict
+                state_dict[k] = v
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
