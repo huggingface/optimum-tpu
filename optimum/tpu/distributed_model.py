@@ -136,7 +136,7 @@ def model_loop_fn(*args):
     xmp.spawn(_mp_fn, args=(args), join=True, daemon=False)
 
 
-class ModelProxy:
+class DistributedModel:
     def __init__(self, model_id: str, sample_fn: callable):
         manager = mp.Manager()
         self.mailbox = RootMailbox(manager)
@@ -145,11 +145,11 @@ class ModelProxy:
         self.model_loop.start()
 
     def prefill(self, **model_args):
-        assert self.mailbox is not None, "ModelProxy is not initialized"
+        assert self.mailbox is not None, "DistributedModel is not initialized"
         return self.mailbox.send(ModelCommand.PREFILL, model_args)
 
     def decode(self, **model_args):
-        assert self.mailbox is not None, "ModelProxy is not initialized"
+        assert self.mailbox is not None, "DistributedModel is not initialized"
         return self.mailbox.send(ModelCommand.PREFILL, model_args)
 
     def leave(self):

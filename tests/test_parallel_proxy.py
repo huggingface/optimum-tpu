@@ -1,5 +1,5 @@
 import os
-from optimum.tpu.xla_parallel_proxy import ModelProxy
+from optimum.tpu.distributed_model import DistributedModel
 from transformers import AutoTokenizer
 import torch
 
@@ -10,9 +10,9 @@ def sample_greedy(logits):
     return next_token_id
 
 
-def test_parallel_proxy_prefill():
+def test_distributed_model_prefill():
     # This model will not actually shard gpt2, but it ensures model can be loaded in a parallel way and
-    # that the proxy can be used to prefill the model.
+    # that the "proxy" distributed model can be used to prefill the model.
     # NOTE: if environment variable DEBUG=1 is set, the test will be much more verbose.
     model_id = "openai-community/gpt2"
     # Disable tokenizers parallelism to avoid deadlocks
@@ -25,7 +25,7 @@ def test_parallel_proxy_prefill():
     pos_ids = (attention_mask.cumsum(-1) - 1).masked_fill(attention_mask == 0, 0)
     tokens = input_ids.clone()
 
-    model = ModelProxy(model_id, sample_greedy)
+    model = DistributedModel(model_id, sample_greedy)
     next_tokens = model.prefill(**inputs, position_ids=pos_ids)
     tokens = torch.cat([tokens, next_tokens], dim=-1)
 
