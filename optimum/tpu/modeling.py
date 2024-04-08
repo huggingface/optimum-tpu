@@ -19,13 +19,13 @@ from os import PathLike, environ
 from typing import Any
 
 from loguru import logger
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 from transformers.utils import is_accelerate_available
 
 
 # TODO: For now TpuModelForCausalLM is just a shallow wrapper of
 # AutoModelForCausalLM, later this could be replaced by a custom class.
-class TpuModelForCausalLM(AutoModelForCausalLM):
+class AutoModelForCausalLM(BaseAutoModelForCausalLM):
 
     @classmethod
     def from_pretrained(
@@ -46,11 +46,11 @@ class TpuModelForCausalLM(AutoModelForCausalLM):
         else:
             device = "xla"
         if is_accelerate_available():
-            model = AutoModelForCausalLM.from_pretrained(
+            model = BaseAutoModelForCausalLM.from_pretrained(
                 pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
             )
         else:
-            model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+            model = BaseAutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
             model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
