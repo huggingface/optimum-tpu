@@ -46,7 +46,12 @@ from transformers.utils import (
 from transformers.utils.import_utils import is_torch_fx_available
 from transformers.models.gemma.configuration_gemma import GemmaConfig
 
-from optimum.tpu.xla_model_parallel import RowParallelLinear, get_model_parallel_rank, get_model_parallel_world_size
+from optimum.tpu.xla_model_parallel import (
+    RowParallelLinear,
+    ColumnParallelLinear,
+    get_model_parallel_rank,
+    get_model_parallel_world_size,
+)
 
 if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
@@ -249,7 +254,13 @@ class TpuGemmaAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
+        self.q_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.num_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = RowParallelLinear(
@@ -1098,12 +1109,16 @@ class TpuGemmaForCausalLM(GemmaPreTrainedModel):
             return tensor
 
         for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
+                v = v.reshape(num_attn_heads, head_dim, hidden_size)
+                v = split(v, 0)
+                v = v.reshape(-1, hidden_size)
             if re.fullmatch(r"model.layers.\d+.self_attn.o_proj.weight", k):
                 v = v.reshape(hidden_size, num_attn_heads, head_dim)
                 v = split(v, 1)
                 v = v.reshape(hidden_size, -1)
-                # Update state_dict
-                state_dict[k] = v
+            # Update state_dict
+            state_dict[k] = v
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
