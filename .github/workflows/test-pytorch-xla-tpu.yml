@@ -1,0 +1,33 @@
+name: Optimum TPU tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "tests/**"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "tests/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  do-the-job:
+    name: Run optimum tpu tests
+    runs-on: optimum-tpu
+    container:
+      # Use an image that works with TPU with Pytorch 2.3.0 (release was not working)
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
+      options: --shm-size "16gb" --ipc host --privileged
+    env:
+      PJRT_DEVICE: TPU
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and test optimum tpu
+        run: |
+          HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tests
