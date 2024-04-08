@@ -154,9 +154,3 @@ class DistributedModel:
 
     def __del__(self):
         self.leave()
-
-
-def sample_greedy(logits):
-    next_logits = logits[:, -1]
-    next_token_id = torch.argmax(next_logits, dim=-1)[:, None].int()
-    return next_token_id
