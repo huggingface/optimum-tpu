@@ -13,7 +13,6 @@ def sample_greedy(logits):
 def test_distributed_model_prefill():
     # This model will not actually shard gpt2, but it ensures model can be loaded in a parallel way and
     # that the "proxy" distributed model can be used to prefill the model.
-    # NOTE: if environment variable DEBUG=1 is set, the test will be much more verbose.
     model_id = "openai-community/gpt2"
     # Disable tokenizers parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -38,3 +37,9 @@ def test_distributed_model_prefill():
     print("------------------------------------------")
     expected_text = "Running something in parallel means that"
     assert expected_text == decoded_texts[0]
+
+
+def test_distributed_model_config():
+    model_id = "openai-community/gpt2"
+    model = DistributedModel(model_id, sample_greedy)
+    assert model.config is not None

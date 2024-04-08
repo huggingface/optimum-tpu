@@ -2,6 +2,8 @@
 import torch
 import os
 from enum import Enum
+from typing import Dict
+from loguru import logger
 
 os.environ["PJRT_DEVICE"] = "TPU"
 
@@ -10,8 +12,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch.multiprocessing as mp
 
 from optimum.tpu.modeling import TpuModelForCausalLM
-from typing import Dict
-from loguru import logger
+from transformers import PretrainedConfig
 
 
 class ModelCommand(Enum):
@@ -26,6 +27,14 @@ class RootMailbox:
         self.root_command = manager.list()
         self.model_ready = manager.Event()
         self.output_data = manager.Value(torch.Tensor, torch.tensor([]))
+        self.model_config = manager.Value(PretrainedConfig, None)
+
+    @property
+    def config(self):
+        while True:
+            config = self.model_config.get()
+            if config is not None:
+                return config
 
     def send(self, command: ModelCommand, data: Dict = None):
         # First wait until model is ready to receive commands
@@ -49,6 +58,7 @@ class AgentMailbox:
         self.root_command = root_mailbox.root_command
         self.model_ready = root_mailbox.model_ready
         self.output_data = root_mailbox.output_data
+        self.model_config = root_mailbox.model_config
 
     def receive(self):
         self.root_bell.wait()
@@ -83,6 +93,8 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
     model = TpuModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float32)
     model = model.eval()
     model.to(device)
+    if rank == 0:
+        mailbox.model_config.set(model.config)
 
     def get_next_token(inputs):
         # move inputs to device in a new dict to avoid conflicts
@@ -151,6 +163,10 @@ class DistributedModel:
         self.model_loop.join()
         logger.debug("Model loop finished")
         self.mailbox = None
+
+    @property
+    def config(self):
+        return self.mailbox.config
 
     def __del__(self):
         self.leave()
