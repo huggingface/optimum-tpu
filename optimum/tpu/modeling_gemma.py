@@ -202,7 +202,7 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class GemmaAttention(nn.Module):
+class TpuGemmaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     # Ignore copy
@@ -305,9 +305,9 @@ class GemmaAttention(nn.Module):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2 with Llama->Gemma
-class GemmaFlashAttention2(GemmaAttention):
+class GemmaFlashAttention2(TpuGemmaAttention):
     """
-    Gemma flash attention module. This module inherits from `GemmaAttention` as the weights of the module stays
+    Gemma flash attention module. This module inherits from `TpuGemmaAttention` as the weights of the module stays
     untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
     flash attention and deal with padding tokens in case the input contains any of them.
     """
@@ -502,10 +502,10 @@ class GemmaFlashAttention2(GemmaAttention):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaSdpaAttention with Llama->Gemma
-class GemmaSdpaAttention(GemmaAttention):
+class GemmaSdpaAttention(TpuGemmaAttention):
     """
     Gemma attention module using torch.nn.functional.scaled_dot_product_attention. This module inherits from
-    `GemmaAttention` as the weights of the module stays untouched. The only changes are on the forward pass to adapt to
+    `TpuGemmaAttention` as the weights of the module stays untouched. The only changes are on the forward pass to adapt to
     SDPA API.
     """
 
@@ -523,7 +523,7 @@ class GemmaSdpaAttention(GemmaAttention):
         if output_attentions:
             # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
             logger.warning_once(
-                "GemmaModel is using GemmaSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
+                "TpuGemmaModel is using GemmaSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
                 'but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
             )
             return super().forward(
@@ -587,14 +587,14 @@ class GemmaSdpaAttention(GemmaAttention):
 
 
 GEMMA_ATTENTION_CLASSES = {
-    "eager": GemmaAttention,
+    "eager": TpuGemmaAttention,
     "flash_attention_2": GemmaFlashAttention2,
     "sdpa": GemmaSdpaAttention,
 }
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with LLAMA->GEMMA,Llama->Gemma
-class GemmaDecoderLayer(nn.Module):
+class TpuGemmaDecoderLayer(nn.Module):
     def __init__(self, config: GemmaConfig, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -695,7 +695,7 @@ class GemmaPreTrainedModel(PreTrainedModel):
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _keep_in_fp32_modules = ["inv_freq", "rotary_emb", "cos_cached", "sin_cached"]
-    _no_split_modules = ["GemmaDecoderLayer"]
+    _no_split_modules = ["TpuGemmaDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values", "causal_mask"]
     _supports_flash_attn_2 = True
     _supports_sdpa = True
@@ -809,9 +809,9 @@ GEMMA_INPUTS_DOCSTRING = r"""
     GEMMA_START_DOCSTRING,
 )
 # Copied from transformers.models.llama.modeling_llama.LlamaModel with LLAMA->GEMMA,Llama->Gemma
-class GemmaModel(GemmaPreTrainedModel):
+class TpuGemmaModel(GemmaPreTrainedModel):
     """
-    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`GemmaDecoderLayer`]
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`TpuGemmaDecoderLayer`]
 
     Args:
         config: GemmaConfig
@@ -824,7 +824,7 @@ class GemmaModel(GemmaPreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
-            [GemmaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+            [TpuGemmaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
@@ -1022,13 +1022,13 @@ class GemmaModel(GemmaPreTrainedModel):
         return causal_mask
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM with LLAMA->GEMMA,Llama->Gemma,llama->gemma
-class GemmaForCausalLM(GemmaPreTrainedModel):
+# Copied from transformers.models.gemma.modeling_gemma.GemmaForCausalLM with Gemma->TpuGemma
+class TpuGemmaForCausalLM(GemmaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         super().__init__(config)
-        self.model = GemmaModel(config)
+        self.model = TpuGemmaModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
@@ -1084,7 +1084,7 @@ class GemmaForCausalLM(GemmaPreTrainedModel):
         ```python
         >>> from transformers import AutoTokenizer, GemmaForCausalLM
 
-        >>> model = GemmaForCausalLM.from_pretrained("google/gemma-7b")
+        >>> model = TpuGemmaForCausalLM.from_pretrained("google/gemma-7b")
         >>> tokenizer = AutoTokenizer.from_pretrained("google/gemma-7b")
 
         >>> prompt = "What is your favorite condiment?"
