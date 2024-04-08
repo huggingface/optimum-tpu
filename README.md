@@ -18,6 +18,15 @@ a magnitude of models developed by research labs, institutions and the community
 We aim at providing our user the best possible performances targeting Google Cloud TPUs for both training and inference
 working closely with Google and Google Cloud to make this a reality.
 
+
+## Supported Model and Tasks
+
+We currently support a few LLM models targeting text generation scenarios:
+- Gemma (2b)
+- Llama (soon)
+- Mistral (soon)
+
+
 ## Installation
 
 `optimum-tpu` comes with an handy PyPi released package compatible with your classical python dependency management tool.
@@ -27,8 +36,9 @@ working closely with Google and Google Cloud to make this a reality.
 ## Inference
 
 `optimum-tpu` provides a set of dedicated tools and integrations in order to leverage Cloud TPUs for inference, especially
-on the latest TPU version `v5`.
+on the latest TPU version `v5e`. 
 
+Other TPU versions will be supported along the way.
 
 ### Text-Generation-Inference
 
