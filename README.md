@@ -1,6 +1,6 @@
 <div align="center">
 
-# Optimum-TPU
+Optimum-TPU
 ===========================
 <h4>Take the most out of Google Cloud TPUs with the ease of 🤗 transformers</h4>
 
