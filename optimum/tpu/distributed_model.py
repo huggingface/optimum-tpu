@@ -11,16 +11,7 @@ import torch.multiprocessing as mp
 
 from optimum.tpu.modeling import TpuModelForCausalLM
 from typing import Dict
-
-
-DEBUG = False
-if os.environ.get("DEBUG", "0") == "1":
-    DEBUG = True
-
-
-def debug(*args):
-    if DEBUG:
-        print(*args)
+from loguru import logger
 
 
 class ModelCommand(Enum):
@@ -38,17 +29,17 @@ class RootMailbox:
 
     def send(self, command: ModelCommand, data: Dict = None):
         # First wait until model is ready to receive commands
-        debug(f"  MM Command {command} waiting for model to be ready")
+        logger.debug(f"  MM Command {command} waiting for model to be ready")
         self.model_ready.wait()
         self.model_ready.clear()
 
         self.root_command[:] = [command, data]
         self.root_bell.set()
-        debug(f"  MM Command {command} sent")
+        logger.debug(f"  MM Command {command} sent")
         # wait again until model is ready, meaning command has been processed
         self.model_ready.wait()
         ret = self.output_data.get()
-        debug(f"  MM Command {command} output shape {ret.shape}")
+        logger.debug(f"  MM Command {command} output shape {ret.shape}")
         return ret
 
 
@@ -65,10 +56,10 @@ class AgentMailbox:
         return self.root_command
 
     def send(self, data: torch.Tensor):
-        debug(f"  MM Enqueueing data {data.shape}")
+        logger.debug(f"  MM Enqueueing data {data.shape}")
         # Data needs to be moved to CPU before setting it
         self.output_data.set(data.cpu())
-        debug("  MM Enqueueing data done")
+        logger.debug("  MM Enqueueing data done")
 
     @property
     def command_data(self):
@@ -83,7 +74,7 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
     # create agent mailbox out of root's one
     mailbox = AgentMailbox(root_mailbox)
 
-    debug(
+    logger.debug(
         f"Rank {rank} on {device} real device {xm.xla_real_devices([device])} ordinal {xm.get_ordinal()} "
         + f"world size {world_size}"
     )
@@ -102,30 +93,30 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
         xm.mark_step()
         # consider adding a rendezvous here
         if rank == 0:
-            debug(f"Rank {rank} getting tokens")
+            logger.debug(f"Rank {rank} getting tokens")
             next_token = sample_fn(outputs)
             xm.mark_step()
-            debug(f"Rank {rank} sending next_tokens {next_token.shape}")
+            logger.debug(f"Rank {rank} sending next_tokens {next_token.shape}")
             mailbox.send(next_token)
 
     while True:
         if rank == 0:
             mailbox.model_ready.set()
-            debug(f"Rank {rank} waiting for commands")
+            logger.debug(f"Rank {rank} waiting for commands")
             mailbox.receive()
         # Wait for rank 0 to receive command
         xm.rendezvous("start")
 
-        debug(f"Rank {rank} waiting for command at rendezvous")
+        logger.debug(f"Rank {rank} waiting for command at rendezvous")
         command, inputs = mailbox.command_data
         if command == ModelCommand.PREFILL:
-            debug(f"Rank {rank} PREFILL")
+            logger.debug(f"Rank {rank} PREFILL")
             get_next_token(inputs)
         elif command == ModelCommand.DECODE:
-            debug(f"Rank {rank} DECODE")
+            logger.debug(f"Rank {rank} DECODE")
             get_next_token(inputs)
         elif command == ModelCommand.LEAVE:
-            debug(f"Rank {rank} LEAVE")
+            logger.debug(f"Rank {rank} LEAVE")
             # Set model to ready
             mailbox.model_ready.set()
             break
@@ -156,9 +147,9 @@ class DistributedModel:
         if self.mailbox is None:
             return
         self.mailbox.send(ModelCommand.LEAVE)
-        debug("Joining...")
+        logger.debug("Joining...")
         self.model_loop.join()
-        debug("Model loop finished")
+        logger.debug("Model loop finished")
         self.mailbox = None
 
     def __del__(self):
