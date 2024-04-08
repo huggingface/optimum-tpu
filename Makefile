@@ -51,12 +51,10 @@ tpu-tgi:
 
 # Run code quality checks
 style_check:
-	black --check .
 	ruff .
 
 style:
-	black .
-	ruff . --fix
+	ruff check . --fix
 
 # Utilities to release to PyPi
 build_dist_install_tools:
@@ -70,7 +68,7 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 
 # Tests
 test_installs:
-	python -m pip install .[tpu,tests]
+	python -m pip install .[tests]
 
 tests: test_installs
 	python -m pytest -sv tests

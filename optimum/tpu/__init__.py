@@ -12,4 +12,5 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .version import __version__, VERSION  # noqa: F401
+from .version import __version__, VERSION   # noqa: F401
+from .modeling import AutoModelForCausalLM  # noqa: F401
