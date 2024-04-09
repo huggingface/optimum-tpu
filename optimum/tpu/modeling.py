@@ -20,7 +20,6 @@ from typing import Any
 
 from loguru import logger
 from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
-from transformers.utils import is_accelerate_available
 
 from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
 
