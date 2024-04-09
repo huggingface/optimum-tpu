@@ -184,7 +184,9 @@ class GemmaMLP(nn.Module):
         self.up_proj = ColumnParallelLinear(
             self.hidden_size, self.intermediate_size, bias=False, rank=self.rank, world_size=self.world_size
         )
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+        self.down_proj = RowParallelLinear(
+            self.intermediate_size, self.hidden_size, bias=False, rank=self.rank, world_size=self.world_size
+        )
         if config.hidden_activation is None:
             logger.warning_once(
                 "Gemma's activation function should be approximate GeLU and not exact GeLU.\n"
@@ -1129,6 +1131,8 @@ class TpuGemmaForCausalLM(GemmaPreTrainedModel):
         for k, v in state_dict.items():
             if re.fullmatch(r"model.layers.\d+.mlp.(gate_proj|up_proj).weight", k):
                 v = split(v, 0)
+            if re.fullmatch(r"model.layers.\d+.mlp.down_proj.weight", k):
+                v = split(v, 1)
             if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
                 v = split(v, 0)
             if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
