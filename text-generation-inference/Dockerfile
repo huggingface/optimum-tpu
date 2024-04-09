@@ -94,6 +94,8 @@ RUN apt-get update -y \
     && apt-get clean
 
 COPY optimum /opt/optimum-tpu
+COPY pyproject.toml /opt/optimum-tpu
+COPY examples /opt/optimum-tpu
 
 # Update pip
 RUN pip install --upgrade pip
