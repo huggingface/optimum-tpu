@@ -93,7 +93,7 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-COPY optimum /opt/optimum-tpu
+COPY optimum /opt/optimum-tpu/optimum
 COPY pyproject.toml /opt/optimum-tpu
 COPY examples /opt/optimum-tpu
 
