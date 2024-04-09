@@ -79,6 +79,11 @@ RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSIO
 # TPU base image (used for deployment)
 FROM base AS tpu_base
 
+# TGI base env
+ENV HUGGINGFACE_HUB_CACHE=/data \
+    HF_HUB_ENABLE_HF_TRANSFER=1 \
+    PORT=80
+
 # Install system prerequisites
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
@@ -88,28 +93,21 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+COPY optimum /opt/optimum-tpu
+
 # Update pip
 RUN pip install --upgrade pip
 
-# Install Torch and XLA packages for TPU
-RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install HuggingFace packages
 ARG TRANSFORMERS_VERSION='4.39.3'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
-RUN pip3 install \
-    hf_transfer \
-    safetensors==${SAFETENSORS_VERSION} \
-    transformers[sklearn,sentencepiece,vision]==${TRANSFORMERS_VERSION} \
-    accelerate==${ACCELERATE_VERSION}
-
-
-# TGI base env
-ENV HUGGINGFACE_HUB_CACHE=/data \
-    HF_HUB_ENABLE_HF_TRANSFER=1 \
-    PORT=80
+# Install Torch and XLA packages for TPU
+# RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
+RUN python3 -m pip install /opt/optimum-tpu && \
+    python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} accelerate==${ACCELERATE_VERSION}
 
 # Install router
 COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
