@@ -12,7 +12,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch.multiprocessing as mp
 
 from optimum.tpu.modeling import AutoModelForCausalLM
-from transformers import PretrainedConfig
+from transformers import PretrainedConfig, AutoConfig
 
 
 class ModelCommand(Enum):
@@ -90,7 +90,8 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
     )
 
     # Model loading and sharding should happen here
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float32)
+    config = AutoConfig.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=config.torch_dtype)
     model = model.eval()
     model.to(device)
     if rank == 0:
