@@ -106,8 +106,8 @@ ARG SAFETENSORS_VERSION='0.4.2'
 
 # Install Torch and XLA packages for TPU
 # RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
-RUN python3 -m pip install /opt/optimum-tpu && \
-    python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} accelerate==${ACCELERATE_VERSION}
+RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} accelerate==${ACCELERATE_VERSION}
+ENV PYTHONPATH=/opt/optimum-tpu:$PYTHONPATH
 
 # Install router
 COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
