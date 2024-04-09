@@ -47,7 +47,7 @@ tpu-tgi:
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
-	docker tag huggingface/optimum-tpu:$(VERSION)-tgi tpu-tgi:latest
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
 # Run code quality checks
 style_check:
