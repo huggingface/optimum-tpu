@@ -261,8 +261,20 @@ class TpuGemmaAttention(nn.Module):
             world_size=self.world_size,
             rank=self.rank,
         )
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.k_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
+        self.v_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
         self.o_proj = RowParallelLinear(
             self.num_heads * self.head_dim,
             self.hidden_size,
@@ -1109,6 +1121,8 @@ class TpuGemmaForCausalLM(GemmaPreTrainedModel):
             return tensor
 
         for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
+                v = split(v, 0)
             if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
                 v = v.reshape(num_attn_heads, head_dim, hidden_size)
                 v = split(v, 0)
