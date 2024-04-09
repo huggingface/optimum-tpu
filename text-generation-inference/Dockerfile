@@ -88,6 +88,7 @@ ENV HUGGINGFACE_HUB_CACHE=/data \
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
     libpython3.10 \
+    git \
     gnupg2 \
     wget \
     && rm -rf /var/lib/apt/lists/* \
