@@ -2,6 +2,7 @@ import os
 from optimum.tpu.distributed_model import DistributedModel
 from transformers import AutoTokenizer
 import torch
+import pytest
 
 
 def sample_greedy(logits):
@@ -10,10 +11,9 @@ def sample_greedy(logits):
     return next_token_id
 
 
-def test_distributed_model_prefill():
-    # This model will not actually shard gpt2, but it ensures model can be loaded in a parallel way and
+def _test_distributed_model_prefill(model_id):
+    # This test ensures model can be loaded in a parallel way and
     # that the "proxy" distributed model can be used to prefill the model.
-    model_id = "openai-community/gpt2"
     # Disable tokenizers parallelism to avoid deadlocks
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -29,14 +29,24 @@ def test_distributed_model_prefill():
     tokens = torch.cat([tokens, next_tokens], dim=-1)
 
     # Data can be decoded even before leaving
-    decoded_texts = tokenizer.batch_decode(tokens)
+    decoded_texts = tokenizer.batch_decode(tokens, skip_special_tokens=True)
     print()
     print("------------------------------------------")
     print("Decoded texts:")
     print(decoded_texts[0])
     print("------------------------------------------")
+    # Even if models are different, for this simple test results are the same.
     expected_text = "Running something in parallel means that"
     assert expected_text == decoded_texts[0]
+
+
+def test_distributed_model_prefill_gpt2():
+    _test_distributed_model_prefill("openai-community/gpt2")
+
+
+@pytest.mark.slow
+def test_distributed_model_prefill_gemma7b():
+    _test_distributed_model_prefill("google/gemma-7b")
 
 
 def test_distributed_model_config():
