@@ -55,7 +55,7 @@ def serve(
         logger.warning("'trust_remote_code' argument is not supported and will be ignored.")
 
     # Import here after the logger is added to log potential import exceptions
-    from .model import fetch_model
+    from optimum.tpu.model import fetch_model
     from .server import serve
 
     model_path = fetch_model(model_id, revision)
@@ -96,6 +96,6 @@ def download_weights(
         logger.warning("'auto_convert' argument is not supported and will be ignored.")
 
     # Import here after the logger is added to log potential import exceptions
-    from .model import fetch_model
+    from optimum.tpu.model import fetch_model
 
     fetch_model(model_id, revision)
