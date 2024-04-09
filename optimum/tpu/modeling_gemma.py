@@ -171,13 +171,19 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class GemmaMLP(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, rank=0, world_size=1):
         super().__init__()
         self.config = config
+        self.rank = rank
+        self.world_size = world_size
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.gate_proj = ColumnParallelLinear(
+            self.hidden_size, self.intermediate_size, bias=False, rank=self.rank, world_size=self.world_size
+        )
+        self.up_proj = ColumnParallelLinear(
+            self.hidden_size, self.intermediate_size, bias=False, rank=self.rank, world_size=self.world_size
+        )
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         if config.hidden_activation is None:
             logger.warning_once(
@@ -650,7 +656,7 @@ class TpuGemmaDecoderLayer(nn.Module):
             config=config, layer_idx=layer_idx, rank=self.rank, world_size=self.world_size
         )
 
-        self.mlp = GemmaMLP(config)
+        self.mlp = GemmaMLP(config, rank=self.rank, world_size=self.world_size)
         self.input_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -1121,6 +1127,8 @@ class TpuGemmaForCausalLM(GemmaPreTrainedModel):
             return tensor
 
         for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.mlp.(gate_proj|up_proj).weight", k):
+                v = split(v, 0)
             if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
                 v = split(v, 0)
             if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
