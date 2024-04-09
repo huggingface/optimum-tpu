@@ -83,6 +83,7 @@ FROM base AS tpu_base
 ENV HUGGINGFACE_HUB_CACHE=/data \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
     PORT=80
+    VERSION=${VERSION}
 
 # Install system prerequisites
 RUN apt-get update -y \
@@ -106,10 +107,9 @@ ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
 # Install Torch and XLA packages for TPU
-# RUN pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html
-RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} accelerate==${ACCELERATE_VERSION} && \
-    cd /opt/optimum-tpu && \
-    python3 -m pip install .
+RUN python3 -m pip install "torch~=2.2.0" "torch_xla[tpu]~=2.2.0" -f https://storage.googleapis.com/libtpu-releases/index.html && \
+    python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} accelerate==${ACCELERATE_VERSION} && \
+    SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPTIMUM_TPU=${VERSION} python3 -m pip install -e /opt/optimum-tpu
 
 # Install router
 COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
