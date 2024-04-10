@@ -12,7 +12,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch.multiprocessing as mp
 
 from optimum.tpu.modeling import AutoModelForCausalLM
-from transformers import PretrainedConfig, AutoConfig
+from transformers import PretrainedConfig
 
 
 class ModelCommand(Enum):
