@@ -19,14 +19,17 @@ from os import PathLike, environ
 from typing import Any
 
 from loguru import logger
-from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
+from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM, AutoConfig
 
 from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
 
+
 def config_name_to_class(pretrained_model_name_or_path: str):
-    if "gemma" in pretrained_model_name_or_path:
+    config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
+    if config.model_type == "gemma":
         return TpuGemmaForCausalLM
     return BaseAutoModelForCausalLM
+
 
 class AutoModelForCausalLM(BaseAutoModelForCausalLM):
 
