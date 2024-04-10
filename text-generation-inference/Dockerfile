@@ -79,10 +79,12 @@ RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSIO
 # TPU base image (used for deployment)
 FROM base AS tpu_base
 
+ARG VERSION=${VERSION}
+
 # TGI base env
 ENV HUGGINGFACE_HUB_CACHE=/data \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
-    PORT=80
+    PORT=80 \
     VERSION=${VERSION}
 
 # Install system prerequisites
