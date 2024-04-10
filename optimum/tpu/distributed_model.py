@@ -38,17 +38,14 @@ class RootMailbox:
 
     def send(self, command: ModelCommand, data: Dict = None):
         # First wait until model is ready to receive commands
-        logger.debug(f"  MM Command {command} waiting for model to be ready")
         self.model_ready.wait()
         self.model_ready.clear()
 
         self.root_command[:] = [command, data]
         self.root_bell.set()
-        logger.debug(f"  MM Command {command} sent")
         # wait again until model is ready, meaning command has been processed
         self.model_ready.wait()
         ret = self.output_data.get()
-        logger.debug(f"  MM Command {command} output shape {ret.shape}")
         return ret
 
 
@@ -66,10 +63,8 @@ class AgentMailbox:
         return self.root_command
 
     def send(self, data: torch.Tensor):
-        logger.debug(f"  MM Enqueueing data {data.shape}")
         # Data needs to be moved to CPU before setting it
         self.output_data.set(data.cpu())
-        logger.debug("  MM Enqueueing data done")
 
     @property
     def command_data(self):
