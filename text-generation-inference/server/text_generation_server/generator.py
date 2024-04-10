@@ -277,7 +277,7 @@ class Slot:
 
     @property
     def stopped(self) -> bool:
-        return self._selector.stopping_criteria(self._tokens, None)
+        return bool(torch.all(self._selector.stopping_criteria(self._tokens, None)))
 
     @property
     def generated_text(self) -> str:

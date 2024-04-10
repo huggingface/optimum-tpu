@@ -19,12 +19,18 @@ from os import PathLike, environ
 from typing import Any
 
 from loguru import logger
-from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
-from transformers.utils import is_accelerate_available
+from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM, AutoConfig
+
+from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
 
 
-# TODO: For now TpuModelForCausalLM is just a shallow wrapper of
-# AutoModelForCausalLM, later this could be replaced by a custom class.
+def config_name_to_class(pretrained_model_name_or_path: str):
+    config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
+    if config.model_type == "gemma":
+        return TpuGemmaForCausalLM
+    return BaseAutoModelForCausalLM
+
+
 class AutoModelForCausalLM(BaseAutoModelForCausalLM):
 
     @classmethod
@@ -45,13 +51,9 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
             logger.debug(f"Device set to: {device}")
         else:
             device = "xla"
-        if is_accelerate_available():
-            model = BaseAutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path, device_map=device, *model_args, **kwargs
-            )
-        else:
-            model = BaseAutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
-            model.to(device)
+        cls = config_name_to_class(pretrained_model_name_or_path)
+        model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
+        model.to(device)
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
             model.config.task = task
