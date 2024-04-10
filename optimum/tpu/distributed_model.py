@@ -90,8 +90,7 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
     )
 
     # Model loading and sharding should happen here
-    config = AutoConfig.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=config.torch_dtype)
+    model = AutoModelForCausalLM.from_pretrained(model_id)
     model = model.eval()
     model.to(device)
     if rank == 0:
