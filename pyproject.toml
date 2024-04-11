@@ -44,7 +44,7 @@ keywords = [
 dependencies = [
     "transformers",
     "torch",
-    "torch-xla[tpu]",
+    "torch-xla",
     "loguru"
 ]
 
