@@ -33,5 +33,4 @@ jobs:
 
       - name: Build and test TGI server
         run: |
-          pip install accelerate==0.27.2
           HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tgi_test
