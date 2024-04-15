@@ -69,7 +69,6 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 # Tests
 test_installs:
 	python -m pip uninstall -y torchvision torchaudio
-	python -m pip install -r requirements.txt
 	python -m pip install .[tests]
 
 tests: test_installs
