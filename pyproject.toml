@@ -42,10 +42,10 @@ keywords = [
 ]
 
 dependencies = [
-    "transformers",
-    "torch",
-    "torch-xla",
-    "loguru"
+    "transformers == 4.39.3",
+    "torch == 2.2.0",
+    "torch-xla == 2.2.0",
+    "loguru == 0.6.0"
 ]
 
 [build-system]
