@@ -8,7 +8,7 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.76-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.77-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
@@ -81,12 +81,6 @@ FROM base AS tpu_base
 
 ARG VERSION=${VERSION}
 
-# TGI base env
-ENV HUGGINGFACE_HUB_CACHE=/data \
-    HF_HUB_ENABLE_HF_TRANSFER=1 \
-    PORT=80 \
-    VERSION=${VERSION}
-
 # Install system prerequisites
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
@@ -97,19 +91,25 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-COPY . /opt/optimum-tpu
-
 # Update pip
 RUN pip install --upgrade pip
-
 
 # Install HuggingFace packages
 ARG TRANSFORMERS_VERSION='4.39.3'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
+# TGI base env
+ENV HUGGINGFACE_HUB_CACHE=/data \
+    HF_HUB_ENABLE_HF_TRANSFER=1 \
+    PORT=80 \
+    VERSION=${VERSION}
+
+COPY . /opt/optimum-tpu
+
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
-RUN python3 -m pip install -r /opt/optimum-tpu/requirements.txt && \
+RUN python3 -m pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com/libtpu-releases/index.html && \
+	python3 -m pip install -r /opt/optimum-tpu/requirements.txt && \
     python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
     SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPTIMUM_TPU=${VERSION} python3 -m pip install -e /opt/optimum-tpu
 
@@ -119,7 +119,7 @@ COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bi
 COPY --from=builder /usr/src/target/release/text-generation-launcher /usr/local/bin/text-generation-launcher
 # Install python server
 COPY --from=pyserver /pyserver/build/dist dist
-RUN pip install dist/text-generation-server*.tar.gz
+RUN pip install dist/text_generation_server*.tar.gz
 
 # TPU compatible image
 FROM tpu_base as tpu_entrypoint
