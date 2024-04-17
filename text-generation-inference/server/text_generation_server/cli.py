@@ -59,7 +59,7 @@ def serve(
     from .server import serve
 
     model_path = fetch_model(model_id, revision)
-    serve(model_path, uds_path)
+    serve(model_path, revision, uds_path)
 
 
 @app.command()
