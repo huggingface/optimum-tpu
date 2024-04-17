@@ -28,8 +28,8 @@ else
   export TGI_MAX_BATCH_SIZE 1
 fi
 
-if [[ -n "${TGI_MAX_INPUT_LENGTH}" ]]; then
-  export TGI_MAX_INPUT_LENGTH="${TGI_MAX_INPUT_LENGTH}"
+if [[ -n "${TGI_MAX_INPUT_TOKENS}" ]]; then
+  export TGI_MAX_INPUT_TOKENS="${TGI_MAX_INPUT_TOKENS}"
 else
   export TGI_MAX_INPUT_LENGTH 128
 fi
@@ -40,22 +40,10 @@ else
   export TGI_MAX_TOTAL_TOKENS 256
 fi
 
-if [[ -n "${TGI_MAX_BATCH_PREFILL_TOKENS}" ]]; then
-  export TGI_MAX_BATCH_PREFILL_TOKENS="${TGI_MAX_BATCH_PREFILL_TOKENS}"
-else
-  export TGI_MAX_BATCH_PREFILL_TOKENS 128
-fi
-
-if [[ -n "${TGI_MAX_BATCH_TOTAL_TOKENS}" ]]; then
-  export TGI_MAX_BATCH_TOTAL_TOKENS="${TGI_MAX_BATCH_TOTAL_TOKENS}"
-else
-  export TGI_MAX_BATCH_TOTAL_TOKENS 256
-fi
-
 text-generation-launcher --port 8080 \
+  --model
   --max-concurrent-requests ${TGI_MAX_CONCURRENT_REQUESTS}
   --max-batch-size ${TGI_MAX_BATCH_SIZE}
-  --max-input-length ${TGI_MAX_INPUT_LENGTH} \
-  --max-total-tokens ${TGI_MAX_TOTAL_TOKENS} \
-  --max-batch-prefill-tokens ${TGI_MAX_BATCH_PREFILL_TOKENS} \
-  --max-batch-total-tokens ${TGI_MAX_BATCH_TOTAL_TOKENS}
+  --max-input-tokens ${TGI_MAX_INPUT_TOKENS} \
+  --max-total-tokens ${TGI_MAX_TOTAL_TOKENS}
+
