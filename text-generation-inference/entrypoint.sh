@@ -41,7 +41,6 @@ else
 fi
 
 text-generation-launcher --port 8080 \
-  --model
   --max-concurrent-requests ${TGI_MAX_CONCURRENT_REQUESTS}
   --max-batch-size ${TGI_MAX_BATCH_SIZE}
   --max-input-tokens ${TGI_MAX_INPUT_TOKENS} \
