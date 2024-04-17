@@ -621,6 +621,10 @@ class TpuGenerator(Generator):
     def from_pretrained(
         cls,
         model_path: str,
+        *,
+        revision: str,
+        max_batch_size: int,
+        max_total_tokens: int
     ):
         """Instantiate a TpuGenerator.
 
@@ -628,12 +632,26 @@ class TpuGenerator(Generator):
             model_path (`str`):
                 The path to a local model. This path must also contain a Tokenizer.
 
+            revision (`str`):
+                The revision for the model to load
+
+            max_batch_size (`str`):
+                The maximum number of parallel requests to execute
+
+            max_total_tokens (`str`):
+                The maximum number of tokens for a single request
+
         Returns:
             A TpuGenerator.
         """
         logger.info("Loading model (this can take a few minutes).")
         start = time.time()
-        model = AutoModelForCausalLM.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            revision,
+            batch_size=max_batch_size,
+            sequence_length=max_total_tokens
+        )
         end = time.time()
         logger.info(f"Model successfully loaded in {end - start:.2f} s.")
         tokenizer = AutoTokenizer.from_pretrained(model_path)

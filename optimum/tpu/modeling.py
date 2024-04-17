@@ -54,6 +54,7 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
         cls = config_name_to_class(pretrained_model_name_or_path)
         model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
         model.to(device)
+
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:
             model.config.task = task
@@ -61,6 +62,7 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
             model.config.batch_size = batch_size
         if sequence_length is not None or getattr(model.config, "sequence_length", None) is None:
             model.config.sequence_length = sequence_length
+
         # Do eval
         model.eval()
 

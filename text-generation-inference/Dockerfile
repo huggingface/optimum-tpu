@@ -3,8 +3,12 @@ FROM alpine AS tgi
 ARG TGI_VERSION
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
-ADD https://github.com/huggingface/text-generation-inference/archive/refs/tags/v${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
-RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
+RUN apk add git
+RUN git init /tgi && \
+    cd /tgi && \
+    git remote add origin https://github.com/huggingface/text-generation-inference && \
+    git fetch origin $TGI_VERSION && \
+    git reset --hard FETCH_HEAD
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)

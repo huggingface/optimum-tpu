@@ -1,4 +1,5 @@
 import asyncio
+import os
 from pathlib import Path
 from typing import List
 
@@ -50,6 +51,7 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
 
 def serve(
     model_path: str,
+    revision: str,
     uds_path: Path,
 ):
     async def serve_inner(model_path: str):
@@ -58,7 +60,16 @@ def serve(
         server_urls = [local_url]
 
         try:
-            generator = TpuGenerator.from_pretrained(model_path)
+            # These two envvars are forwarded by the text-generation-launcher
+            max_batch_size = int(os.environ.get("MAX_BATCH_SIZE", "1"))
+            max_total_tokens = int(os.environ.get("MAX_TOTAL_TOKENS", "128"))
+
+            generator = TpuGenerator.from_pretrained(
+                model_path,
+                revision=revision,
+                max_batch_size=max_batch_size,
+                max_total_tokens=max_total_tokens
+            )
         except Exception:
             logger.exception("Error when initializing model")
             raise

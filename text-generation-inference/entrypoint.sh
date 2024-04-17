@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Hugging Face Hub related
 if [[ -z "${HF_MODEL_ID}" ]]; then
   echo "HF_MODEL_ID must be set"
   exit 1
@@ -14,4 +15,40 @@ if [[ -n "${HF_MODEL_TRUST_REMOTE_CODE}" ]]; then
   export TRUST_REMOTE_CODE="${HF_MODEL_TRUST_REMOTE_CODE}"
 fi
 
-text-generation-launcher --port 8080
+# TGI related
+if [[ -n "${TGI_MAX_CONCURRENT_REQUESTS}" ]]; then
+  export TGI_MAX_CONCURRENT_REQUESTS="${TGI_MAX_CONCURRENT_REQUESTS}"
+else
+  export TGI_MAX_CONCURRENT_REQUESTS 4
+fi
+
+if [[ -n "${TGI_MAX_INPUT_LENGTH}" ]]; then
+  export TGI_MAX_INPUT_LENGTH="${TGI_MAX_INPUT_LENGTH}"
+else
+  export TGI_MAX_INPUT_LENGTH 128
+fi
+
+if [[ -n "${TGI_MAX_TOTAL_TOKENS}" ]]; then
+  export TGI_MAX_TOTAL_TOKENS="${TGI_MAX_TOTAL_TOKENS}"
+else
+  export TGI_MAX_TOTAL_TOKENS 256
+fi
+
+if [[ -n "${TGI_MAX_BATCH_PREFILL_TOKENS}" ]]; then
+  export TGI_MAX_BATCH_PREFILL_TOKENS="${TGI_MAX_BATCH_PREFILL_TOKENS}"
+else
+  export TGI_MAX_BATCH_PREFILL_TOKENS 128
+fi
+
+if [[ -n "${TGI_MAX_BATCH_TOTAL_TOKENS}" ]]; then
+  export TGI_MAX_BATCH_TOTAL_TOKENS="${TGI_MAX_BATCH_TOTAL_TOKENS}"
+else
+  export TGI_MAX_BATCH_TOTAL_TOKENS 256
+fi
+
+text-generation-launcher --port 8080 \
+  --max-concurrent-requests ${TGI_MAX_CONCURRENT_REQUESTS}
+  --max-input-length ${TGI_MAX_INPUT_LENGTH} \
+  --max-total-tokens ${TGI_MAX_TOTAL_TOKENS} \
+  --max-batch-prefill-tokens ${TGI_MAX_BATCH_PREFILL_TOKENS} \
+  --max-batch-total-tokens ${TGI_MAX_BATCH_TOTAL_TOKENS}
