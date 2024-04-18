@@ -31,7 +31,7 @@ fi
 if [[ -n "${TGI_MAX_INPUT_TOKENS}" ]]; then
   export TGI_MAX_INPUT_TOKENS="${TGI_MAX_INPUT_TOKENS}"
 else
-  export TGI_MAX_INPUT_LENGTH 128
+  export TGI_MAX_INPUT_TOKENS 128
 fi
 
 if [[ -n "${TGI_MAX_TOTAL_TOKENS}" ]]; then
