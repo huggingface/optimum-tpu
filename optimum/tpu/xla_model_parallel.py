@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from copy import deepcopy
 from dataclasses import dataclass
-import os
 from typing import Callable, List, Optional, Tuple
 
 import torch
@@ -25,6 +25,7 @@ import torch.distributed.distributed_c10d as c10d
 import torch.nn.functional as F
 import torch.nn.init as init
 from torch.nn.parameter import Parameter
+
 
 EPS = torch.finfo(torch.float32).eps
 

@@ -16,16 +16,15 @@
 """ PyTorch Gemma model."""
 
 import math
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
-import re
 
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss
-
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.modeling_attn_mask_utils import (
@@ -34,6 +33,7 @@ from transformers.modeling_attn_mask_utils import (
 )
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
+from transformers.models.gemma.configuration_gemma import GemmaConfig
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_13
 from transformers.utils import (
     add_start_docstrings,
@@ -44,14 +44,14 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.utils.import_utils import is_torch_fx_available
-from transformers.models.gemma.configuration_gemma import GemmaConfig
 
 from optimum.tpu.xla_model_parallel import (
-    RowParallelLinear,
     ColumnParallelLinear,
+    RowParallelLinear,
     get_model_parallel_rank,
     get_model_parallel_world_size,
 )
+
 
 if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func

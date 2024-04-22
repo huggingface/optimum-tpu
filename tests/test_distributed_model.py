@@ -1,8 +1,10 @@
 import os
-from optimum.tpu.distributed_model import DistributedModel
-from transformers import AutoTokenizer
-import torch
+
 import pytest
+import torch
+from transformers import AutoTokenizer
+
+from optimum.tpu.distributed_model import DistributedModel
 
 
 def sample_greedy(logits):

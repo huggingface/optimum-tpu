@@ -1,14 +1,16 @@
 #!/usr/bin/python
 
-import torch
-import time
 import datetime
 import os
 import platform
+import time
 from typing import List
+
+import torch
 import torch_xla.core.xla_model as xm
-from optimum.tpu.modeling import AutoModelForCausalLM
 from transformers import AutoTokenizer, StaticCache
+
+from optimum.tpu.modeling import AutoModelForCausalLM
 
 
 os.environ["PJRT_DEVICE"] = "TPU"

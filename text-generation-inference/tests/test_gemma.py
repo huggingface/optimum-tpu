@@ -1,14 +1,16 @@
-import pytest
 import os
-from tqdm import tqdm
+
+import pytest
 from text_generation_server.generator import TpuGenerator
-from optimum.tpu.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
     Request,
     StoppingCriteriaParameters,
 )
+from tqdm import tqdm
+
+from optimum.tpu.model import fetch_model
 
 
 MODEL_ID = "google/gemma-2b"
@@ -57,7 +59,9 @@ def test_decode_single(model_path):
     max_new_tokens = 20
     generated_text = "\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never"
 
-    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH)
+    generator = TpuGenerator.from_pretrained(
+        model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
+    )
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)

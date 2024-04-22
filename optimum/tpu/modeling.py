@@ -19,7 +19,8 @@ from os import PathLike, environ
 from typing import Any
 
 from loguru import logger
-from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM, AutoConfig
+from transformers import AutoConfig
+from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 
 from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
 
