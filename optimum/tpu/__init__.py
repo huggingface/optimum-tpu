@@ -12,5 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from .cache import initialize_cache
+from .model import fetch_model
 from .modeling import AutoModelForCausalLM
 from .version import VERSION, __version__
