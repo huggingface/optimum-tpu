@@ -1,16 +1,17 @@
 import copy
 import logging
-import time
 import os
+import time
 from abc import ABC
 from enum import Enum
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch_xla.core.xla_model as xm
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
 from transformers.generation import GenerationConfig
+
 from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
 

@@ -1,14 +1,16 @@
-import pytest
 import os
-from tqdm import tqdm
+
+import pytest
 from text_generation_server.generator import TpuGenerator
-from optimum.tpu.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
     Request,
     StoppingCriteriaParameters,
 )
+from tqdm import tqdm
+
+from optimum.tpu.model import fetch_model
 
 
 MODEL_ID = "google/gemma-2b"

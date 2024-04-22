@@ -1,18 +1,20 @@
 # ruff: noqa: E402
-import torch
 import os
 from enum import Enum
 from typing import Dict
+
+import torch
 from loguru import logger
+
 
 os.environ["PJRT_DEVICE"] = "TPU"
 
+import torch.multiprocessing as mp
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
-import torch.multiprocessing as mp
+from transformers import PretrainedConfig
 
 from optimum.tpu.modeling import AutoModelForCausalLM
-from transformers import PretrainedConfig
 
 
 class ModelCommand(Enum):
