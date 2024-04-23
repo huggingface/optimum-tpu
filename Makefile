@@ -71,7 +71,8 @@ test_installs:
 	python -m pip install .[tests]
 
 tests: test_installs
-	python -m pytest -sv tests
+	python -m pytest -sv tests/single_thread
+	python -m pytest -sv tests/distributed
 
 # Stand-alone TGI server for unit tests outside of TGI container
 tgi_server:
