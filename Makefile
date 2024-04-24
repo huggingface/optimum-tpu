@@ -68,9 +68,7 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 
 # Tests
 test_installs:
-	python -m pip uninstall -y torchvision torchaudio
-	python -m pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com/libtpu-releases/index.html
-	python -m pip install .[tests]
+	python -m pip install .[tests] -f https://storage.googleapis.com/libtpu-releases/index.html
 
 tests: test_installs
 	python -m pytest -sv tests
