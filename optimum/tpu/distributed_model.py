@@ -51,18 +51,20 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
             next_token = sample_fn(outputs)
             xm.mark_step()
             logger.debug(f"Rank {rank} sending next_tokens {next_token.shape}")
-            mailbox.send(next_token)
+            # Data needs to be moved to CPU before setting it
+            mailbox.send(next_token.cpu())
 
     while True:
         if rank == 0:
-            mailbox.model_ready.set()
+            mailbox.agent_ready.set()
             logger.debug(f"Rank {rank} waiting for commands")
             mailbox.receive()
         # Wait for rank 0 to receive command
         xm.rendezvous("start")
 
         logger.debug(f"Rank {rank} waiting for command at rendezvous")
-        command, inputs = mailbox.command_data
+        command, data = mailbox.command_data
+        inputs = data[0] if len(data) > 0 else None
         if command == ModelCommand.PREFILL:
             logger.debug(f"Rank {rank} PREFILL")
             get_next_token(inputs)
@@ -72,7 +74,7 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
         elif command == ModelCommand.LEAVE:
             logger.debug(f"Rank {rank} LEAVE")
             # Set model to ready
-            mailbox.model_ready.set()
+            mailbox.agent_ready.set()
             break
 
 
@@ -91,11 +93,11 @@ class DistributedModel:
 
     def prefill(self, **model_args):
         assert self.mailbox is not None, "DistributedModel is not initialized"
-        return self.mailbox.send(ModelCommand.PREFILL, model_args)
+        return self.mailbox.send(ModelCommand.PREFILL, model_args)[0]
 
     def decode(self, **model_args):
         assert self.mailbox is not None, "DistributedModel is not initialized"
-        return self.mailbox.send(ModelCommand.PREFILL, model_args)
+        return self.mailbox.send(ModelCommand.PREFILL, model_args)[0]
 
     def leave(self):
         if self.mailbox is None:

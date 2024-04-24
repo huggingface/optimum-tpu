@@ -1,7 +1,3 @@
-# ruff: noqa: E402
-from typing import Dict
-
-import torch
 import torch.multiprocessing as mp
 
 
@@ -9,19 +5,19 @@ class RootMailbox:
     def __init__(self, manager: mp.Manager):
         self.root_bell = manager.Event()
         self.root_command = manager.list()
-        self.model_ready = manager.Event()
-        self.output_data = manager.Value(torch.Tensor, torch.tensor([]))
+        self.agent_ready = manager.Event()
+        self.output_data = manager.list()
 
-    def send(self, command: int, data: Dict = None):
-        # First wait until model is ready to receive commands
-        self.model_ready.wait()
-        self.model_ready.clear()
+    def send(self, command: int, *args):
+        # First wait until agent is ready to receive commands
+        self.agent_ready.wait()
+        self.agent_ready.clear()
 
-        self.root_command[:] = [command, data]
+        self.root_command[:] = [command, *args]
         self.root_bell.set()
-        # wait again until model is ready, meaning command has been processed
-        self.model_ready.wait()
-        ret = self.output_data.get()
+        # wait again until agent is ready, meaning command has been processed
+        self.agent_ready.wait()
+        ret = self.output_data
         return ret
 
 
@@ -29,7 +25,7 @@ class AgentMailbox:
     def __init__(self, root_mailbox: RootMailbox):
         self.root_bell = root_mailbox.root_bell
         self.root_command = root_mailbox.root_command
-        self.model_ready = root_mailbox.model_ready
+        self.agent_ready = root_mailbox.agent_ready
         self.output_data = root_mailbox.output_data
 
     def receive(self):
@@ -37,12 +33,11 @@ class AgentMailbox:
         self.root_bell.clear()
         return self.root_command
 
-    def send(self, data: torch.Tensor):
-        # Data needs to be moved to CPU before setting it
-        self.output_data.set(data.cpu())
+    def send(self, *data):
+        self.output_data[:] = [*data]
 
     @property
     def command_data(self):
         command = self.root_command[0]
-        data = self.root_command[1]
+        data = self.root_command[1:]
         return command, data
