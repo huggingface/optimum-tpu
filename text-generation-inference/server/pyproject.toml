@@ -16,7 +16,7 @@ dependencies = [
     'typer == 0.6.1',
     'safetensors == 0.4.2',
     'transformers == 4.39.3',
-    'loguru == 0.6.0'
+    'loguru == 0.6.0',
 ]
 
 [tool.setuptools]

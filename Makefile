@@ -19,7 +19,7 @@ REAL_CLONE_URL = $(if $(CLONE_URL),$(CLONE_URL),$(DEFAULT_CLONE_URL))
 
 .PHONY:	build_dist style style_check clean
 
-TGI_VERSION ?= 1.4.2
+TGI_VERSION ?= 2.0.0
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 
@@ -47,7 +47,7 @@ tpu-tgi:
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
-	docker tag huggingface/optimum-tpu:$(VERSION)-tgi tpu-tgi:latest
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
 # Run code quality checks
 style_check:
@@ -68,7 +68,7 @@ pypi_upload: ${PACKAGE_DIST} ${PACKAGE_WHEEL}
 
 # Tests
 test_installs:
-	python -m pip install .[tests]
+	python -m pip install .[tests] -f https://storage.googleapis.com/libtpu-releases/index.html
 
 tests: test_installs
 	python -m pytest -sv tests

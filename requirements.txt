@@ -1,0 +1,4 @@
+loguru == 0.6.0
+transformers == 4.39.3
+torch ~= 2.2.0
+torch-xla[tpu] ~= 2.2.0 -f https://storage.googleapis.com/libtpu-releases/index.html
