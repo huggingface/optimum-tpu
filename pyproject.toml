@@ -62,9 +62,6 @@ Documentation = "https://hf.co/docs/optimum/tpu"
 Repository = "https://github.com/huggingface/optimum-tpu"
 Issues = "https://github.com/huggingface/optimum-tpu/issues"
 
-[tool.setuptools_scm]
-
-
 [tool.setuptools.packages.find]
 include = ["optimum.tpu"]
 
