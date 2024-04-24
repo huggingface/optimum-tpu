@@ -108,10 +108,8 @@ ENV HUGGINGFACE_HUB_CACHE=/data \
 COPY . /opt/optimum-tpu
 
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
-RUN python3 -m pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com/libtpu-releases/index.html && \
-	python3 -m pip install -r /opt/optimum-tpu/requirements.txt && \
-    python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
-    SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPTIMUM_TPU=${VERSION} python3 -m pip install -e /opt/optimum-tpu
+RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
+    SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPTIMUM_TPU=${VERSION} python3 -m pip install -e /opt/optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install router
 COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
