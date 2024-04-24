@@ -49,9 +49,3 @@ def test_distributed_model_prefill_gpt2():
 @pytest.mark.slow
 def test_distributed_model_prefill_gemma7b():
     _test_distributed_model_prefill("google/gemma-7b")
-
-
-def test_distributed_model_config():
-    model_id = "openai-community/gpt2"
-    model = DistributedModel(model_id, sample_greedy)
-    assert model.config is not None

@@ -37,8 +37,6 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
     model = AutoModelForCausalLM.from_pretrained(model_id)
     model = model.eval()
     model.to(device)
-    if rank == 0:
-        mailbox.model_config.set(model.config)
 
     def get_next_token(inputs):
         # move inputs to device in a new dict to avoid conflicts
@@ -107,10 +105,6 @@ class DistributedModel:
         self.model_loop.join()
         logger.debug("Model loop finished")
         self.mailbox = None
-
-    @property
-    def config(self):
-        return self.mailbox.config
 
     def __del__(self):
         self.leave()

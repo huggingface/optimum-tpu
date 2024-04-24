@@ -3,7 +3,6 @@ from typing import Dict
 
 import torch
 import torch.multiprocessing as mp
-from transformers import PretrainedConfig
 
 
 class RootMailbox:
@@ -12,14 +11,6 @@ class RootMailbox:
         self.root_command = manager.list()
         self.model_ready = manager.Event()
         self.output_data = manager.Value(torch.Tensor, torch.tensor([]))
-        self.model_config = manager.Value(PretrainedConfig, None)
-
-    @property
-    def config(self):
-        while True:
-            config = self.model_config.get()
-            if config is not None:
-                return config
 
     def send(self, command: int, data: Dict = None):
         # First wait until model is ready to receive commands
@@ -40,7 +31,6 @@ class AgentMailbox:
         self.root_command = root_mailbox.root_command
         self.model_ready = root_mailbox.model_ready
         self.output_data = root_mailbox.output_data
-        self.model_config = root_mailbox.model_config
 
     def receive(self):
         self.root_bell.wait()
