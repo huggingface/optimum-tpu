@@ -65,7 +65,7 @@ def serve(
                 model_path,
                 revision=revision,
                 max_batch_size=max_batch_size,
-                max_sequence_length=max_seq_length
+                max_sequence_length=max_sequence_length
             )
         except Exception:
             logger.exception("Error when initializing model")
