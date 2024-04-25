@@ -40,9 +40,12 @@ else
   export TGI_MAX_TOTAL_TOKENS 256
 fi
 
+TGI_MAX_BATCH_PREFILL_TOKENS=$(( TGI_MAX_BATCH_SIZE*TGI_MAX_INPUT_TOKENS ))
+
 text-generation-launcher --port 8080 \
-  --max-concurrent-requests ${TGI_MAX_CONCURRENT_REQUESTS}
-  --max-batch-size ${TGI_MAX_BATCH_SIZE}
+  --max-concurrent-requests ${TGI_MAX_CONCURRENT_REQUESTS} \
+  --max-batch-size ${TGI_MAX_BATCH_SIZE} \
+  --max-batch-prefill-tokens ${TGI_MAX_BATCH_PREFILL_TOKENS}
   --max-input-tokens ${TGI_MAX_INPUT_TOKENS} \
   --max-total-tokens ${TGI_MAX_TOTAL_TOKENS}
 
