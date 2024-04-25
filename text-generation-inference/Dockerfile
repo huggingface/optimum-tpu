@@ -120,15 +120,9 @@ COPY --from=pyserver /pyserver/build/dist dist
 RUN pip install dist/text_generation_server*.tar.gz
 
 # TPU compatible image
-FROM tpu_base as tpu_entrypoint
+FROM tpu_base
 
 COPY text-generation-inference/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
-
-# Final image
-FROM tpu_base
-
-ENTRYPOINT ["text-generation-launcher"]
-CMD ["--json-output"]
