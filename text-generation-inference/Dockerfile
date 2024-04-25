@@ -1,14 +1,10 @@
 # Fetch and extract the TGI sources (TGI_VERSION is mandatory)
 FROM alpine AS tgi
 ARG TGI_VERSION
-RUN apk add git && \
-    test -n ${TGI_VERSION:?} && \
-    mkdir -p /tgi && \
-    cd /tgi && \
-    git init && \
-    git remote add origin https://github.com/huggingface/text-generation-inference && \
-    git fetch origin ${TGI_VERSION} && \
-    git reset --hard FETCH_HEAD
+RUN test -n ${TGI_VERSION:?}
+RUN mkdir -p /tgi
+ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
+RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
@@ -121,7 +117,7 @@ COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bi
 COPY --from=builder /usr/src/target/release/text-generation-launcher /usr/local/bin/text-generation-launcher
 # Install python server
 COPY --from=pyserver /pyserver/build/dist dist
-RUN pip install dist/text_generation_server*.whl
+RUN pip install dist/text_generation_server*.tar.gz
 
 # TPU compatible image
 FROM tpu_base as tpu_entrypoint

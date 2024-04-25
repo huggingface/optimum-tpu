@@ -1,14 +1,14 @@
 # Initialize base variables
 pkg_name := text_generation_server
-BUILDDIR ?= /tgi/build
+BUILDDIR ?= $(CURDIR)/build
 VERSION ?= 0.0.1
-TGI_VERSION ?= 1.4.2
+TGI_VERSION ?= v2.0.1
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir := $(dir $(mkfile_path))
 pkg_dir := $(BUILDDIR)/$(pkg_name)
 
 clean:
-	rm -rf $(BUILDDIR)
+	rm -rf $(BUILDDIR)/*
 
 # List static sources to be deployed in the package
 src_dir := $(mkfile_dir)/$(pkg_name)
@@ -34,16 +34,13 @@ $(pkg_dir)/%.py: $(src_dir)/%.py
 
 # If not provided, fetch proto files from TGI
 ifndef PROTODIR
-PROTODIR := $(BUILDDIR)/proto
+PROTODIR := $(BUILDDIR)/tgi/proto
 endif
 
-$(BUILDDIR)/proto/%.proto:
-	install -d $(BUILDDIR) && \
-	cd $(BUILDDIR) && \
-	git init && \
-	git remote add origin https://github.com/huggingface/text-generation-inference && \
-	git fetch origin $(TGI_VERSION) && \
-	git reset --hard FETCH_HEAD
+$(BUILDDIR)/tgi/proto/%.proto:
+	install -d $(BUILDDIR)/tgi
+	curl -L https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz --output $(BUILDDIR)/tgi/sources.tar.gz
+	tar -C $(BUILDDIR)/tgi -xf $(BUILDDIR)/tgi/sources.tar.gz --strip-components=1
 
 # Three python files are generated for each protobuf
 protobufs := $(PROTODIR)/generate.proto
