@@ -10,9 +10,6 @@ RUN apk add git && \
     git fetch origin ${TGI_VERSION} && \
     git reset --hard FETCH_HEAD
 
-#ADD https://github.com/huggingface/text-generation-inference/archive/refs/tags/v${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
-#RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
-
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
 FROM lukemathwalker/cargo-chef:latest-rust-1.77-bookworm AS chef
