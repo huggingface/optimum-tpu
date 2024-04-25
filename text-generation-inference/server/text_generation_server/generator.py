@@ -621,6 +621,9 @@ class TpuGenerator(Generator):
     def from_pretrained(
         cls,
         model_path: str,
+        revision: str,
+        max_batch_size: int,
+        max_sequence_length: int
     ):
         """Instantiate a TpuGenerator.
 
@@ -633,7 +636,12 @@ class TpuGenerator(Generator):
         """
         logger.info("Loading model (this can take a few minutes).")
         start = time.time()
-        model = AutoModelForCausalLM.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            revision=revision,
+            batch_size=max_batch_size,
+            sequence_length=max_sequence_length
+        )
         end = time.time()
         logger.info(f"Model successfully loaded in {end - start:.2f} s.")
         tokenizer = AutoTokenizer.from_pretrained(model_path)
