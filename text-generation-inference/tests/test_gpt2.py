@@ -24,7 +24,7 @@ def model_path():
 
 
 def test_info(model_path):
-    generator = TpuGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=1)
     info = generator.info
     assert info.requires_padding is True
     assert info.device_type == "xla"
@@ -81,7 +81,7 @@ def create_request(
 )
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
-    generator = TpuGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
@@ -120,7 +120,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
     ids=["greedy", "sample"],
 )
 def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, model_path):
-    generator = TpuGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH)
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=do_sample)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
@@ -140,7 +140,7 @@ def test_decode_single(input_text, max_new_tokens, generated_text, do_sample, mo
 
 
 def test_decode_multiple(model_path):
-    generator = TpuGenerator.from_pretrained(model_path)
+    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH)
     input_text = "Once upon a time"
     max_new_tokens = 20
     # Prefill a single request, remembering the generated token
