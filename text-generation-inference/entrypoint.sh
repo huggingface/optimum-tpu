@@ -1,19 +1,11 @@
 #!/bin/bash
 
 # Hugging Face Hub related
-if [[ -z "${HF_MODEL_ID}" ]]; then
-  echo "HF_MODEL_ID must be set"
+if [[ -z "${MODEL_ID}" ]]; then
+  echo "MODEL_ID must be set"
   exit 1
 fi
-export MODEL_ID="${HF_MODEL_ID}"
-
-if [[ -n "${HF_MODEL_REVISION}" ]]; then
-  export REVISION="${HF_MODEL_REVISION}"
-fi
-
-if [[ -n "${HF_MODEL_TRUST_REMOTE_CODE}" ]]; then
-  export TRUST_REMOTE_CODE="${HF_MODEL_TRUST_REMOTE_CODE}"
-fi
+export MODEL_ID="${MODEL_ID}"
 
 # TGI related
 if [[ -n "${TGI_MAX_CONCURRENT_REQUESTS}" ]]; then
@@ -48,4 +40,5 @@ text-generation-launcher --port 8080 \
   --max-batch-prefill-tokens ${TGI_MAX_BATCH_PREFILL_TOKENS}
   --max-input-tokens ${TGI_MAX_INPUT_TOKENS} \
   --max-total-tokens ${TGI_MAX_TOTAL_TOKENS}
+  --model-id ${MODEL_ID}
 
