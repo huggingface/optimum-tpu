@@ -9,10 +9,10 @@ import torch
 import torch.multiprocessing as mp
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
-from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
 from transformers.generation import GenerationConfig
 
+import optimum.tpu.xla_logger as logger
 from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
 from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
