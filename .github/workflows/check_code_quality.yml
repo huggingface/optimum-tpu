@@ -44,7 +44,7 @@ jobs:
       run: |
         source venv/bin/activate
         pip install --upgrade pip
-        pip install .[quality]
+        pip install .[quality] -f https://storage.googleapis.com/libtpu-releases/index.html
     - name: Check style with ruff
       run: |
         source venv/bin/activate

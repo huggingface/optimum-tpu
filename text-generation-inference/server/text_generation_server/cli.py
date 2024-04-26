@@ -1,3 +1,4 @@
+import os
 import sys
 from typing import Optional
 
@@ -58,8 +59,19 @@ def serve(
     from optimum.tpu.model import fetch_model
     from .server import serve
 
+    # Read environment variables forwarded by the launcher
+    max_batch_size = int(os.environ.get("MAX_BATCH_SIZE", "1"))
+    max_total_tokens = int(os.environ.get("MAX_TOTAL_TOKENS", "64"))
+
+    # Start the server
     model_path = fetch_model(model_id, revision)
-    serve(model_path, uds_path)
+    serve(
+        model_path,
+        revision=revision,
+        max_batch_size=max_batch_size,
+        max_sequence_length=max_total_tokens,
+        uds_path=uds_path
+    )
 
 
 @app.command()

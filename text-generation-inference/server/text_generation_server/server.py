@@ -50,6 +50,9 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
 
 def serve(
     model_path: str,
+    revision: str,
+    max_batch_size: int,
+    max_sequence_length: int,
     uds_path: Path,
 ):
     async def serve_inner(model_path: str):
@@ -58,7 +61,12 @@ def serve(
         server_urls = [local_url]
 
         try:
-            generator = TpuGenerator.from_pretrained(model_path)
+            generator = TpuGenerator.from_pretrained(
+                model_path,
+                revision=revision,
+                max_batch_size=max_batch_size,
+                max_sequence_length=max_sequence_length
+            )
         except Exception:
             logger.exception("Error when initializing model")
             raise

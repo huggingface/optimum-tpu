@@ -3,7 +3,7 @@ FROM alpine AS tgi
 ARG TGI_VERSION
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
-ADD https://github.com/huggingface/text-generation-inference/archive/refs/tags/v${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
+ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
 RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
@@ -120,15 +120,9 @@ COPY --from=pyserver /pyserver/build/dist dist
 RUN pip install dist/text_generation_server*.tar.gz
 
 # TPU compatible image
-FROM tpu_base as tpu_entrypoint
+FROM tpu_base
 
 COPY text-generation-inference/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
-
-# Final image
-FROM tpu_base
-
-ENTRYPOINT ["text-generation-launcher"]
-CMD ["--json-output"]
