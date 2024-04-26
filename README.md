@@ -31,7 +31,7 @@ We currently support a few LLM models targeting text generation scenarios:
 
 `optimum-tpu` comes with an handy PyPi released package compatible with your classical python dependency management tool.
 
-`pip install optimum-tpu`
+`pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html`
 
 ## Inference
 
