@@ -6,13 +6,16 @@ from enum import Enum
 from typing import Dict, List, Tuple
 
 import torch
+import torch.multiprocessing as mp
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
 from transformers.generation import GenerationConfig
 
 from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
+from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
 
 from .generator_base import Generator
 from .pb.generate_pb2 import (
@@ -240,8 +243,8 @@ class Slot:
         return self._generation_config.max_length
 
 
-class TpuGenerator(Generator):
-    """A Generator for models running on TPU."""
+class TpuGeneratorSingleThread(Generator):
+    """A Generator for models running on TPU, single threaded."""
 
     def __init__(
         self,
@@ -574,6 +577,12 @@ class TpuGenerator(Generator):
         Args:
             model_path (`str`):
                 The path to a local model. This path must also contain a Tokenizer.
+            revision (`str`):
+                The revision of the model.
+            max_batch_size (`int`):
+                The maximum batch size.
+            max_sequence_length (`int`):
+                The maximum sequence length.
 
         Returns:
             A TpuGenerator.
@@ -590,3 +599,170 @@ class TpuGenerator(Generator):
         logger.info(f"Model successfully loaded in {end - start:.2f} s.")
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         return cls(model, tokenizer)
+
+
+class GeneratorCommand(Enum):
+    INFO = 0
+    WARMUP = 1
+    PREFILL = 2
+    DECODE = 3
+    FILTER = 4
+    CLEAR = 5
+    DELETE = -1
+
+
+def _mp_fn(rank,
+           model_path: str,
+           revision: str,
+           max_batch_size: int,
+           max_sequence_length: int,
+           root_mailbox: RootMailbox):
+    device = xm.xla_device()
+    world_size = xm.xrt_world_size()
+    # create agent mailbox out of root's one
+    mailbox = AgentMailbox(root_mailbox)
+
+    logger.debug(
+        f"Rank {rank} on {device} real device {xm.xla_real_devices([device])} ordinal {xm.get_ordinal()} "
+        + f"world size {world_size}"
+    )
+
+    generator = TpuGeneratorSingleThread.from_pretrained(model_path, revision, max_batch_size, max_sequence_length)
+    # TODO: maybe model_config can be removed from mailbox
+
+    def return_to_caller(*data):
+        # consider adding a rendezvous here
+        if rank == 0:
+            xm.mark_step()
+            mailbox.send(*data)
+
+
+    while True:
+        xm.rendezvous("start")
+        if rank == 0:
+            mailbox.agent_ready.set()
+            mailbox.receive()
+        # Wait for rank 0 to receive command
+        xm.rendezvous("wait_command")
+        command, data = mailbox.command_data
+        logger.debug(f"Generator@{rank} {command.name}")
+        if command == GeneratorCommand.INFO:
+            info = generator.info
+            return_to_caller(info.SerializeToString())
+        if command == GeneratorCommand.WARMUP:
+            batch = Batch.FromString(data[0])
+            return_to_caller(generator.warmup(batch=batch))
+        if command == GeneratorCommand.PREFILL:
+            batch = Batch.FromString(data[0])
+            generations, cached_batch = generator.prefill(batch=batch)
+            return_to_caller([g.SerializeToString() for g in generations], cached_batch.SerializeToString())
+        if command == GeneratorCommand.DECODE:
+            batches = [CachedBatch.FromString(b) for b in data[0]]
+            generations, cached_batch = generator.decode(batches=batches)
+            s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
+            return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
+        if command == GeneratorCommand.FILTER:
+            batch_id, request_ids = data
+            cached_batch = generator.filter(batch_id, request_ids)
+            return_to_caller(cached_batch.SerializeToString())
+        if command == GeneratorCommand.CLEAR:
+            generator.clear()
+        if command == GeneratorCommand.DELETE:
+            if rank == 0:
+                # Set agent to ready
+                mailbox.agent_ready.set()
+            break
+
+
+def model_loop_fn(*args):
+    """Spawn processes in the TPUs forwarding arguments"""
+    xmp.spawn(_mp_fn, args=(args), join=True, daemon=False)
+
+class TpuGenerator(Generator):
+    """A Generator for models running on TPU.
+
+    This generator actually spawns several processes to handle the requests in sharded models whenever possible.
+    """
+
+    def __init__(self, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
+        manager = mp.Manager()
+        self.mailbox = RootMailbox(manager)
+
+        # Disable parallelism on tokenizers to avoid deadlocks on TPU threads
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+        self.model_loop = mp.Process(
+            target=model_loop_fn, args=(model_path, revision, max_batch_size, max_sequence_length, self.mailbox)
+        )
+        self.model_loop.start()
+
+    @property
+    def info(self) -> InfoResponse:
+        s_info = self.mailbox.send(GeneratorCommand.INFO, None)[0]
+        return InfoResponse.FromString(s_info)
+
+    def warmup(self, batch: Batch) -> int:
+        return self.mailbox.send(GeneratorCommand.WARMUP, batch.SerializeToString())[0]
+
+    def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
+        s_generations, s_cached_batch = self.mailbox.send(GeneratorCommand.PREFILL, batch.SerializeToString())
+        generations = [Generation.FromString(g) for g in s_generations]
+        return generations, CachedBatch.FromString(s_cached_batch)
+
+    def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
+        s_batches = [b.SerializeToString() for b in batches]
+        s_generations, s_cached_batch = self.mailbox.send(GeneratorCommand.DECODE, s_batches)
+        generations = [Generation.FromString(g) for g in s_generations]
+        cached_batch = CachedBatch.FromString(s_cached_batch) if s_cached_batch is not None else None
+        return generations, cached_batch
+
+    def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
+        s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER,
+                                            batch_id,
+                                            request_ids)[0]
+        return CachedBatch.FromString(s_cached_batch)
+
+    def clear(self):
+        self.mailbox.send(GeneratorCommand.CLEAR)
+
+    def leave(self):
+        if self.mailbox is None:
+            return
+        self.mailbox.send(GeneratorCommand.DELETE)
+        # Use Loguru's logger directly, to avoid errors whyle TPU is shutting down
+        logger.logger.debug("Joining...")
+        self.model_loop.join()
+        logger.logger.debug("Generator loop finished")
+        self.mailbox = None
+
+    @property
+    def config(self):
+        return self.mailbox.config
+
+    def __del__(self):
+        self.leave()
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        model_path: str,
+        revision: str,
+        max_batch_size: int,
+        max_sequence_length: int
+    ):
+        """Instantiate a Generator distributed on as many cores as possible.
+
+        Args:
+            model_path (`str`):
+                The path to a local model. This path must also contain a Tokenizer.
+            revision (`str`):
+                The revision of the model.
+            max_batch_size (`int`):
+                The maximum batch size.
+            max_sequence_length (`int`):
+                The maximum sequence length.
+
+        Returns:
+            A TpuGenerator.
+        """
+        return cls(model_path, revision, max_batch_size, max_sequence_length)
