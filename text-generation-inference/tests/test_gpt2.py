@@ -72,8 +72,8 @@ def create_request(
         ],
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
-            775,
-            " We",
+            1439,
+            " All",
             True,
         ],
     ],
@@ -113,7 +113,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
         [
             "It was a bright cold day in April, and the clocks were striking thirteen.",
             20,
-            " We sat at the front door and watched the clock on a box of yellow paper and found it almost",
+            " All day the sun had set, as was well-known. The first thing I noticed when I",
             True,
         ],
     ],
