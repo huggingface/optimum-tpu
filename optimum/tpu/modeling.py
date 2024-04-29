@@ -22,12 +22,12 @@ from loguru import logger
 from transformers import AutoConfig
 from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 
-from optimum.tpu.modeling_gemma import TpuGemmaForCausalLM
-
 
 def config_name_to_class(pretrained_model_name_or_path: str):
     config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
     if config.model_type == "gemma":
+        from .modeling_gemma import TpuGemmaForCausalLM
+
         return TpuGemmaForCausalLM
     return BaseAutoModelForCausalLM
 
