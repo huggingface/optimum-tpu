@@ -29,6 +29,10 @@ def config_name_to_class(pretrained_model_name_or_path: str):
         from .modeling_gemma import TpuGemmaForCausalLM
 
         return TpuGemmaForCausalLM
+    if config.model_type == "llama":
+        from .modeling_llama import LlamaForCausalLM
+
+        return LlamaForCausalLM
     return BaseAutoModelForCausalLM
 
 
