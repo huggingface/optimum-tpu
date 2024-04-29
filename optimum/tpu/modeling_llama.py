@@ -50,7 +50,12 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 
-from optimum.tpu.xla_model_parallel import RowParallelLinear, get_model_parallel_rank, get_model_parallel_world_size
+from optimum.tpu.xla_model_parallel import (
+    ColumnParallelLinear,
+    RowParallelLinear,
+    get_model_parallel_rank,
+    get_model_parallel_world_size,
+)
 
 
 if is_flash_attn_2_available():
@@ -299,9 +304,25 @@ class LlamaAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
+        self.q_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.num_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=world_size,
+            rank=rank,
+        )
+        self.k_proj = ColumnParallelLinear(self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=world_size,
+            rank=rank,
+        )
+        self.v_proj = ColumnParallelLinear(self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=config.attention_bias,
+            world_size=world_size,
+            rank=rank
+        )
         self.o_proj = RowParallelLinear(
             self.hidden_size,
             self.hidden_size,
@@ -1196,6 +1217,12 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             return tensor
 
         for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
+                v = split(v, 0)
+            if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
+                v = v.reshape(num_attn_heads, head_dim, hidden_size)
+                v = split(v, 0)
+                v = v.reshape(-1, hidden_size)
             if re.fullmatch(r"model.layers.\d+.self_attn.o_proj.weight", k):
                 v = v.reshape(hidden_size, num_attn_heads, head_dim)
                 v = split(v, 1)
