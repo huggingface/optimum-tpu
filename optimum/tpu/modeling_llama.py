@@ -20,6 +20,7 @@
 """PyTorch LLaMA model."""
 
 import math
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -28,7 +29,6 @@ import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
@@ -39,6 +39,7 @@ from transformers.modeling_outputs import (
     SequenceClassifierOutputWithPast,
 )
 from transformers.modeling_utils import PreTrainedModel
+from transformers.models.llama.configuration_llama import LlamaConfig
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
     add_start_docstrings,
@@ -48,7 +49,8 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from transformers.models.llama.configuration_llama import LlamaConfig
+
+from optimum.tpu.xla_model_parallel import RowParallelLinear, get_model_parallel_rank, get_model_parallel_world_size
 
 
 if is_flash_attn_2_available():
@@ -257,8 +259,21 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: LlamaConfig, layer_idx: Optional[int] = None):
+    def __init__(self,
+                 config: LlamaConfig,
+                 layer_idx: Optional[int] = None,
+                 rank: Optional[int] = None,
+                 world_size: Optional[int] = None,
+        ):
         super().__init__()
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
         self.config = config
         self.layer_idx = layer_idx
         if layer_idx is None:
@@ -287,7 +302,13 @@ class LlamaAttention(nn.Module):
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
-        self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=config.attention_bias)
+        self.o_proj = RowParallelLinear(
+            self.hidden_size,
+            self.hidden_size,
+            bias=config.attention_bias,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
         self._init_rope()
 
     def _init_rope(self):
@@ -693,11 +714,13 @@ LLAMA_ATTENTION_CLASSES = {
 
 
 class LlamaDecoderLayer(nn.Module):
-    def __init__(self, config: LlamaConfig, layer_idx: int):
+    def __init__(self, config: LlamaConfig, layer_idx: int, rank: int = 0, world_size: int = 1):
         super().__init__()
+        self.rank = rank
+        self.world_size = world_size
         self.hidden_size = config.hidden_size
 
-        self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx, rank=rank, world_size=world_size)
 
         self.mlp = LlamaMLP(config)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -917,14 +940,22 @@ class LlamaModel(LlamaPreTrainedModel):
         config: LlamaConfig
     """
 
-    def __init__(self, config: LlamaConfig):
+    def __init__(self, config: LlamaConfig, rank: Optional[int] = None, world_size: Optional[int] = None):
         super().__init__(config)
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
-            [LlamaDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+            [LlamaDecoderLayer(config, layer_idx, rank, world_size) for layer_idx in range(config.num_hidden_layers)]
         )
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
@@ -1130,14 +1161,47 @@ class LlamaModel(LlamaPreTrainedModel):
 class LlamaForCausalLM(LlamaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config, rank=None, world_size=None):
         super().__init__(config)
-        self.model = LlamaModel(config)
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
+        self.model = LlamaModel(config, rank, world_size)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        # Initialize weights and apply final processing
+        self._register_load_state_dict_pre_hook(self.load_hook)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def load_hook(self, state_dict, _prefix, *_args):
+        num_attn_heads = self.config.num_attention_heads
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+        hidden_size = self.config.hidden_size
+
+        def split(tensor: torch.Tensor, axis: int) -> torch.Tensor:
+            axis_len = tensor.shape[axis]
+            split_len = axis_len // self.world_size
+            split_start = split_len * self.rank
+            split_end = split_start + split_len
+            tensor = torch.moveaxis(tensor, axis, 0)
+            tensor = tensor[split_start:split_end, ...]
+            tensor = torch.moveaxis(tensor, 0, axis)
+            return tensor
+
+        for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.self_attn.o_proj.weight", k):
+                v = v.reshape(hidden_size, num_attn_heads, head_dim)
+                v = split(v, 1)
+                v = v.reshape(hidden_size, -1)
+            # Update state_dict
+            state_dict[k] = v
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
