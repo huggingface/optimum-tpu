@@ -1,8 +1,10 @@
 import os
-from optimum.tpu.distributed_model import DistributedModel
-from transformers import AutoTokenizer
-import torch
+
 import pytest
+import torch
+from transformers import AutoTokenizer
+
+from optimum.tpu.distributed_model import DistributedModel
 
 
 def sample_greedy(logits):
@@ -47,9 +49,3 @@ def test_distributed_model_prefill_gpt2():
 @pytest.mark.slow
 def test_distributed_model_prefill_gemma7b():
     _test_distributed_model_prefill("google/gemma-7b")
-
-
-def test_distributed_model_config():
-    model_id = "openai-community/gpt2"
-    model = DistributedModel(model_id, sample_greedy)
-    assert model.config is not None

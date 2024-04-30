@@ -70,17 +70,17 @@ line-length = 119
 target-version = ['py38']
 extend-exclude = '.ipynb'
 
-[lint.ruff]
+[tool.ruff]
 # Never enforce `E501` (line length violations).
-ignore = ["C901", "E501", "E741", "W605"]
-select = ["C", "E", "F", "I", "W"]
+lint.ignore = ["C901", "E501", "E741", "W605"]
+lint.select = ["C", "E", "F", "I", "W"]
 line-length = 119
 
 # Ignore import violations in all `__init__.py` files.
-[lint.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403", "F811"]
 
-[lint.ruff.isort]
+[tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["optimum.tpu"]
 

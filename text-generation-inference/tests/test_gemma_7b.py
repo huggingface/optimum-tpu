@@ -1,18 +1,20 @@
-import pytest
 import os
-from tqdm import tqdm
+
+import pytest
 from text_generation_server.generator import TpuGenerator
-from optimum.tpu.model import fetch_model
 from text_generation_server.pb.generate_pb2 import (
     Batch,
     NextTokenChooserParameters,
     Request,
     StoppingCriteriaParameters,
 )
+from tqdm import tqdm
+
+from optimum.tpu.model import fetch_model
 
 
-MODEL_ID = "google/gemma-2b"
-SEQUENCE_LENGTH = 1024
+MODEL_ID = "google/gemma-7b"
+SEQUENCE_LENGTH = 128
 
 
 @pytest.fixture(scope="module")
@@ -52,19 +54,22 @@ def create_request(
     return Request(id=id, inputs=inputs, parameters=parameters, stopping_parameters=stopping_parameters)
 
 
+@pytest.mark.slow
 def test_decode_single(model_path):
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
     max_new_tokens = 20
-    generated_text = "\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never"
+    generated_text = "\n\nThe time is 1984. The place is Airstrip One, the British"
 
-    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH)
+    generator = TpuGenerator.from_pretrained(
+        model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
+    )
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
     for _ in tqdm(range(max_new_tokens - 1)):
         assert next_batch.size == 1
-        assert next_batch.max_tokens == 1024
+        assert next_batch.max_tokens == 128
         assert len(generations) == 1
         assert len(generations[0].tokens.ids) == 1
         generations, next_batch = generator.decode([next_batch])

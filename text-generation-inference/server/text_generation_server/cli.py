@@ -57,6 +57,7 @@ def serve(
 
     # Import here after the logger is added to log potential import exceptions
     from optimum.tpu.model import fetch_model
+
     from .server import serve
 
     # Read environment variables forwarded by the launcher
