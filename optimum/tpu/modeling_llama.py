@@ -1219,7 +1219,13 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             self.world_size = world_size
         self.model = LlamaModel(config, rank, world_size)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.lm_head = ColumnParallelLinear(
+            config.hidden_size,
+            config.vocab_size,
+            bias=False,
+            rank=self.rank,
+            world_size=self.world_size,
+        )
         # Initialize weights and apply final processing
         self._register_load_state_dict_pre_hook(self.load_hook)
 
@@ -1256,6 +1262,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 v = v.reshape(hidden_size, num_attn_heads, head_dim)
                 v = split(v, 1)
                 v = v.reshape(hidden_size, -1)
+            if k == "lm_head.weight":
+                v = split(v, 0)
             # Update state_dict
             state_dict[k] = v
 
