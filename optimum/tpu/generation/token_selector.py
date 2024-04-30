@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import Optional
+from typing import List, Optional, Union
 
 import torch
 import torch_xla.core.xla_model as xm
@@ -42,7 +42,7 @@ class TokenSelector:
         mode: GenerationMode,
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
-        eos_token_id: int,
+        eos_token_ids: Union[int,List[int]],
         pad_token_id: int,
         logits_warper: Optional[LogitsProcessorList] = None,
         seed: Optional[int] = 0,
@@ -50,7 +50,7 @@ class TokenSelector:
         self.mode = mode
         self.logits_processor = logits_processor
         self.stopping_criteria = stopping_criteria
-        self.eos_token_id = eos_token_id
+        self.eos_token_ids = eos_token_ids
         self.pad_token_id = pad_token_id
         self.logits_warper = logits_warper
         xm.set_rng_state(seed)
@@ -132,13 +132,14 @@ class TokenSelector:
             stopping_criteria = StoppingCriteriaList()
         stopping_criteria = model._get_stopping_criteria(generation_config, stopping_criteria=stopping_criteria)
 
-        # The generation requires special tokens
-        eos_token_id = generation_config.eos_token_id
         # This is not supposed to happen for any of the models we support
-        assert eos_token_id is not None and not isinstance(eos_token_id, list)
+        eos_token_id = generation_config.eos_token_id
+        assert eos_token_id is not None
+        # The generation requires special tokens
+        eos_token_ids = eos_token_id if isinstance(eos_token_id, list) else [eos_token_id]
         if generation_config.pad_token_id is None:
-            logger.warning(f"Setting `pad_token_id` to `eos_token_id`:{eos_token_id} for open-end generation.")
-            generation_config.pad_token_id = eos_token_id
+            logger.warning(f"Setting `pad_token_id` to `eos_token_id`:{eos_token_ids[0]} for open-end generation.")
+            generation_config.pad_token_id = eos_token_ids[0]
 
         generation_mode = generation_config.get_generation_mode()
         if generation_mode not in [GenerationMode.GREEDY_SEARCH, GenerationMode.SAMPLE]:
@@ -153,7 +154,7 @@ class TokenSelector:
             logits_processor=logits_processor,
             stopping_criteria=stopping_criteria,
             logits_warper=logits_warper,
-            eos_token_id=eos_token_id,
+            eos_token_ids=eos_token_ids,
             pad_token_id=generation_config.pad_token_id,
             seed=seed,
         )

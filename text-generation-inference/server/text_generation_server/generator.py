@@ -429,6 +429,12 @@ class TpuGeneratorSingleThread(Generator):
         for i, slot in enumerate(self.slots):
             if slot.state != Slot.State.EMPTY:
                 if input_ids is None:
+                    pad_token_id = self.tokenizer.pad_token_id
+                    if pad_token_id is None:
+                        if isinstance(self.tokenizer.eos_token_id, list):
+                            pad_token_id = self.tokenizer.eos_token_id[0]
+                        else:
+                            pad_token_id = self.tokenizer.eos_token_id
                     # Create blank inputs covering all slots (even empty ones)
                     input_ids = torch.full(
                         [batch_size, 1],
