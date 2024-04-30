@@ -64,7 +64,7 @@ def _mp_fn(rank, model_id, root_mailbox: RootMailbox, sample_fn: callable):
 
         logger.debug(f"Rank {rank} waiting for command at rendezvous")
         command, data = mailbox.command_data
-        inputs = data[0] if len(data) > 0 else None
+        inputs = data[0] if data else None
         if command == ModelCommand.PREFILL:
             logger.debug(f"Rank {rank} PREFILL")
             get_next_token(inputs)
