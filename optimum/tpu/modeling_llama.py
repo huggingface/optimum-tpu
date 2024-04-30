@@ -216,14 +216,34 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class LlamaMLP(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, rank=0, world_size=1):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+        self.rank = rank
+        self.world_size = world_size
+        self.gate_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.intermediate_size,
+            bias=False,
+            rank=rank,
+            world_size=world_size,
+        )
+        self.up_proj = ColumnParallelLinear(
+            self.hidden_size,
+            self.intermediate_size,
+            bias=False,
+            rank=rank,
+            world_size=world_size,
+        )
+        self.down_proj = RowParallelLinear(
+            self.intermediate_size,
+            self.hidden_size,
+            bias=False,
+            rank=rank,
+            world_size=world_size,
+        )
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -264,12 +284,13 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self,
-                 config: LlamaConfig,
-                 layer_idx: Optional[int] = None,
-                 rank: Optional[int] = None,
-                 world_size: Optional[int] = None,
-        ):
+    def __init__(
+        self,
+        config: LlamaConfig,
+        layer_idx: Optional[int] = None,
+        rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+    ):
         super().__init__()
         if rank is None:
             self.rank = get_model_parallel_rank()
@@ -311,17 +332,19 @@ class LlamaAttention(nn.Module):
             world_size=world_size,
             rank=rank,
         )
-        self.k_proj = ColumnParallelLinear(self.hidden_size,
+        self.k_proj = ColumnParallelLinear(
+            self.hidden_size,
             self.num_key_value_heads * self.head_dim,
             bias=config.attention_bias,
             world_size=world_size,
             rank=rank,
         )
-        self.v_proj = ColumnParallelLinear(self.hidden_size,
+        self.v_proj = ColumnParallelLinear(
+            self.hidden_size,
             self.num_key_value_heads * self.head_dim,
             bias=config.attention_bias,
             world_size=world_size,
-            rank=rank
+            rank=rank,
         )
         self.o_proj = RowParallelLinear(
             self.hidden_size,
@@ -741,9 +764,11 @@ class LlamaDecoderLayer(nn.Module):
         self.world_size = world_size
         self.hidden_size = config.hidden_size
 
-        self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx, rank=rank, world_size=world_size)
+        self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](
+            config=config, layer_idx=layer_idx, rank=rank, world_size=world_size
+        )
 
-        self.mlp = LlamaMLP(config)
+        self.mlp = LlamaMLP(config, rank=rank, world_size=world_size)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -1162,9 +1187,9 @@ class LlamaModel(LlamaPreTrainedModel):
                     offset = 0
                 mask_shape = attention_mask.shape
                 mask_slice = (attention_mask.eq(0.0)).to(dtype=dtype) * min_dtype
-                causal_mask[
-                    : mask_shape[0], : mask_shape[1], offset : mask_shape[2] + offset, : mask_shape[3]
-                ] = mask_slice
+                causal_mask[: mask_shape[0], : mask_shape[1], offset : mask_shape[2] + offset, : mask_shape[3]] = (
+                    mask_slice
+                )
 
         if (
             self.config._attn_implementation == "sdpa"
@@ -1217,6 +1242,10 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             return tensor
 
         for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.mlp.(gate_proj|up_proj).weight", k):
+                v = split(v, 0)
+            if re.fullmatch(r"model.layers.\d+.mlp.down_proj.weight", k):
+                v = split(v, 1)
             if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
                 v = split(v, 0)
             if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
