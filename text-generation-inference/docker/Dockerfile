@@ -129,6 +129,6 @@ RUN chmod +x entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
 
 # TPU compatible image
-FROM tpu_base as final_image
+FROM tpu_base
 ENTRYPOINT text-generation-launcher
 CMD ["--json-output"]
