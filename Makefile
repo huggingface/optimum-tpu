@@ -43,7 +43,7 @@ clean:
 	rm -rf dist
 
 tpu-tgi:
-	docker build --rm -f text-generation-inference/Dockerfile \
+	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
