@@ -51,7 +51,7 @@ tpu-tgi:
 
 tpu-tgi-ie:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
-				--target inference-endpoints \
+				 --target inference-endpoints \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
