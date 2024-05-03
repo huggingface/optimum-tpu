@@ -35,5 +35,6 @@ jobs:
       - name: Build and test TGI (also slow tests)
         run: |
           make tgi_server test_installs
+          find text-generation-inference/ -name "text_generation_server-*whl" -exec python -m pip install {} \;
           python -m pytest --runslow -sv text-generation-inference/tests
 
