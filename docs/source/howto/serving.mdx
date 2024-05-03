@@ -26,7 +26,7 @@ sudo docker run -p 8080:80 \
                 -v $(pwd)/data:/data \
                 -e HF_TOKEN=${HF_TOKEN} \
                 huggingface/optimum-tpu:latest \
-                --model-id google/gemma-2b \
+                --model-id ${MODEL_ID} \
                 --max-concurrent-requests 4 \
                 --max-input-length 32 \
                 --max-total-tokens 64 \
