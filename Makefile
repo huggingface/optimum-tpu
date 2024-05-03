@@ -43,11 +43,19 @@ clean:
 	rm -rf dist
 
 tpu-tgi:
-	docker build --rm -f text-generation-inference/Dockerfile \
+	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
+
+tpu-tgi-ie:
+	docker build --rm -f text-generation-inference/docker/Dockerfile \
+				 --target inference-endpoints \
+	             --build-arg VERSION=$(VERSION) \
+	             --build-arg TGI_VERSION=$(TGI_VERSION) \
+				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest-ie
 
 # Run code quality checks
 style_check:

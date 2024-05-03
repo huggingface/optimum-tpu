@@ -17,20 +17,20 @@ Optimum-TPU provides a `make tpu-tgi` command at the root level to help you crea
 ### Docker Container Run
 
 ```
-OPTIMUM_TPU_VERSION=0.1.0b1
-docker run -p 8080:80 \
-       --net=host --privileged \
-       -v $(pwd)/data:/data \
-       -e HF_TOKEN=${HF_TOKEN} \
-       -e HF_BATCH_SIZE=1 \
-       -e HF_SEQUENCE_LENGTH=1024 \
-       huggingface/optimum-tpu:${OPTIMUM_TPU_VERSION}-tgi \
-       --model-id google/gemma-2b \
-       --max-concurrent-requests 4 \
-       --max-input-length 512 \
-       --max-total-tokens 1024 \
-       --max-batch-prefill-tokens 512 \
-       --max-batch-total-tokens 1024
+HF_TOKEN=<your_hf_token_here>
+MODEL_ID=google/gemma-2b
+
+sudo docker run -p 8080:80 \
+                --net=host \
+                --privileged \
+                -v $(pwd)/data:/data \
+                -e HF_TOKEN=${HF_TOKEN} \
+                huggingface/optimum-tpu:latest \
+                --model-id ${MODEL_ID} \
+                --max-concurrent-requests 4 \
+                --max-input-length 32 \
+                --max-total-tokens 64 \
+                --max-batch-size 1
 ```
 
 ### Executing requests against the service
