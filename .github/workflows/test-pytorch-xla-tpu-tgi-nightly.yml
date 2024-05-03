@@ -30,10 +30,10 @@ jobs:
         run: |
           python -m pip install build
           make build_dist test_installs
-          python -m pytest --runslow tests
+          python -m pytest --runslow -sv tests
 
       - name: Build and test TGI (also slow tests)
         run: |
           make tgi_server test_installs
-          python -m pytest --runslow text-generation-inference/tests
+          python -m pytest --runslow -sv text-generation-inference/tests
 
