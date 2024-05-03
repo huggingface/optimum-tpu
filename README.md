@@ -23,7 +23,7 @@ working closely with Google and Google Cloud to make this a reality.
 
 We currently support a few LLM models targeting text generation scenarios:
 - Gemma (2b)
-- Llama (soon)
+- Llama (8b)
 - Mistral (soon)
 
 

@@ -59,7 +59,7 @@ tpu-tgi-ie:
 
 # Run code quality checks
 style_check:
-	ruff .
+	ruff check .
 
 style:
 	ruff check . --fix

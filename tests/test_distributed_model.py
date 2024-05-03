@@ -49,3 +49,7 @@ def test_distributed_model_prefill_gpt2():
 @pytest.mark.slow
 def test_distributed_model_prefill_gemma7b():
     _test_distributed_model_prefill("google/gemma-7b")
+
+@pytest.mark.slow
+def test_distributed_model_prefill_llama3_8b():
+    _test_distributed_model_prefill("meta-llama/Meta-Llama-3-8B")
