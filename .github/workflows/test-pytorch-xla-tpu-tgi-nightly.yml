@@ -1,0 +1,38 @@
+name: Optimum TPU / Test TGI on TPU (slow tests)
+
+on:
+  # This can be used to automatically publish nightlies at UTC nighttime
+  schedule:
+  - cron: '0 2 * * *' # run at 2 AM UTC
+  # This can be used to allow manually triggering nightlies from the web interface
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  do-the-job:
+    name: Build and Run slow tests
+    runs-on: optimum-tpu
+    container:
+      # Use an image that works with TPU with Pytorch 2.3.0 (release was not working)
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
+      options: --shm-size "16gb" --ipc host --privileged
+    env:
+      PJRT_DEVICE: TPU
+      HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and test Optimum TPU (also slow tests)
+        run: |
+          make build_dist test_installs
+          python -m pytest --runslow tests
+
+      - name: Build and test TGI (also slow tests)
+        run: |
+          make tgi_server test_installs
+          python -m pytest --runslow text-generation-inference/tests
+
