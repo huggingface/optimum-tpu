@@ -27,6 +27,7 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import torch_xla.distributed.spmd.xla_sharding as xs
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.activations import ACT2FN
@@ -216,13 +217,14 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class LlamaMLP(nn.Module):
-    def __init__(self, config, rank=0, world_size=1):
+    def __init__(self, config, rank=0, world_size=1, **spmd_mesh_args):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
         self.rank = rank
         self.world_size = world_size
+        self.spmd_mesh_args = spmd_mesh_args
         self.gate_proj = ColumnParallelLinear(
             self.hidden_size,
             self.intermediate_size,
@@ -263,6 +265,25 @@ class LlamaMLP(nn.Module):
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]
             down_proj = sum(down_proj)
+        elif self.spmd_mesh_args:
+            mesh = xs.HybridMesh(**self.spmd_mesh_args)
+            up_proj = self.up_proj(x)
+            # Apply 2D sharding:
+            # up_proj (batch, length, intermediate)
+            # mesh (data, None, model)
+            partition_spec = (("dcn", "data"), None, "model")
+            xs.mark_sharding(up_proj, mesh, partition_spec)
+
+            gate_proj = self.act_fn(self.gate_proj(x))
+            # Apply 2D sharding:
+            # gate_proj (batch, length, intermediate)
+            # mesh (data, None, model)
+            xs.mark_sharding(gate_proj, mesh, partition_spec)
+
+            down_proj = self.down_proj(gate_proj * up_proj)
+            # down_proj (batch, length, hidden)
+            # mesh (data, None, model)
+            xs.mark_sharding(down_proj, mesh, partition_spec)
         else:
             down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
@@ -290,6 +311,7 @@ class LlamaAttention(nn.Module):
         layer_idx: Optional[int] = None,
         rank: Optional[int] = None,
         world_size: Optional[int] = None,
+        **spmd_mesh_args,
     ):
         super().__init__()
         if rank is None:
@@ -300,6 +322,7 @@ class LlamaAttention(nn.Module):
             self.world_size = get_model_parallel_world_size()
         else:
             self.world_size = world_size
+        self.spmd_mesh_args = spmd_mesh_args
         self.config = config
         self.layer_idx = layer_idx
         if layer_idx is None:
@@ -417,11 +440,25 @@ class LlamaAttention(nn.Module):
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
+        mesh = None
+        if self.spmd_mesh_args:
+            # Apply 2D sharding:
+            # query_states (batch, length, hidden)
+            # key_states (batch, length, hidden / attention_heads * key_value_heads)
+            # value_states (batch, length, hidden / attention_heads * key_value_heads)
+            # mesh (data, None, model)
+            partition_spec = (("dcn", "data"), None, "model")
+            mesh = xs.HybridMesh(**self.spmd_mesh_args)
+            xs.mark_sharding(query_states, mesh, partition_spec)
+            xs.mark_sharding(key_states, mesh, partition_spec)
+            xs.mark_sharding(value_states, mesh, partition_spec)
+
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
         past_key_value = getattr(self, "past_key_value", past_key_value)
+
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
@@ -433,7 +470,13 @@ class LlamaAttention(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        if mesh is None:
+            attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        else:
+            # This replaces matmul with einsum, as it seems to improve performance on SPMD.
+            # See https://github.com/pytorch-tpu/transformers/pull/34 for details.
+            attn_weights = torch.einsum("bnsh,bnkh->bnsk", query_states, key_states) / math.sqrt(self.head_dim)
+            xs.mark_sharding(attn_weights, mesh, (("dcn", "data"), "model", None, None))
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -442,7 +485,12 @@ class LlamaAttention(nn.Module):
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
-        attn_output = torch.matmul(attn_weights, value_states)
+        if mesh is None:
+            attn_output = torch.matmul(attn_weights, value_states)
+        else:
+            # attn_weights Batch Num_head Seq Kv_seq
+            # value_states Batch Num_head Seq Head_dim
+            attn_output = torch.einsum("bnsk,bnkh->bnsh", attn_weights, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
@@ -463,6 +511,12 @@ class LlamaAttention(nn.Module):
 
         if not output_attentions:
             attn_weights = None
+
+        if mesh:
+            # Apply 2D sharding:
+            # attn_output (batch, length, hidden)
+            # mesh (data, None, model)
+            xs.mark_sharding(attn_output, mesh, (("dcn", "data"), None, "model"))
 
         return attn_output, attn_weights, past_key_value
 
@@ -758,17 +812,26 @@ LLAMA_ATTENTION_CLASSES = {
 
 
 class LlamaDecoderLayer(nn.Module):
-    def __init__(self, config: LlamaConfig, layer_idx: int, rank: int = 0, world_size: int = 1):
+
+    def __init__(
+        self,
+        config: LlamaConfig,
+        layer_idx: int,
+        rank: int = 0,
+        world_size: int = 1,
+        **spmd_mesh_args,
+    ):
         super().__init__()
         self.rank = rank
         self.world_size = world_size
+        self.spmd_mesh_args = spmd_mesh_args
         self.hidden_size = config.hidden_size
 
         self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](
-            config=config, layer_idx=layer_idx, rank=rank, world_size=world_size
+            config=config, layer_idx=layer_idx, rank=rank, world_size=world_size, **spmd_mesh_args
         )
 
-        self.mlp = LlamaMLP(config, rank=rank, world_size=world_size)
+        self.mlp = LlamaMLP(config, rank=rank, world_size=world_size, **spmd_mesh_args)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -986,7 +1049,13 @@ class LlamaModel(LlamaPreTrainedModel):
         config: LlamaConfig
     """
 
-    def __init__(self, config: LlamaConfig, rank: Optional[int] = None, world_size: Optional[int] = None):
+    def __init__(
+        self,
+        config: LlamaConfig,
+        rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+        **spmd_mesh_args,
+    ):
         super().__init__(config)
         if rank is None:
             self.rank = get_model_parallel_rank()
@@ -996,12 +1065,16 @@ class LlamaModel(LlamaPreTrainedModel):
             self.world_size = get_model_parallel_world_size()
         else:
             self.world_size = world_size
+        self.spmd_mesh_args = spmd_mesh_args
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
-            [LlamaDecoderLayer(config, layer_idx, rank, world_size) for layer_idx in range(config.num_hidden_layers)]
+            [
+                LlamaDecoderLayer(config, layer_idx, rank, world_size, **spmd_mesh_args)
+                for layer_idx in range(config.num_hidden_layers)
+            ]
         )
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
@@ -1070,6 +1143,11 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # embed positions
         hidden_states = inputs_embeds
+
+        if self.spmd_mesh_args:
+            # Apply 2D sharding
+            mesh = xs.HybridMesh(**self.spmd_mesh_args)
+            xs.mark_sharding(hidden_states, mesh, (("dcn", "data"), None, "model"))
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1207,7 +1285,7 @@ class LlamaModel(LlamaPreTrainedModel):
 class LlamaForCausalLM(LlamaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config, rank=None, world_size=None):
+    def __init__(self, config, rank=None, world_size=None, **spmd_mesh_args):
         super().__init__(config)
         if rank is None:
             self.rank = get_model_parallel_rank()
@@ -1217,7 +1295,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             self.world_size = get_model_parallel_world_size()
         else:
             self.world_size = world_size
-        self.model = LlamaModel(config, rank, world_size)
+        # Store spmd mesh setup
+        self.spmd_mesh_args = spmd_mesh_args
+        self.model = LlamaModel(config, rank, world_size, **spmd_mesh_args)
         self.vocab_size = config.vocab_size
         self.lm_head = ColumnParallelLinear(
             config.hidden_size,
@@ -1354,6 +1434,10 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         else:
             logits = self.lm_head(hidden_states)
         logits = logits.float()
+
+        if self.spmd_mesh_args:
+            mesh = xs.HybridMesh(**self.spmd_mesh_args)
+            xs.mark_sharding(logits, mesh, (("dcn", "data"), None, "model"))
 
         loss = None
         if labels is not None:
