@@ -24,6 +24,7 @@ import torch.distributed._functional_collectives as fc
 import torch.distributed.distributed_c10d as c10d
 import torch.nn.functional as F
 import torch.nn.init as init
+from torch.nn import Linear
 from torch.nn.parameter import Parameter
 
 
@@ -32,6 +33,7 @@ EPS = torch.finfo(torch.float32).eps
 USE_CUDA = os.environ.get("USE_CUDA", False)
 if not USE_CUDA:
     import torch_xla.core.xla_model as xm
+    import torch_xla.runtime as xr
 
 TAG = None
 RANKSET = None
@@ -581,6 +583,39 @@ class ColumnParallelLinear(torch.nn.Module):
             output = output_parallel
         return output
 
+    @classmethod
+    def create(
+        cls,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        gather_output: bool = True,
+        init_method: Callable[[torch.Tensor], torch.Tensor] = init.xavier_normal_,
+        stride: int = 1,
+        keep_master_weight_for_test: bool = False,
+        world_size: Optional[int] = None,
+        rank: Optional[int] = None,
+        groups: Optional[List] = None,
+        quant: bool = False,
+    ):
+        if xr.is_spmd():
+            # when SPMD is enabled, sharding is done with notation on the Linear.
+            return Linear(in_features, out_features, bias=bias)
+        else:
+            return ColumnParallelLinear(
+                in_features,
+                out_features,
+                bias,
+                gather_output,
+                init_method,
+                stride,
+                keep_master_weight_for_test,
+                world_size,
+                rank,
+                groups,
+                quant,
+            )
+
 
 class RowParallelLinear(torch.nn.Module):
     """Linear layer with row parallelism.
@@ -726,3 +761,36 @@ class RowParallelLinear(torch.nn.Module):
         else:
             output = output_
         return output
+
+    @classmethod
+    def create(
+        cls,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        input_is_parallel: bool = False,
+        init_method: Callable[[torch.Tensor], torch.Tensor] = init.xavier_normal_,
+        stride: int = 1,
+        keep_master_weight_for_test: bool = False,
+        world_size: Optional[int] = None,
+        rank: Optional[int] = None,
+        groups: Optional[List] = None,
+        quant: bool = False,
+    ):
+        if xr.is_spmd():
+            # when SPMD is enabled, sharding is done with notation on the Linear.
+            return Linear(in_features, out_features, bias=bias)
+        else:
+            return RowParallelLinear(
+                in_features,
+                out_features,
+                bias,
+                input_is_parallel,
+                init_method,
+                stride,
+                keep_master_weight_for_test,
+                world_size,
+                rank,
+                groups,
+                quant,
+            )
