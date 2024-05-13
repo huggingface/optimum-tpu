@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 
 # Integrations must be imported before ML frameworks:
 # isort: off
-from .integrations import (
+from transformers.integrations import (
     get_reporting_integration_callbacks,
     hp_params,
 )
@@ -53,24 +53,23 @@ from huggingface_hub import ModelCard, create_repo, upload_folder
 from packaging import version
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
-
-from . import __version__
-from .configuration_utils import PretrainedConfig
-from .data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
-from .debug_utils import DebugOption, DebugUnderflowOverflow
-from .hyperparameter_search import ALL_HYPERPARAMETER_SEARCH_BACKENDS, default_hp_search_backend
-from .integrations.deepspeed import deepspeed_init, deepspeed_load_checkpoint, is_deepspeed_available
-from .integrations.tpu import tpu_spmd_dataloader
-from .modelcard import TrainingSummary
-from .modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
-from .models.auto.modeling_auto import (
+from transformers import __version__
+from transformers.configuration_utils import PretrainedConfig
+from transformers.data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
+from transformers.debug_utils import DebugOption, DebugUnderflowOverflow
+from transformers.hyperparameter_search import ALL_HYPERPARAMETER_SEARCH_BACKENDS, default_hp_search_backend
+from transformers.integrations.deepspeed import deepspeed_init, deepspeed_load_checkpoint, is_deepspeed_available
+from transformers.integrations.tpu import tpu_spmd_dataloader
+from transformers.modelcard import TrainingSummary
+from transformers.modeling_utils import PreTrainedModel, load_sharded_checkpoint, unwrap_model
+from transformers.models.auto.modeling_auto import (
     MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
     MODEL_MAPPING_NAMES,
 )
-from .optimization import Adafactor, get_scheduler
-from .pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_13
-from .tokenization_utils_base import PreTrainedTokenizerBase
-from .trainer_callback import (
+from transformers.optimization import Adafactor, get_scheduler
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS, is_torch_greater_or_equal_than_1_13
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers.trainer_callback import (
     CallbackHandler,
     DefaultFlowCallback,
     PrinterCallback,
@@ -79,7 +78,7 @@ from .trainer_callback import (
     TrainerControl,
     TrainerState,
 )
-from .trainer_pt_utils import (
+from transformers.trainer_pt_utils import (
     DistributedTensorGatherer,
     IterableDatasetShard,
     LabelSmoother,
@@ -100,7 +99,7 @@ from .trainer_pt_utils import (
     reissue_pt_warnings,
     remove_dummy_checkpoint,
 )
-from .trainer_utils import (
+from transformers.trainer_utils import (
     PREFIX_CHECKPOINT_DIR,
     BestRun,
     EvalLoopOutput,
@@ -125,8 +124,8 @@ from .trainer_utils import (
     set_seed,
     speed_metrics,
 )
-from .training_args import OptimizerNames, ParallelMode, TrainingArguments
-from .utils import (
+from transformers.training_args import OptimizerNames, ParallelMode, TrainingArguments
+from transformers.utils import (
     ADAPTER_CONFIG_NAME,
     ADAPTER_SAFE_WEIGHTS_NAME,
     ADAPTER_WEIGHTS_NAME,
@@ -157,14 +156,14 @@ from .utils import (
     logging,
     strtobool,
 )
-from .utils.quantization_config import QuantizationMethod
+from transformers.utils.quantization_config import QuantizationMethod
 
 
 DEFAULT_CALLBACKS = [DefaultFlowCallback]
 DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 
 if is_in_notebook():
-    from .utils.notebook import NotebookProgressCallback
+    from transformers.utils.notebook import NotebookProgressCallback
 
     DEFAULT_PROGRESS_CALLBACK = NotebookProgressCallback
 
@@ -187,7 +186,7 @@ if is_sagemaker_mp_enabled():
 
     IS_SAGEMAKER_MP_POST_1_10 = version.parse(SMP_VERSION) >= version.parse("1.10")
 
-    from .trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
+    from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
 
@@ -343,7 +342,7 @@ class Trainer:
     """
 
     # Those are used as methods of the Trainer in examples.
-    from .trainer_pt_utils import _get_learning_rate, log_metrics, metrics_format, save_metrics, save_state
+    from transformers.trainer_pt_utils import _get_learning_rate, log_metrics, metrics_format, save_metrics, save_state
 
     def __init__(
         self,
@@ -855,6 +854,9 @@ class Trainer:
             dataloader_params["worker_init_fn"] = seed_worker
             dataloader_params["prefetch_factor"] = self.args.dataloader_prefetch_factor
 
+        if xr.is_spmd():
+            # Accelerator does not handle XLA SPMD mode
+            return DataLoader(train_dataset, **dataloader_params)
         return self.accelerator.prepare(DataLoader(train_dataset, **dataloader_params))
 
     def _get_eval_sampler(self, eval_dataset: Dataset) -> Optional[torch.utils.data.Sampler]:
@@ -1075,7 +1077,7 @@ class Trainer:
             optimizer_cls = Adafactor
             optimizer_kwargs.update({"scale_parameter": False, "relative_step": False})
         elif args.optim == OptimizerNames.ADAMW_HF:
-            from .optimization import AdamW
+            from transformers.optimization import AdamW
 
             optimizer_cls = AdamW
             optimizer_kwargs.update(adam_kwargs)
@@ -1406,7 +1408,6 @@ class Trainer:
                 raise ValueError("For sweeps with deepspeed, `args.deepspeed` must be set")
             # Rebuild the deepspeed config to reflect the updated training parameters
             from accelerate.utils import DeepSpeedPlugin
-
             from transformers.integrations.deepspeed import HfTrainerDeepSpeedConfig
 
             self.args.hf_deepspeed_config = HfTrainerDeepSpeedConfig(self.args.deepspeed)
@@ -1612,7 +1613,7 @@ class Trainer:
             if self.is_fsdp_xla_v2_enabled:
 
                 def shard_output(output, mesh):
-                    from .modeling_outputs import CausalLMOutputWithPast
+                    from transformers.modeling_outputs import CausalLMOutputWithPast
 
                     real_output = None
                     if isinstance(output, torch.Tensor):
@@ -1675,6 +1676,23 @@ class Trainer:
             self.accelerator.ddp_handler = DistributedDataParallelKwargs(**kwargs)
 
         return model
+
+    def _xla_sharded_dataloader(self, dataloader):
+        if is_torch_xla_available and getattr(self.args, "spmd_mesh", False):
+            import torch_xla.distributed.parallel_loader as pl
+            import torch_xla.distributed.spmd.xla_sharding as xs
+            sharding_spec = xs.ShardingSpec(self.args.spmd_mesh, (('dcn', 'data'), None))
+            loader = pl.MpDeviceLoader(
+                dataloader,
+                self.args.device,
+                input_sharding=sharding_spec,
+                loader_prefetch_size=self.args.train_batch_size,
+                device_prefetch_size=4,
+            )
+            loader.dataset = dataloader.dataset
+            return loader
+        else:
+            return dataloader
 
     def train(
         self,
@@ -1807,6 +1825,8 @@ class Trainer:
         logger.debug(f"Currently training with a batch size of: {self._train_batch_size}")
         # Data loader and number of training steps
         train_dataloader = self.get_train_dataloader()
+        if xr.is_spmd():
+            train_dataloader = self._xla_sharded_dataloader(train_dataloader)
         if self.is_fsdp_xla_v2_enabled:
             train_dataloader = tpu_spmd_dataloader(train_dataloader)
 
@@ -3341,6 +3361,8 @@ class Trainer:
         """
         # handle multipe eval datasets
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
+        if xr.is_spmd():
+            eval_dataset = self._xla_sharded_dataloader(eval_dataset)
         if isinstance(eval_dataset, dict):
             metrics = {}
             for eval_dataset_name, _eval_dataset in eval_dataset.items():

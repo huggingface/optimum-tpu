@@ -33,17 +33,20 @@ from typing import Optional
 import datasets
 import evaluate
 import torch
-from datasets import load_dataset
-
+import torch_xla
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.spmd.xla_sharding as xs
+import torch_xla.runtime as xr
 import transformers
+from datasets import load_dataset
+from torch_xla.distributed.fsdp import checkpoint_module
+from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
-    AutoModelForCausalLM,
     AutoTokenizer,
     HfArgumentParser,
-    Trainer,
     TrainingArguments,
     default_data_collator,
     is_torch_xla_available,
@@ -54,9 +57,20 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
+from optimum.tpu import AutoModelForCausalLM, Trainer
+
+
+# Set TPU usage
+os.environ["PJRT_DEVICE"] = "TPU"
+# Generalize BF16 usage
+os.environ["XLA_USE_BF16"] = "1"
+
+# Enable SPMD mode execution
+xr.use_spmd()
+
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.40.0")
+check_min_version("4.39.3")
 
 require_version("datasets>=2.14.0", "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt")
 
@@ -153,6 +167,30 @@ class ModelArguments:
             "help": (
                 "It is an option to create the model as an empty shell, then only materialize its parameters when the pretrained weights are loaded. "
                 "set True will benefit LLM loading time and RAM consumption."
+            )
+        },
+    )
+    spmd_dcn_parallelism: int = field(
+        default=1,
+        metadata={
+            "help": (
+                "Number of slices to run in data parallel"
+            )
+        },
+    )
+    spmd_grad_chkpt: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Apply gradient checkpointing to the model"
+            )
+        },
+    )
+    spmd_2d_sharding: int = field(
+        default=0,
+        metadata={
+            "help": (
+                "Will apply XLA SPMD to 2D sharding, i.e., weights + activations, and spmd_2d_sharding specifies the model dimension"
             )
         },
     )
@@ -431,6 +469,25 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
+    # Place DCN on an independent axis in the mesh. Model parameters should be
+    # replicated along the DCN axis, and inputs and activations should have
+    # the batch dimension sharded along the combined DCN and data axes.
+    num_devices = xr.global_runtime_device_count()
+    model_axis = max(model_args.spmd_2d_sharding, 1)
+    assert xr.device_type() == 'TPU', "Only TPU is supported"
+    dcn_axis = model_args.spmd_dcn_parallelism
+    data_axis = num_devices // model_axis // dcn_axis
+    # mesh data setup
+    ici_mesh_shape = (1, data_axis, model_axis)
+    dcn_mesh_shape = (dcn_axis, 1, 1)
+    axis_names=('dcn', 'data', 'model')
+    # Note that we do not pass the spmd_mesh to the model because it is not JSON-serializable.
+    spmd_mesh = xs.HybridMesh(ici_mesh_shape=ici_mesh_shape, dcn_mesh_shape=dcn_mesh_shape, axis_names=axis_names)
+
+    # Add spmd_mesh to the training_args. This is kind of hacky, but it is a simple way to pass the mesh info without
+    # having to implement a custom TrainingArgs class just for this.
+    training_args.spmd_mesh = spmd_mesh
+
     if model_args.model_name_or_path:
         torch_dtype = (
             model_args.torch_dtype
@@ -447,6 +504,9 @@ def main():
             trust_remote_code=model_args.trust_remote_code,
             torch_dtype=torch_dtype,
             low_cpu_mem_usage=model_args.low_cpu_mem_usage,
+            ici_mesh_shape=ici_mesh_shape,
+            dcn_mesh_shape=dcn_mesh_shape,
+            axis_names=axis_names,
         )
     else:
         model = AutoModelForCausalLM.from_config(config, trust_remote_code=model_args.trust_remote_code)
@@ -458,6 +518,48 @@ def main():
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
         model.resize_token_embeddings(len(tokenizer))
+
+    # Replace the linear layer
+    model = apply_xla_patch_to_nn_linear(model, xs.xla_patched_nn_linear_forward)
+
+    # Set the dtype, and move to the XLA device when parameters are already initialized
+    model = model.to(xm.xla_device(), dtype=getattr(torch, model_args.torch_dtype))
+
+    # Shard each parameter in the model based on the sharding strategy provided.
+    for name, param in model.named_parameters():
+        if model_args.spmd_2d_sharding > 0:
+            # Apply 2D sharding:
+            # We don't care about layernorm's weights, and
+            # LLaMA/Gemma models don't use biases.
+            if len(param.shape) == 1:
+                continue
+
+            if 'embed_tokens' in name:
+                xs.mark_sharding(param, spmd_mesh, ('model', 'data'))
+            elif 'q_proj' in name or 'k_proj' in name or 'v_proj' in name:
+                xs.mark_sharding(param, spmd_mesh, ('data', 'model'))
+            elif 'o_proj' in name:
+                xs.mark_sharding(param, spmd_mesh, ('model', 'data'))
+            elif 'gate_proj' in name or 'up_proj' in name:
+                xs.mark_sharding(param, spmd_mesh, ('model', 'data'))
+            elif 'down_proj' in name:
+                xs.mark_sharding(param, spmd_mesh, ('data', 'model'))
+            elif 'lm_head' in name:
+                xs.mark_sharding(param, spmd_mesh, ('model', 'data'))
+            else:
+                continue
+            print('> [2D] Sharding tensor', name, param.shape)
+        print(f'{name} {torch_xla._XLAC._get_xla_sharding_spec(param)}')
+
+    for i, _block in enumerate(model.model.layers):
+        # LLaMA/Gemma specific
+        xs.apply_backward_optimization_barrier(model.model.layers[i])
+
+    if model_args.spmd_grad_chkpt:
+        print("Applying gradient checkpointing")
+        for i, block in enumerate(model.model.layers):
+            # LLaMA/Gemma specific
+            model.model.layers[i] = checkpoint_module(block)
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
