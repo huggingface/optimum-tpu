@@ -225,21 +225,21 @@ class LlamaMLP(nn.Module):
         self.rank = rank
         self.world_size = world_size
         self.spmd_mesh_args = spmd_mesh_args
-        self.gate_proj = ColumnParallelLinear(
+        self.gate_proj = ColumnParallelLinear.create(
             self.hidden_size,
             self.intermediate_size,
             bias=False,
             rank=rank,
             world_size=world_size,
         )
-        self.up_proj = ColumnParallelLinear(
+        self.up_proj = ColumnParallelLinear.create(
             self.hidden_size,
             self.intermediate_size,
             bias=False,
             rank=rank,
             world_size=world_size,
         )
-        self.down_proj = RowParallelLinear(
+        self.down_proj = RowParallelLinear.create(
             self.intermediate_size,
             self.hidden_size,
             bias=False,
@@ -348,28 +348,28 @@ class LlamaAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = ColumnParallelLinear(
+        self.q_proj = ColumnParallelLinear.create(
             self.hidden_size,
             self.num_heads * self.head_dim,
             bias=config.attention_bias,
             world_size=world_size,
             rank=rank,
         )
-        self.k_proj = ColumnParallelLinear(
+        self.k_proj = ColumnParallelLinear.create(
             self.hidden_size,
             self.num_key_value_heads * self.head_dim,
             bias=config.attention_bias,
             world_size=world_size,
             rank=rank,
         )
-        self.v_proj = ColumnParallelLinear(
+        self.v_proj = ColumnParallelLinear.create(
             self.hidden_size,
             self.num_key_value_heads * self.head_dim,
             bias=config.attention_bias,
             world_size=world_size,
             rank=rank,
         )
-        self.o_proj = RowParallelLinear(
+        self.o_proj = RowParallelLinear.create(
             self.hidden_size,
             self.hidden_size,
             bias=config.attention_bias,
@@ -1299,7 +1299,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.spmd_mesh_args = spmd_mesh_args
         self.model = LlamaModel(config, rank, world_size, **spmd_mesh_args)
         self.vocab_size = config.vocab_size
-        self.lm_head = ColumnParallelLinear(
+        self.lm_head = ColumnParallelLinear.create(
             config.hidden_size,
             config.vocab_size,
             bias=False,
