@@ -13,4 +13,5 @@
 #  limitations under the License.
 
 from .modeling import AutoModelForCausalLM
+from .trainer import Trainer
 from .version import VERSION, __version__
