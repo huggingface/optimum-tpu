@@ -86,7 +86,7 @@ gcloud compute tpus tpu-vm ssh $TPU_NAME \
     virtualenv hf;\
     source hf/bin/activate;\
     pip install -U pip;\
-    pip install 'torch~=2.2.0' 'torch_xla[tpu]~=2.2.0' \
+    pip install 'torch~=2.3.0' 'torch_xla[tpu]~=2.3.0' \
         -f https://storage.googleapis.com/libtpu-releases/index.html;\
     pip install numpy accelerate sentencepiece datasets evaluate"
 ```
