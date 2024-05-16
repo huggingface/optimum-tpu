@@ -224,7 +224,9 @@ class Slot:
 
     @property
     def stopped(self) -> bool:
-        return bool(torch.all(self._selector.stopping_criteria(self._tokens, None)))
+        # unsqueeze tokens to avoid problems with stopping criteria
+        tokens = self._tokens.unsqueeze(0)
+        return bool(torch.all(self._selector.stopping_criteria(tokens, None)))
 
     @property
     def generated_text(self) -> str:
