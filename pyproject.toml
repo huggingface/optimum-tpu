@@ -42,7 +42,7 @@ keywords = [
 ]
 
 dependencies = [
-    "transformers == 4.39.3",
+    "transformers == 4.40.2",
     "torch ~= 2.3.0",
     "torch-xla[tpu] ~= 2.3.0",
     "loguru == 0.6.0"
