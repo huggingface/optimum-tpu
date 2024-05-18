@@ -126,5 +126,5 @@ gcloud compute tpus tpu-vm ssh $TPU_NAME \
       --max_steps 10 \
       --logging_steps 10 \
       --spmd_2d_sharding 1 \
-      --spmd_grad_chkpt
+      --spmd_grad_chkpt"
 ```
