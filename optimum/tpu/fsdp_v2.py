@@ -17,6 +17,8 @@ Utility functions to provide FSDPv2 configuration for TPU training.
 """
 from typing import Dict, List, Union
 
+from transformers.modeling_utils import PreTrainedModel
+
 
 def use_fsdp_v2():
     """
@@ -44,3 +46,38 @@ def get_fsdp_config(*cls_to_wrap: Union[str | List[str]]) -> Dict:
         "xla_fsdp_v2": True,
         "xla_fsdp_grad_ckpt": True,
     }
+
+
+def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
+    """
+    Returns the default FSDPv2 training arguments for a model of a known class.
+
+    Args:
+        model: The model to train with FSDPv2.
+
+    Returns:
+        A dictionary with the FSDPv2 training arguments.
+    """
+    model_type = model.config.model_type
+    matched_model = True
+    if model_type == "gemma":
+        from .modeling_gemma import TpuGemmaForCausalLM
+
+        if isinstance(model, TpuGemmaForCausalLM):
+            cls_to_wrap = "TpuGemmaDecoderLayer"
+            matched_model = True
+    elif model_type == "llama":
+        from .modeling_llama import LlamaForCausalLM
+
+        if isinstance(model, LlamaForCausalLM):
+            cls_to_wrap = "LlamaDecoderLayer"
+            matched_model = True
+
+    if not matched_model:
+        raise ValueError(f"Model {model} configuration cannot be auto-generated, use get_fsdp_config instead.")
+
+    fsdp_training_args = {
+        "fsdp": "full_shard",
+        "fsdp_config": get_fsdp_config(cls_to_wrap),
+    }
+    return fsdp_training_args

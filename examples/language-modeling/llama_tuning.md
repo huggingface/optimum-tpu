@@ -66,10 +66,10 @@ data = load_dataset("Abirate/english_quotes")
 data = data.map(lambda samples: tokenizer(samples["quote"]), batched=True)
 ```
 
-You then need to specify the FSDP configuration to enable the sharding feature, and just indicate the layer classes that need to be sharded:
+You then need to specify the FSDP training arguments to enable the sharding feature,the function will deduce the classes that should be sharded:
 
 ```python
-fsdp_config = fsdp_v2.get_fsdp_config("LlamaDecoderLayer")
+fsdp_training_args = fsdp_v2.get_fsdp_training_args(model)
 ```
 
 Now training can be done as simply as using the standard `Trainer` class:
@@ -87,8 +87,7 @@ trainer = Trainer(
         optim="adafactor",
         logging_steps=1,
         dataloader_drop_last=True,  # Required by FSDP v2 and SPMD.
-        fsdp="full_shard",
-        fsdp_config=fsdp_config,
+        **fsdp_training_args,
     ),
     data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
