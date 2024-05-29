@@ -48,6 +48,25 @@ def get_fsdp_config(*cls_to_wrap: Union[str | List[str]]) -> Dict:
     }
 
 
+def _unwrap_model(model: PreTrainedModel) -> PreTrainedModel:
+    """
+    Unwraps the model from the PeftModel wrapper.
+
+    Args:
+        model: The model to unwrap.
+
+    Returns:
+        The unwrapped model.
+    """
+    try:
+        from peft.peft_model import LoraModel, PeftModel
+        if isinstance(model, PeftModel) and isinstance(model.base_model, LoraModel):
+            return model.base_model.model
+        return model
+    except ImportError:
+        return model
+
+
 def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
     """
     Returns the default FSDPv2 training arguments for a model of a known class.
@@ -58,8 +77,9 @@ def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
     Returns:
         A dictionary with the FSDPv2 training arguments.
     """
+    model = _unwrap_model(model)
     model_type = model.config.model_type
-    matched_model = True
+    matched_model = False
     if model_type == "gemma":
         from .modeling_gemma import TpuGemmaForCausalLM
 
