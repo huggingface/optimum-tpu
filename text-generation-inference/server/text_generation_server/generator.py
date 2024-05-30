@@ -264,10 +264,9 @@ class TpuGeneratorSingleThread(Generator):
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
         self.past_key_values = None
-        # _setup_cache is specific to some models (e.g.: Gemma and Llama). In those cases it is possible to setup
-        # a static cache, otherwise it is not.
+        # use_static_cache is specific to some models (e.g.: Gemma and Llama).
         self.use_static_cache = True
-        if getattr(self.model, "_setup_cache", False) is False:
+        if getattr(self.model, "_supports_static_cache", False) is False:
             logger.warning(
                 f"Static cache not available for {self.model.__class__.__name__}. Performance will be affected"
             )
@@ -384,8 +383,15 @@ class TpuGeneratorSingleThread(Generator):
 
         extra_args = {}
         if self.use_static_cache:
-            self.model._setup_cache(StaticCache, len(self.slots), self.model.config.sequence_length)
+            self.past_key_values = StaticCache(
+                    config=self.model.config,
+                    max_batch_size=len(self.slots),
+                    max_cache_len=self.model.config.sequence_length,
+                    device=self.model.device,
+                    dtype=self.model.dtype,
+                )
             extra_args["cache_position"] = torch.arange(seq_length, device=self.model.device)
+            extra_args["past_key_values"] = self.past_key_values
         else:
             # Reset/clear KV cache
             self.past_key_values = None
@@ -464,7 +470,7 @@ class TpuGeneratorSingleThread(Generator):
             extra_args["cache_position"] = position_ids.max().unsqueeze(0)
         else:
             extra_args["attention_mask"] = attention_mask
-            extra_args["past_key_values"] = self.past_key_values
+        extra_args["past_key_values"] = self.past_key_values
         return self._generate_token(
             next_batch_id, input_ids, self.model_one_token, position_ids=position_ids, **extra_args
         )

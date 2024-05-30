@@ -95,7 +95,7 @@ RUN apt-get update -y \
 RUN pip install --upgrade pip
 
 # Install HuggingFace packages
-ARG TRANSFORMERS_VERSION='4.40.2'
+ARG TRANSFORMERS_VERSION='4.41.1'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
