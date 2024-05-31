@@ -26,9 +26,9 @@ from transformers import AutoModelForCausalLM as BaseAutoModelForCausalLM
 def config_name_to_class(pretrained_model_name_or_path: str):
     config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
     if config.model_type == "gemma":
-        from .modeling_gemma import TpuGemmaForCausalLM
+        from .modeling_gemma import GemmaForCausalLM
 
-        return TpuGemmaForCausalLM
+        return GemmaForCausalLM
     if config.model_type == "llama":
         from .modeling_llama import LlamaForCausalLM
 
