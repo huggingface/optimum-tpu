@@ -16,11 +16,12 @@ limitations under the License.
 
 # Tuning Llama Model
 
-Training Large Language Models (LLMs) on Google Tensor Processing Units (TPUs) with Single Program Multiple Data (SPMD) offers a multitude of benefits. TPUs provide competitive processing power, enabling good training times and allowing researchers to experiment with larger models and datasets efficiently. SPMD architecture optimizes resource utilization by distributing tasks across multiple TPUs, enhancing parallelism and scalability. This approach not only accelerates training but also enables seamless scaling to tackle increasingly complex natural language processing tasks. Moreover, the combination of TPUs and SPMD ensures cost-effectiveness by maximizing computational efficiency. For details on using SPMD on Pytorch/XLA you can refer to the [documentation](https://github.com/pytorch/xla/blob/master/docs/spmd.md).
+Training Large Language Models (LLMs) on Google Tensor Processing Units (TPUs) with Single Program Multiple Data (SPMD) offers a multitude of benefits. TPUs provide competitive processing power, enabling good training times and allowing researchers to experiment with larger models and datasets efficiently. SPMD architecture optimizes resource utilization by distributing tasks across multiple TPUs, enhancing parallelism and scalability.
+The easiest approach to tune a model with SPMD is using Fully Sharded Data Parallel [(FSDP)](https://engineering.fb.com/2021/07/15/open-source/fsdp/). Pytorch/XLA most recent and performant implementation is [FSDP v2](https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md), that allows to shard weights, activations and outputs.
 
-This example shows how to tune Meta's LLama2 and Llama3 models on single-host and multi-host TPUs. For information on this, you can consult the [architecture documentation](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm).
 
-## Tuning LLama2
+This example shows how to tune Meta's LLama2 and Llama3 models on single host TPUs. For information on TPUs architecture, you can consult the [documentation](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm).
+
 
 ### Prerequisites
 
@@ -35,96 +36,61 @@ Note that to work with the gated model, you will need to export the `HF_TOKEN` v
 
 ### Instructions
 
-You can now use a modified version of `run_clm.py` to train your model on the `wikitext-2-raw-v1` dataset:
+To use FSDPv2, it needs to be enabled:
 
-```bash
-python examples/language-modeling/run_clm.py \
-   --model_name_or_path meta-llama/Llama-2-7b-hf \
-   --dataset_name wikitext \
-   --dataset_config_name wikitext-2-raw-v1 \
-   --per_device_train_batch_size 4 \
-   --per_device_eval_batch_size 8 \
-   --num_train_epochs 1 \
-   --do_train \
-   --output_dir /tmp/output \
-   --overwrite_output_dir \
-   --save_strategy no \
-   --logging_strategy no \
-   --remove_unused_columns no \
-   --optim adafactor \
-   --torch_dtype bfloat16 \
-   --dataloader_drop_last yes \
-   --block_size 1024 \
-   --learning_rate 5e-5 \
-   --max_steps 10 \
-   --logging_steps 10 \
-   --spmd_2d_sharding 1 \
-   --spmd_grad_chkpt
+```python
+from optimum.tpu import fsdp_v2
+fsdp_v2.use_fsdp_v2()
 ```
 
-This step will use the `Trainer` class in `optimum-tpu` to mark the model sharding and adapt it for the training on Pytorch/XLA. Training can take around 20 minutes on a TPU `v5e-litepod8`.
+Then, the tokenizer and model need to be loaded. We will choose [`meta-llama/Meta-Llama-3-8B`](https://huggingface.co/meta-llama/Meta-Llama-3-8B) for this example
 
-## Llama3 tuning on multi-host setups
+```python
+import torch
+from transformers import AutoTokenizer
+from optimum.tpu import AutoModelForCausalLM
 
-Tuning Llama3 can be done on larger multi-host setups, such as the `v5litepod16`. We assume here you already created the required TPU Pod slices VM. For details on how to do that, please check the related [documentation](https://cloud.google.com/tpu/docs/pytorch-pods).
-
-### Instructions
-
-First, you will need to setup some variable to simplify using the `gcloud` command line to issue the commands on all workers.
-
-```shell
-export ZONE=us-central1-a
-export TPU_NAME=tpu-name
+model_id = "meta-llama/Meta-Llama-3-8B"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+# Add custom token for padding Llama
+tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
+model = AutoModelForCausalLM.from_pretrained(model_id)
 ```
 
-Once that is done, you can setup the environment that will be used for the tuning.
+To tune the model with the [Abirate/english_quotes](https://huggingface.co/datasets/Abirate/english_quotes) dataset, you can load it and obtain the `quote` column:
 
-```bash
-gcloud compute tpus tpu-vm ssh $TPU_NAME \
-    --zone=$ZONE --worker=all --command="\
-    rm -rf hf;\
-    virtualenv hf;\
-    source hf/bin/activate;\
-    pip install -U pip;\
-    pip install 'torch~=2.3.0' 'torch_xla[tpu]~=2.3.0' \
-        -f https://storage.googleapis.com/libtpu-releases/index.html;\
-    pip install numpy accelerate sentencepiece datasets evaluate"
+```python
+from datasets import load_dataset
+
+data = load_dataset("Abirate/english_quotes")
+data = data.map(lambda samples: tokenizer(samples["quote"]), batched=True)
 ```
 
-To complete this example, we will fine-tune Llama3 on the `wikitext` dataset. To do that, it will be necessary to use the `HF_TOKEN` set as environment variable, to propagate that on all workers, and allow them to access the gated model.
-Finally, it will be possible to launch this command to use optimum-tpu's custom `run_clm.py` script.
+You then need to specify the FSDP training arguments to enable the sharding feature,the function will deduce the classes that should be sharded:
 
-```shell
-gcloud compute tpus tpu-vm ssh $TPU_NAME \
-  --zone=$ZONE \
-  --worker=all \
-  --command="\
-    source hf/bin/activate;\
-    rm -rf optimum-tpu;\
-    git clone https://github.com/huggingface/optimum-tpu.git;\
-    cd optimum-tpu;\
-    git checkout basic-training;
-    pip install -e .;\
-    HF_TOKEN=$HF_TOKEN python3 examples/language-modeling/run_clm.py \
-      --model_name_or_path meta-llama/Meta-Llama-3-8B \
-      --dataset_name wikitext \
-      --dataset_config_name wikitext-2-raw-v1 \
-      --per_device_train_batch_size 4 \
-      --per_device_eval_batch_size 8 \
-      --num_train_epochs 1 \
-      --do_train \
-      --output_dir /tmp/output \
-      --overwrite_output_dir \
-      --save_strategy no \
-      --logging_strategy no \
-      --remove_unused_columns no \
-      --optim adafactor \
-      --torch_dtype bfloat16 \
-      --dataloader_drop_last yes \
-      --block_size 1024 \
-      --learning_rate 5e-5 \
-      --max_steps 10 \
-      --logging_steps 10 \
-      --spmd_2d_sharding 1 \
-      --spmd_grad_chkpt"
+```python
+fsdp_training_args = fsdp_v2.get_fsdp_training_args(model)
+```
+
+Now training can be done as simply as using the standard `Trainer` class:
+
+```python
+from transformers import DataCollatorForLanguageModeling, Trainer, TrainingArguments
+trainer = Trainer(
+    model=model,
+    train_dataset=data["train"],
+    args=TrainingArguments(
+        per_device_train_batch_size=24,
+        num_train_epochs=10,
+        max_steps=-1,
+        output_dir="/tmp/output",
+        optim="adafactor",
+        logging_steps=1,
+        dataloader_drop_last=True,  # Required by FSDP v2 and SPMD.
+        **fsdp_training_args,
+    ),
+    data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
+)
+
+trainer.train()
 ```

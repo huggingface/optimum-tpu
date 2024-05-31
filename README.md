@@ -22,8 +22,8 @@ working closely with Google and Google Cloud to make this a reality.
 ## Supported Model and Tasks
 
 We currently support a few LLM models targeting text generation scenarios:
-- Gemma (2b)
-- Llama (8b)
+- Gemma (2b, 7b)
+- Llama2  (7b) and Llama3 (8b)
 - Mistral (soon)
 
 
@@ -49,4 +49,13 @@ Please see the [TGI specific documentation]() on how to get started
 
 ## Training
 
-Journey just started, we are working hard on this; stay tuned! ⚒️
+Fine-tuning is supported and tested on the TPU `v5e`. We have tested so far:
+
+- 🦙 Llama-2 7B and Llama-3 8B
+- 💎 Gemma 2B and 7B
+
+You can check the examples:
+
+- [Fine-Tune Gemma on Google TPU](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/gemma_tuning.ipynb)
+- The [Llama fine-tuning script](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.md)
+
