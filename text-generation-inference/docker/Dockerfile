@@ -121,7 +121,7 @@ RUN pip install dist/text_generation_server*.tar.gz
 
 
 # TPU compatible image for Inference Endpoints
-FROM tpu-base as inference-endpoint
+FROM tpu_base as inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
