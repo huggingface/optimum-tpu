@@ -81,10 +81,10 @@ def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
     model_type = model.config.model_type
     matched_model = False
     if model_type == "gemma":
-        from .modeling_gemma import TpuGemmaForCausalLM
+        from .modeling_gemma import GemmaForCausalLM
 
-        if isinstance(model, TpuGemmaForCausalLM):
-            cls_to_wrap = "TpuGemmaDecoderLayer"
+        if isinstance(model, GemmaForCausalLM):
+            cls_to_wrap = "GemmaDecoderLayer"
             matched_model = True
     elif model_type == "llama":
         from .modeling_llama import LlamaForCausalLM

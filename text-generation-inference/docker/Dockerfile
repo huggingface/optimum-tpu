@@ -95,7 +95,7 @@ RUN apt-get update -y \
 RUN pip install --upgrade pip
 
 # Install HuggingFace packages
-ARG TRANSFORMERS_VERSION='4.40.2'
+ARG TRANSFORMERS_VERSION='4.41.1'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
@@ -121,7 +121,7 @@ RUN pip install dist/text_generation_server*.tar.gz
 
 
 # TPU compatible image for Inference Endpoints
-FROM tpu-base as inference-endpoint
+FROM tpu_base as inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
