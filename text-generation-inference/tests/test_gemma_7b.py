@@ -79,3 +79,40 @@ def test_decode_single(model_path):
     assert output.generated_tokens == max_new_tokens
     assert output.finish_reason == 0
     assert output.text == generated_text
+
+
+@pytest.mark.slow
+def test_decode_multi(model_path):
+    prompts: List[str] = [
+      "I believe the meaning of life is",
+      "To add an element to an ArrayList of a specific class type in Java, you can follow the following steps:\n\n1. Create an instance of the class to be added.\n2. Get a reference to the ArrayList.\n3. Call the `add()` method on the ArrayList, passing the instance of the class as the argument.\n\nHere's an example of how to add an object of type `Person` to an ArrayList of type `ArrayList<Person>`:\n```csharp\n// Create a new instance of the Person class\nPerson person = new Person(\"John\", 25);\n\n// Get a reference to the ArrayList\nArrayList<Person> peopleList = new ArrayList<>();\n\n// Add the person object to the ArrayList\npeopleList.add(person);\n```\nIn this example, the `Person` class is assumed to have a constructor that takes two arguments: a String for the person's name, and an int for their age. You can substitute your own class and constructor as necessary.",
+      "<s>[INST] <<SYS>>\nYou are an AI assistant. User will you give you a task. Your goal is to complete the task as faithfully as you can. While performing the task think step-by-step and justify your steps.\n<</SYS>>\n\nQuestion 1: What is commercial real estate finance?\nQuestion 2: What are Commercial Real Estate services?\nOptions are:\n[a]. no.\n[b]. yes.\nWould the answer to these two questions be the same? [/INST]",
+      "<s>[INST] <<SYS>>\nYou are an AI assistant that helps people find information. Provide a detailed answer so user don\u2019t need to search outside to understand the answer.\n<</SYS>>\n\nUse reasoning to lead to the answer of the following question:\nWhere are you likely to find water underneath?\nOptions:\n- toilet\n- sink\n- jar\n- bridge\n- house\n Reasoning process: [/INST",
+      "<s>[INST] <<SYS>>\nYou are an AI assistant. You will be given a task. You must generate a detailed and long answer.\n<</SYS>>\n\nContinue the following story.\n\nKay didn't have shoes that fit her feet properly. She only wore sneakers, because the \nChoose from: [I] shoes  fitted badly. [II] sneakers  fitted badly. [/INST]",
+    ]
+    for prompt in prompts:
+        input_text = prompt # "It was a bright cold day in April, and the clocks were striking thirteen."
+        max_new_tokens = 20
+        # generated_text = "\n\nThe time is 1984. The place is Airstrip One, the British"
+    
+        generator = TpuGenerator.from_pretrained(
+            model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
+        )
+        request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
+        batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
+        generations, next_batch = generator.prefill(batch)
+        # We already generated one token: call decode max_new_tokens - 1 times
+        for _ in tqdm(range(max_new_tokens - 1)):
+            assert next_batch.size == 1
+            assert next_batch.max_tokens == 128
+            assert len(generations) == 1
+            assert len(generations[0].tokens.ids) == 1
+            generations, next_batch = generator.decode([next_batch])
+        assert next_batch is None
+        assert len(generations) == 1
+        print("---- One output text: ", output.text)
+    print("---- finish all four inference tests")
+        # output = generations[0].generated_text
+        # assert output.generated_tokens == max_new_tokens
+        # assert output.finish_reason == 0
+        # assert output.text == generated_text
