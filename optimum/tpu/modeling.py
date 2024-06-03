@@ -51,14 +51,8 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
         if "PJRT_DEVICE" not in environ:
             logger.info("PJRT_DEVICE environment variable not found. Setting it to 'TPU'.")
             environ["PJRT_DEVICE"] = "TPU"
-        if "DBG_DEVICE" in environ:
-            device = environ["DBG_DEVICE"]
-            logger.debug(f"Device set to: {device}")
-        else:
-            device = "xla"
         cls = config_name_to_class(pretrained_model_name_or_path)
         model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
-        model.to(device)
 
         # Update config with specific data)
         if task is not None or getattr(model.config, "task", None) is None:

@@ -11,7 +11,7 @@ import torch_xla.core.xla_model as xm
 from transformers import AutoTokenizer, StaticCache
 
 from optimum.tpu.modeling import AutoModelForCausalLM
-
+from optimum.tpu import fsdp_v2
 
 os.environ["PJRT_DEVICE"] = "TPU"
 
@@ -55,13 +55,21 @@ def summary(values: List[float]):
 
 
 def main():
+    use_fsdp = os.environ.get("USE_FSDP", False) is not False
+    if use_fsdp:
+        print("enable fsdp")
+        fsdp_v2.use_fsdp_v2()
     prg_start = time.time()
     model_id = "google/gemma-2b"
     torch_dtype = torch.bfloat16
 
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
-    device = model.device
+    print(f"model device before shard {model.device}")
     model = model.eval()
+    if use_fsdp:
+        model = fsdp_v2.wrap_model(model)
+    print(f"model device after {model.device}")
+    device = xm.xla_device()
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     prompts = ["Here's a funny thing:", "Once upon a time,"]
