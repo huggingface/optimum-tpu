@@ -81,6 +81,9 @@ def test_decode_single(model_path):
 
 
 def test_decode_multi(model_path):
+    generator = TpuGenerator.from_pretrained(
+            model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
+    )
     prompts: List[str] = [
       "I believe the meaning of life is",
       "To add an element to an ArrayList of a specific class type in Java, you can follow the following steps:\n\n1. Create an instance of the class to be added.\n2. Get a reference to the ArrayList.\n3. Call the `add()` method on the ArrayList, passing the instance of the class as the argument.\n\nHere's an example of how to add an object of type `Person` to an ArrayList of type `ArrayList<Person>`:\n```csharp\n// Create a new instance of the Person class\nPerson person = new Person(\"John\", 25);\n\n// Get a reference to the ArrayList\nArrayList<Person> peopleList = new ArrayList<>();\n\n// Add the person object to the ArrayList\npeopleList.add(person);\n```\nIn this example, the `Person` class is assumed to have a constructor that takes two arguments: a String for the person's name, and an int for their age. You can substitute your own class and constructor as necessary.",
@@ -93,9 +96,9 @@ def test_decode_multi(model_path):
         max_new_tokens = 20
         # generated_text = "\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never"
     
-        generator = TpuGenerator.from_pretrained(
-            model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
-        )
+        # generator = TpuGenerator.from_pretrained(
+        #     model_path, revision="", max_batch_size=1, max_sequence_length=SEQUENCE_LENGTH
+        # )
         request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
         batch = Batch(id=0, requests=[request], size=1, max_tokens=SEQUENCE_LENGTH)
         generations, next_batch = generator.prefill(batch)
