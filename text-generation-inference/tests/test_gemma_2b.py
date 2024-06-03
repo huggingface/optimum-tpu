@@ -110,6 +110,7 @@ def test_decode_multi(model_path):
         assert len(generations) == 1
         output = generations[0].generated_text
         print("---- One output text: ", output.text)
+    print("---- finish all four inference tests")
     # assert output.generated_tokens == max_new_tokens
     # assert output.finish_reason == 0
     # assert output.text == generated_text
