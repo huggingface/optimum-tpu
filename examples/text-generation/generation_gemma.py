@@ -22,13 +22,14 @@ def sample_greedy(logits):
     return next_token_id
 
 
-def decode_one_tokens(model, cur_token, input_pos, cache_position, step):
+def decode_one_tokens(model, cur_token, input_pos, cache_position, past_key_values):
     logits = model(
         cur_token,
         position_ids=input_pos,
         cache_position=cache_position,
         return_dict=False,
         use_cache=True,
+        past_key_values=past_key_values,
     )[0]
     new_token = sample_greedy(logits)
     return new_token
@@ -69,10 +70,14 @@ def main():
     max_cache_length = 1024
     max_new_tokens = 20
 
-    start = time.time()
-    model._setup_cache(StaticCache, batch_size, max_cache_len=max_cache_length)
-    end = time.time()
-    print(f"Model cache setup took {end - start} seconds.")
+    # setup static cache
+    past_key_values = StaticCache(
+        config=model.config,
+        max_batch_size=batch_size,
+        max_cache_len=max_cache_length,
+        device=model.device,
+        dtype=model.dtype,
+    )
     start = time.time()
     cache_position = torch.arange(sequence_length, device=device)
     generated_ids = torch.zeros(
@@ -91,6 +96,7 @@ def main():
         return_dict=False,
         use_cache=True,
         position_ids=pos_ids,
+        past_key_values=past_key_values,
     )[0]
     next_token = sample_greedy(logits)
     xm.mark_step()
@@ -101,14 +107,13 @@ def main():
     pos_ids = pos_ids.max(axis=-1)[0].unsqueeze(1) + 1
 
     model = conditional_compile(model)
-    cache_position = torch.tensor([sequence_length + 1], device=device)
+    cache_position = torch.tensor([sequence_length], device=device)
     decode_times = []
     for i in range(max_new_tokens):
         step_start = time.time()
-        next_token = decode_one_tokens(model, next_token.clone(), pos_ids, cache_position, i)
-        generated_ids[:, cache_position] = next_token
-
+        next_token = decode_one_tokens(model, next_token.clone(), pos_ids, cache_position, past_key_values)
         cache_position += 1
+        generated_ids[:, cache_position] = next_token
         pos_ids += 1
         xm.mark_step()
         step_end = time.time()
