@@ -48,6 +48,8 @@ dependencies = [
     "loguru == 0.6.0"
 ]
 
+[tool.setuptools_scm]
+
 [build-system]
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
