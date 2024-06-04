@@ -63,7 +63,7 @@ Repository = "https://github.com/huggingface/optimum-tpu"
 Issues = "https://github.com/huggingface/optimum-tpu/issues"
 
 [tool.setuptools.packages.find]
-include = ["optimum.tpu"]
+include = ["optimum.tpu*"]
 
 [tool.black]
 line-length = 119
