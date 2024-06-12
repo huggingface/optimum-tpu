@@ -33,6 +33,10 @@ def config_name_to_class(pretrained_model_name_or_path: str):
         from .modeling_llama import LlamaForCausalLM
 
         return LlamaForCausalLM
+    if config.model_type == "mistral":
+        from .modeling_mistral import MistralForCausalLM
+
+        return MistralForCausalLM
     return BaseAutoModelForCausalLM
 
 
