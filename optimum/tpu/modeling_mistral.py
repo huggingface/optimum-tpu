@@ -21,6 +21,7 @@
 
 import inspect
 import math
+import re
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -46,6 +47,13 @@ from transformers.utils import (
     is_flash_attn_greater_or_equal_2_10,
     logging,
     replace_return_docstrings,
+)
+
+from optimum.tpu.xla_model_parallel import (
+    ColumnParallelLinear,
+    RowParallelLinear,
+    get_model_parallel_rank,
+    get_model_parallel_world_size,
 )
 
 
@@ -164,13 +172,19 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class MistralMLP(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, rank=0, world_size=1):
         super().__init__()
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+        self.gate_proj = ColumnParallelLinear.create(
+            self.hidden_size, self.intermediate_size, bias=False, rank=rank, world_size=world_size
+        )
+        self.up_proj = ColumnParallelLinear.create(
+            self.hidden_size, self.intermediate_size, bias=False, rank=rank, world_size=world_size
+        )
+        self.down_proj = RowParallelLinear.create(
+            self.intermediate_size, self.hidden_size, bias=False, rank=rank, world_size=world_size
+        )
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, hidden_state):
@@ -196,7 +210,9 @@ class MistralAttention(nn.Module):
     and "Generating Long Sequences with Sparse Transformers".
     """
 
-    def __init__(self, config: MistralConfig, layer_idx: Optional[int] = None):
+    def __init__(self, config: MistralConfig, layer_idx: Optional[int] = None,
+        rank: Optional[int] = None,
+        world_size: Optional[int] = None,):
         super().__init__()
         self.config = config
         self.layer_idx = layer_idx
@@ -222,10 +238,34 @@ class MistralAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
-        self.o_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
+        self.q_proj = ColumnParallelLinear.create(
+            self.hidden_size,
+            self.num_heads * self.head_dim,
+            bias=False,
+            world_size=world_size,
+            rank=rank,
+        )
+        self.k_proj = ColumnParallelLinear.create(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=False,
+            world_size=world_size,
+            rank=rank,
+        )
+        self.v_proj = ColumnParallelLinear.create(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=False,
+            world_size=world_size,
+            rank=rank,
+        )
+        self.o_proj = RowParallelLinear.create(
+            self.hidden_size,
+            self.hidden_size,
+            bias=False,
+            world_size=world_size,
+            rank=rank,
+        )
 
         self.rotary_emb = MistralRotaryEmbedding(
             self.head_dim,
@@ -676,13 +716,13 @@ MISTRAL_ATTENTION_CLASSES = {
 
 # Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with Llama->Mistral, LLAMA->MISTRAL
 class MistralDecoderLayer(nn.Module):
-    def __init__(self, config: MistralConfig, layer_idx: int):
+    def __init__(self, config: MistralConfig, layer_idx: int, rank: int = 0, world_size: int = 1):
         super().__init__()
         self.hidden_size = config.hidden_size
 
-        self.self_attn = MISTRAL_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.self_attn = MISTRAL_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx, rank=rank, world_size=world_size)
 
-        self.mlp = MistralMLP(config)
+        self.mlp = MistralMLP(config, rank=rank, world_size=world_size)
         self.input_layernorm = MistralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = MistralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -870,14 +910,18 @@ class MistralModel(MistralPreTrainedModel):
         config: MistralConfig
     """
 
-    def __init__(self, config: MistralConfig):
+    def __init__(self, config: MistralConfig, rank: Optional[int] = None, world_size: Optional[int] = None):
         super().__init__(config)
+        if rank is None:
+            rank = get_model_parallel_rank()
+        if world_size is None:
+            world_size = get_model_parallel_world_size()
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList(
-            [MistralDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+            [MistralDecoderLayer(config, layer_idx, rank, world_size) for layer_idx in range(config.num_hidden_layers)]
         )
         self._attn_implementation = config._attn_implementation
         self.norm = MistralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -1118,14 +1162,65 @@ class MistralModel(MistralPreTrainedModel):
 class MistralForCausalLM(MistralPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config, rank=None, world_size=None):
         super().__init__(config)
-        self.model = MistralModel(config)
+        if rank is None:
+            self.rank = get_model_parallel_rank()
+        else:
+            self.rank = rank
+        if world_size is None:
+            self.world_size = get_model_parallel_world_size()
+        else:
+            self.world_size = world_size
+        self.model = MistralModel(config, rank, world_size)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.lm_head = ColumnParallelLinear.create(
+            config.hidden_size,
+            config.vocab_size,
+            bias=False,
+            rank=rank,
+            world_size=world_size,
+        )
+        # Initialize weights and apply final processing
+        self._register_load_state_dict_pre_hook(self.load_hook)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def load_hook(self, state_dict, _prefix, *_args):
+        num_attn_heads = self.config.num_attention_heads
+        head_dim = self.config.hidden_size // self.config.num_attention_heads
+        hidden_size = self.config.hidden_size
+
+        def split(tensor: torch.Tensor, axis: int) -> torch.Tensor:
+            axis_len = tensor.shape[axis]
+            split_len = axis_len // self.world_size
+            split_start = split_len * self.rank
+            split_end = split_start + split_len
+            tensor = torch.moveaxis(tensor, axis, 0)
+            tensor = tensor[split_start:split_end, ...]
+            tensor = torch.moveaxis(tensor, 0, axis)
+            return tensor
+
+        for k, v in state_dict.items():
+            if re.fullmatch(r"model.layers.\d+.mlp.(gate_proj|up_proj).weight", k):
+                v = split(v, 0)
+            if re.fullmatch(r"model.layers.\d+.mlp.down_proj.weight", k):
+                v = split(v, 1)
+            if re.fullmatch(r"model.layers.\d+.self_attn.(k|v)_proj.weight", k):
+                v = split(v, 0)
+            if re.fullmatch(r"model.layers.\d+.self_attn.q_proj.weight", k):
+                v = v.reshape(num_attn_heads, head_dim, hidden_size)
+                v = split(v, 0)
+                v = v.reshape(-1, hidden_size)
+            if re.fullmatch(r"model.layers.\d+.self_attn.o_proj.weight", k):
+                v = v.reshape(hidden_size, num_attn_heads, head_dim)
+                v = split(v, 1)
+                v = v.reshape(hidden_size, -1)
+            if k == "lm_head.weight":
+                v = split(v, 0)
+            # Update state_dict
+            state_dict[k] = v
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
