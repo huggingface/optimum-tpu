@@ -20,8 +20,7 @@ Optimum-TPU provides a `make tpu-tgi` command at the root level to help you crea
 HF_TOKEN=<your_hf_token_here>
 MODEL_ID=google/gemma-2b
 
-sudo docker run -p 8080:80 \
-                --net=host \
+sudo docker run --net=host \
                 --privileged \
                 -v $(pwd)/data:/data \
                 -e HF_TOKEN=${HF_TOKEN} \
@@ -38,14 +37,14 @@ sudo docker run -p 8080:80 \
 You can query the model using either the `/generate` or `/generate_stream` routes:
 
 ```
-curl 127.0.0.1:8080/generate \
+curl localhost/generate \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
 ```
 
 ```
-curl 127.0.0.1:8080/generate_stream \
+curl localhost/generate_stream \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
