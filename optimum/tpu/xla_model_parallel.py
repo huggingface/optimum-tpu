@@ -598,7 +598,7 @@ class ColumnParallelLinear(torch.nn.Module):
         groups: Optional[List] = None,
         quant: bool = False,
     ):
-        if xr.is_spmd():
+        if world_size == 1 or xr.is_spmd():
             # when SPMD is enabled, sharding is done with notation on the Linear.
             return Linear(in_features, out_features, bias=bias)
         else:
@@ -777,7 +777,7 @@ class RowParallelLinear(torch.nn.Module):
         groups: Optional[List] = None,
         quant: bool = False,
     ):
-        if xr.is_spmd():
+        if world_size == 1 or xr.is_spmd():
             # when SPMD is enabled, sharding is done with notation on the Linear.
             return Linear(in_features, out_features, bias=bias)
         else:
