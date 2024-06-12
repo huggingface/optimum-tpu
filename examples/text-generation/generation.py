@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import datetime
 import os
 import platform
@@ -55,20 +56,33 @@ def summary(values: List[float]):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Text generation example")
+    parser.add_argument("--model_id", type=str,
+                        default="google/gemma-2b",
+                        help="Model ID (e.g.: google/gemma-2b, mistralai/Mistral-7B-v0.3)")
+    parser.add_argument("--max_new_tokens", type=int, default=20, help="Number of tokens to generate")
+    parser.add_argument("--max_cache_length", type=int, default=256, help="Maximum cache length for the model")
+    args = parser.parse_args()
+
     prg_start = time.time()
-    model_id = "google/gemma-2b"
+    print(f"⏳ Loading model {args.model_id}...")
+    model_id = args.model_id
     torch_dtype = torch.bfloat16
 
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
     device = model.device
     model = model.eval()
+    print(f"✅ Model loaded in {time.time() - prg_start} seconds.")
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
+    # Set pad token for cases where it is None, e.g. for Mistral
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
     prompts = ["Here's a funny thing:", "Once upon a time,"]
     inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
     batch_size, sequence_length = inputs["input_ids"].shape
     max_cache_length = 1024
-    max_new_tokens = 20
+    max_new_tokens = args.max_new_tokens
 
     # setup static cache
     past_key_values = StaticCache(
