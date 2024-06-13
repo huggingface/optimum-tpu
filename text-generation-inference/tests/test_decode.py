@@ -46,8 +46,13 @@ def test_decode_single(params):
             sequence_length=128,
             expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
         ),
+        DecodeTestParams(
+            model_id="mistralai/Mistral-7B-v0.3",
+            sequence_length=128,
+            expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the v",
+        ),
     ],
-    ids=["Meta-Llama-3-8B", "gemma-7b"],
+    ids=["Meta-Llama-3-8B", "gemma-7b", "Mistral-7B-v0.3"],
 )
 def test_decode_single_slow(params):
     _test_decode_single(params)
