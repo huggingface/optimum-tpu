@@ -76,6 +76,9 @@ def _test_decode_single(params):
         assert len(generations) == 1
         assert len(generations[0].tokens.ids) == 1
         generations, next_batch = generator.decode([next_batch])
+    # Destroy generator: this will properly stop threads and prevent them from getting stuck if one of the following
+    # assertions fails.
+    del generator
     assert next_batch is None
     assert len(generations) == 1
     output = generations[0].generated_text
