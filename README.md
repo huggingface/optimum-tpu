@@ -22,9 +22,9 @@ working closely with Google and Google Cloud to make this a reality.
 ## Supported Model and Tasks
 
 We currently support a few LLM models targeting text generation scenarios:
-- Gemma (2b, 7b)
-- Llama2  (7b) and Llama3 (8b)
-- Mistral (soon)
+- 💎 Gemma (2b, 7b)
+- 🦙 Llama2 (7b) and Llama3 (8b)
+- 💨 Mistral (7b)
 
 
 ## Installation

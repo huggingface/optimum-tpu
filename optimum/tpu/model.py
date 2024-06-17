@@ -49,7 +49,7 @@ def fetch_model(
     local_path = snapshot_download(
         repo_id=model_id,
         revision=revision,
-        allow_patterns=["config.json", "*.safetensors", SAFE_WEIGHTS_INDEX_NAME, "tokenizer*"],
+        allow_patterns=["config.json", "model*.safetensors", SAFE_WEIGHTS_INDEX_NAME, "tokenizer*"],
     )
     end = time.time()
     logger.info(f"Model successfully fetched in {end - start:.2f} s.")
