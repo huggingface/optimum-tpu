@@ -1630,3 +1630,10 @@ class MistralForTokenClassification(MistralPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        # Unless specified otherwise, the model weights type will be bfloat16
+        torch_dtype = kwargs.pop("torch_dtype", torch.bfloat16)
+        # forward to base implementation
+        return super().from_pretrained(pretrained_model_name_or_path, *model_args, torch_dtype=torch_dtype, **kwargs)
