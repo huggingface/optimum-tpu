@@ -1634,6 +1634,8 @@ class MistralForTokenClassification(MistralPreTrainedModel):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         # Unless specified otherwise, the model weights type will be bfloat16
+        if "torch_dtype" not in kwargs:
+            logger.warning_once("Defaulting to `torch_dtype=torch.bfloat16` for this model")
         torch_dtype = kwargs.pop("torch_dtype", torch.bfloat16)
         # forward to base implementation
         return super().from_pretrained(pretrained_model_name_or_path, *model_args, torch_dtype=torch_dtype, **kwargs)
