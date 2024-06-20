@@ -74,7 +74,7 @@ WORKDIR /pyserver
 COPY text-generation-inference/server server
 COPY --from=tgi /tgi/proto proto
 RUN pip3 install -r server/build-requirements.txt
-RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSION} make -C server gen-server
+RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto TGI_VERSION=${TGI_VERSION} VERSION=${VERSION} make -C server gen-server
 
 # TPU base image (used for deployment)
 FROM base AS tpu_base
