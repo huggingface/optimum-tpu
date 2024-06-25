@@ -37,7 +37,8 @@ jobs:
           uses: docker/metadata-action@v5
           with:
             images: |
-              ghcr.io/${{ github.repository }}
+              ghcr.io/${{ env.IMAGE_NAME }}
+              ${{ env.IMAGE_NAME}}
             flavor: |
               latest=auto
               prefix=
@@ -48,7 +49,8 @@ jobs:
           uses: docker/metadata-action@v5
           with:
             images: |
-              ghcr.io/${{ github.repository }}
+              ghcr.io/${{ env.IMAGE_NAME }}
+              ${{ env.IMAGE_NAME}}
             flavor: |
               latest=auto
               prefix=
