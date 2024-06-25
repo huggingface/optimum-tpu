@@ -32,7 +32,7 @@ jobs:
             username: ${{ github.actor }}
             password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Extract metadata (tags, labels) for Docker
+        - name: Extract metadata (tags, labels) for Docker TGI
           id: meta
           uses: docker/metadata-action@v5
           with:
@@ -43,13 +43,24 @@ jobs:
               prefix=
               suffix=-tgi
 
+        - name: Extract metadata (tags, labels) for Docker TGI-IE
+          id: meta-ie
+          uses: docker/metadata-action@v5
+          with:
+            images: |
+              ghcr.io/${{ github.repository }}
+            flavor: |
+              latest=auto
+              prefix=
+              suffix=-tgi-ie
+
         - name: Get the version
           id: version
           run: |
            VERSION=$(awk '/__version__ = "(.*)"/{print $3}' optimum/tpu/version.py | sed 's/"//g')
            echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-        - name: Build and push Docker image
+        - name: Build and push TGI Docker image
           id: push
           uses: docker/build-push-action@v6
           with:
@@ -61,12 +72,33 @@ jobs:
             build-args: |
               VERSION=${{ steps.version.outputs.version }}
               TGI_VERSION=5bc3d65dd32ba1f979540caeccbf3dd8798dd9df
-            target: inference-endpoint
 
 
-        - name: Generate artifact attestation
+        - name: Generate artifact attestation for TGI
           uses: actions/attest-build-provenance@v1
           with:
             subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
             subject-digest: ${{ steps.push.outputs.digest }}
+            push-to-registry: true
+
+        - name: Build and push TGI IE Docker image
+          id: push-ie
+          uses: docker/build-push-action@v6
+          with:
+            context: .
+            file: text-generation-inference/docker/Dockerfile
+            push: true
+            tags: ${{ steps.meta-ie.outputs.tags }}
+            labels: ${{ steps.meta-ie.outputs.labels }}
+            build-args: |
+              VERSION=${{ steps.version.outputs.version }}
+              TGI_VERSION=5bc3d65dd32ba1f979540caeccbf3dd8798dd9df
+            target: inference-endpoint
+
+
+        - name: Generate artifact attestation for TGI IE
+          uses: actions/attest-build-provenance@v1
+          with:
+            subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            subject-digest: ${{ steps.push-ie.outputs.digest }}
             push-to-registry: true
