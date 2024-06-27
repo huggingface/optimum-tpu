@@ -317,6 +317,7 @@ class TpuGeneratorSingleThread(Generator):
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
         self.prefill(batch)
+        self.clear()
         return batch_size * self.model.config.sequence_length
 
     @torch.no_grad
