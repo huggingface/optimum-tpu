@@ -1,7 +1,9 @@
 name: Release
 
 on:
-  release:
+  push:
+    branches:
+      - debug-tgi-ie
 
 jobs:
   docker:
