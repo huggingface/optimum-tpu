@@ -1,7 +1,9 @@
 name: Release
 
 on:
-  release:
+  push:
+    branches:
+      - tgi_entrypoint_fix_length
 
 jobs:
   docker:
