@@ -309,7 +309,9 @@ class TpuGeneratorSingleThread(Generator):
             raise ValueError(
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
-        self.prefill(batch)
+        # TODO: this is just a workaround to allow launching even if the tokens are not truncated.
+        # Later on we should properly truncate input as in request.
+        # self.prefill(batch)
         return batch_size * self.model.config.sequence_length
 
     @torch.no_grad
