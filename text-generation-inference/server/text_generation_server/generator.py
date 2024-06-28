@@ -348,7 +348,7 @@ class TpuGeneratorSingleThread(Generator):
         #   for unfinished requests.
         inputs = [slot.cached_text for slot in self.slots]
         # Tokenize with padding
-        padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.model.device)
+        padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True)
         #  If needed truncate sequences to fit into the static dimensions
         seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.sequence_length)
         input_ids = padded_inputs.input_ids[:, :seq_length]
@@ -385,19 +385,24 @@ class TpuGeneratorSingleThread(Generator):
         extra_args = {}
         if self._supports_static_cache:
             self.past_key_values = StaticCache(
-                    config=self.model.config,
-                    max_batch_size=len(self.slots),
-                    max_cache_len=self.model.config.sequence_length,
-                    device=self.model.device,
-                    dtype=self.model.dtype,
-                )
+                config=self.model.config,
+                max_batch_size=len(self.slots),
+                max_cache_len=self.model.config.sequence_length,
+                device=self.model.device,
+                dtype=self.model.dtype,
+            )
             extra_args["cache_position"] = torch.arange(seq_length, device=self.model.device)
             extra_args["past_key_values"] = self.past_key_values
         else:
             # Reset/clear KV cache
             self.past_key_values = None
         generation, next_batch = self._generate_token(
-            batch.id, input_ids, self.model, attention_mask=attention_mask, position_ids=position_ids, **extra_args
+            batch.id,
+            input_ids.to(self.model.device),
+            self.model,
+            attention_mask=attention_mask.to(self.model.device),
+            position_ids=position_ids.to(self.model.device),
+            **extra_args,
         )
 
         # Reactivate previously active slots for the next decode, and append
@@ -580,13 +585,7 @@ class TpuGeneratorSingleThread(Generator):
                 slot.clear()
 
     @classmethod
-    def from_pretrained(
-        cls,
-        model_path: str,
-        revision: str,
-        max_batch_size: int,
-        max_sequence_length: int
-    ):
+    def from_pretrained(cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
         """Instantiate a TpuGenerator.
 
         Args:
@@ -605,10 +604,7 @@ class TpuGeneratorSingleThread(Generator):
         logger.info("Loading model (this can take a few minutes).")
         start = time.time()
         model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            revision=revision,
-            batch_size=max_batch_size,
-            sequence_length=max_sequence_length
+            model_path, revision=revision, batch_size=max_batch_size, sequence_length=max_sequence_length
         )
         end = time.time()
         logger.info(f"Model successfully loaded in {end - start:.2f} s.")
@@ -626,12 +622,9 @@ class GeneratorCommand(Enum):
     DELETE = -1
 
 
-def _mp_fn(rank,
-           model_path: str,
-           revision: str,
-           max_batch_size: int,
-           max_sequence_length: int,
-           root_mailbox: RootMailbox):
+def _mp_fn(
+    rank, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int, root_mailbox: RootMailbox
+):
     device = xm.xla_device()
     world_size = xm.xrt_world_size()
     # create agent mailbox out of root's one
@@ -650,7 +643,6 @@ def _mp_fn(rank,
         if rank == 0:
             xm.mark_step()
             mailbox.send(*data)
-
 
     while True:
         xm.rendezvous("start")
@@ -694,6 +686,7 @@ def model_loop_fn(*args):
     """Spawn processes in the TPUs forwarding arguments"""
     xmp.spawn(_mp_fn, args=(args), join=True, daemon=False)
 
+
 class TpuGenerator(Generator):
     """A Generator for models running on TPU.
 
@@ -734,9 +727,7 @@ class TpuGenerator(Generator):
         return generations, cached_batch
 
     def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
-        s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER,
-                                            batch_id,
-                                            request_ids)[0]
+        s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER, batch_id, request_ids)[0]
         return CachedBatch.FromString(s_cached_batch)
 
     def clear(self):
@@ -760,13 +751,7 @@ class TpuGenerator(Generator):
         self.leave()
 
     @classmethod
-    def from_pretrained(
-        cls,
-        model_path: str,
-        revision: str,
-        max_batch_size: int,
-        max_sequence_length: int
-    ):
+    def from_pretrained(cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
         """Instantiate a Generator distributed on as many cores as possible.
 
         Args:
