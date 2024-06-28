@@ -298,6 +298,7 @@ class TpuGeneratorSingleThread(Generator):
         Return:
             The maximum number of tokens the model supports.
         """
+        logger.debug("Warming up the model")
         # Just check that the warmup request parameters match the model capacity
         # NOTE: later self.model.config.batch_size might become self.model.config.max_batch_size.
         if self.model.config.batch_size is not None:
@@ -669,7 +670,8 @@ def _mp_fn(rank,
         if command == GeneratorCommand.PREFILL:
             batch = Batch.FromString(data[0])
             generations, cached_batch = generator.prefill(batch=batch)
-            return_to_caller([g.SerializeToString() for g in generations], cached_batch.SerializeToString())
+            s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
+            return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
         if command == GeneratorCommand.DECODE:
             batches = [CachedBatch.FromString(b) for b in data[0]]
             generations, cached_batch = generator.decode(batches=batches)
@@ -721,7 +723,8 @@ class TpuGenerator(Generator):
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
         s_generations, s_cached_batch = self.mailbox.send(GeneratorCommand.PREFILL, batch.SerializeToString())
         generations = [Generation.FromString(g) for g in s_generations]
-        return generations, CachedBatch.FromString(s_cached_batch)
+        cached_batch = CachedBatch.FromString(s_cached_batch) if s_cached_batch is not None else None
+        return generations, cached_batch
 
     def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
         s_batches = [b.SerializeToString() for b in batches]
