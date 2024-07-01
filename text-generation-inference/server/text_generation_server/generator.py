@@ -64,6 +64,7 @@ class Slot:
         self._generated_text = ""
         self._next_text = ""
         self._kv_cache = None
+        self._truncate = 0
 
     @property
     def id(self) -> int:
@@ -93,6 +94,10 @@ class Slot:
     def cur_position(self) -> int:
         return self._next_text_token_start
 
+    @property
+    def truncate(self) -> int:
+        return self._truncate
+
     def assign(self, request: Request, generation_config: GenerationConfig):
         """Assign a request to a slot.
 
@@ -113,6 +118,7 @@ class Slot:
         self._generation_config.typical_p = request.parameters.typical_p
         self._generation_config.do_sample = request.parameters.do_sample
         self._generation_config.repetition_penalty = request.parameters.repetition_penalty
+        self._truncate = request.truncate
         self.seed = request.parameters.seed
         # TODO: watermark
         self._generation_config.max_new_tokens = request.stopping_parameters.max_new_tokens
@@ -346,13 +352,25 @@ class TpuGeneratorSingleThread(Generator):
         # - the inputs for new requests,
         # - the inputs and the generated text that has already been cached (i.e. excluding the last generated token)
         #   for unfinished requests.
-        inputs = [slot.cached_text for slot in self.slots]
-        # Tokenize with padding
-        padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True)
-        #  If needed truncate sequences to fit into the static dimensions
-        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.sequence_length)
-        input_ids = padded_inputs.input_ids[:, :seq_length]
-        attention_mask = padded_inputs.attention_mask[:, :seq_length]
+
+        # Prepare inputs. They need to be tokenized and truncated afterwards.
+        tokenized_inputs = []
+        seq_length = 0
+        for _, slot in enumerate(self.slots):
+            cur_input = slot.cached_text
+            tokenized_input = self.tokenizer(cur_input, return_tensors="pt")
+            # Truncate the input to truncation in the slot (coming from request) and the maximum sequence length
+            tokenized_input.input_ids = tokenized_input.input_ids[:, -slot.truncate:][:self.model.config.sequence_length]
+            tokenized_input.attention_mask = tokenized_input.attention_mask[:, -slot.truncate:][:self.model.config.sequence_length]
+            tokenized_inputs.append(tokenized_input)
+            # Update the maximum sequence length
+            seq_length = max(seq_length, tokenized_input.input_ids.size(-1))
+
+        batch_size = len(self.slots)
+        # Initialize input_ids and attention_mask with padding (to make them all the same size)
+        input_ids = torch.full((batch_size, seq_length), self.tokenizer.pad_token_id, dtype=torch.int64)
+        attention_mask = torch.full((batch_size, seq_length), 0, dtype=torch.int64)
+
         # Pause previously active slots during generation and store their last token.
         next_tokens = []
         for slot in active_slots:
@@ -360,23 +378,25 @@ class TpuGeneratorSingleThread(Generator):
             slot.pause()
         # Each slot must be reset with the padded inputs and masks
         for i, slot in enumerate(self.slots):
-            if slot.state != slot.state.EMPTY:
-                slot_input_ids = input_ids[i : i + 1, :]
-                # Padded input ids are also required to set logits processors and stopping criterias
-                selector = TokenSelector.create(
-                    slot_input_ids,
-                    slot.generation_config,
-                    self.model,
-                    self.model.config.sequence_length,
-                    seed=slot.seed,
-                )
-                slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
-                if self._supports_static_cache:
-                    # Attention mask does not need to be tracked when using static cache
-                    slot_attention_mask = None
-                else:
-                    slot_attention_mask = attention_mask[i]
-                slot.reset(slot_input_ids, slot_attention_mask, selector)
+            assert slot.state != slot.state.EMPTY
+            input_ids[i, : tokenized_inputs[i].input_ids.size(-1)] = tokenized_inputs[i].input_ids
+            slot_input_ids = input_ids[i : i + 1, :]
+            # Padded input ids are also required to set logits processors and stopping criterias
+            selector = TokenSelector.create(
+                slot_input_ids,
+                slot.generation_config,
+                self.model,
+                self.model.config.sequence_length,
+                seed=slot.seed,
+            )
+            slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
+            attention_mask[i, : tokenized_inputs[i].attention_mask.size(-1)] = tokenized_inputs[i].attention_mask
+            if self._supports_static_cache:
+                # Attention mask does not need to be tracked when using static cache
+                slot_attention_mask = None
+            else:
+                slot_attention_mask = attention_mask[i]
+            slot.reset(slot_input_ids, slot_attention_mask, selector)
         # Clear KV cache
         self.past_key_values = None
         # Obtain position ids using attention mask.
