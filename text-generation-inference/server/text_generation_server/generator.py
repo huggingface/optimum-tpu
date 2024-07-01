@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import torch
 import torch.multiprocessing as mp
@@ -52,6 +52,7 @@ class Slot:
     def clear(self):
         """Clear the slot and mark it as available."""
         self._state = Slot.State.EMPTY
+        self._batch_id = None
         self._request_id = None
         self._inputs = ""
         self._generation_config = None
@@ -73,6 +74,10 @@ class Slot:
     @property
     def state(self) -> "Slot.State":
         return self._state
+
+    @property
+    def batch_id(self) -> int:
+        return self._batch_id
 
     @property
     def request_id(self) -> int:
@@ -98,16 +103,18 @@ class Slot:
     def truncate(self) -> int:
         return self._truncate
 
-    def assign(self, request: Request, generation_config: GenerationConfig):
+    def assign(self, batch_id: int, request: Request, generation_config: GenerationConfig):
         """Assign a request to a slot.
 
         Args:
+            batch_id (`int`): The id of the batch containing the request.
             request (`Request`):
                 The request to be assigned. Contains the inputs and tokens selection parameters.
             generation_config (`transformers.GenerationConfig`):
                 The base generation config (might be modified by the request generation parameters).
         """
         self._state = Slot.State.READY
+        self._batch_id = batch_id
         self._request_id = request.id
         self._inputs = request.inputs
         self._generation_config = copy.deepcopy(generation_config)
@@ -122,6 +129,7 @@ class Slot:
         self.seed = request.parameters.seed
         # TODO: watermark
         self._generation_config.max_new_tokens = request.stopping_parameters.max_new_tokens
+        self._max_new_tokens = self._generation_config.max_new_tokens
         # TODO: stop_sequences, ignore_eos_token
 
     def reset(self, input_ids: torch.LongTensor, attention_mask: torch.LongTensor, selector: TokenSelector):
@@ -152,8 +160,9 @@ class Slot:
         """
         # Drop the last token as it will be added back when resuming the slot
         self._generated_tokens -= 1
-        # Subtract the number of cached tokens from the maximum number of tokens
-        self._generation_config.max_new_tokens -= self._generated_tokens
+        # Since generated tokens are now part of the prefill, we need to reevaluate
+        # max_new_tokens for the next generation
+        self._generation_config.max_new_tokens = self._max_new_tokens - self._generated_tokens
         self._state = Slot.State.PAUSE
 
     def resume(self):
@@ -267,6 +276,7 @@ class TpuGeneratorSingleThread(Generator):
         self.special_tokens = self.tokenizer.all_special_ids
         # Slots are empty to begin with, they will be populated as new batches arrive
         self.slots = []
+        self.batch_id = 0
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
         self.past_key_values = None
@@ -345,7 +355,7 @@ class TpuGeneratorSingleThread(Generator):
             # Dynamically create a new slot for each request
             slot = Slot(self.slot_index, self.tokenizer, self.model.device)
             self.slot_index += 1
-            slot.assign(request, self.model.generation_config)
+            slot.assign(self.batch_id, request, self.model.generation_config)
             self.slots.append(slot)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
         # Reconstruct the full inputs (without padding) as seen by the model.
@@ -418,13 +428,14 @@ class TpuGeneratorSingleThread(Generator):
             # Reset/clear KV cache
             self.past_key_values = None
         generation, next_batch = self._generate_token(
-            batch.id,
+            self.batch_id,
             input_ids.to(self.model.device),
             self.model,
             attention_mask=attention_mask.to(self.model.device),
             position_ids=position_ids.to(self.model.device),
             **extra_args,
         )
+        self.batch_id += 1
 
         # Reactivate previously active slots for the next decode, and append
         # back their next token.
@@ -581,7 +592,7 @@ class TpuGeneratorSingleThread(Generator):
         max_tokens = size * self.model.config.sequence_length
         return CachedBatch(id=batch_id, request_ids=request_ids, size=size, max_tokens=max_tokens)
 
-    def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
+    def filter(self, batch_id: int, keep_request_ids: List[int]) -> CachedBatch:
         """Remove requests that are not listed from the specified batch
 
         Args:
@@ -593,17 +604,21 @@ class TpuGeneratorSingleThread(Generator):
         Return:
             A `CachedBatch` containing the pending requests.
         """
-        self._clear(request_ids)
-        return self._cached_batch(batch_id, request_ids)
+        keep_slot_ids = [slot.id for slot in self.slots if slot.request_id in keep_request_ids]
+        self._clear(keep_slot_ids)
+        return self._cached_batch(batch_id, keep_request_ids)
 
-    def clear(self):
-        """Remove all requests from the generator"""
-        return self._clear([])
+    def clear(self, batch_id: Optional[int] = None):
+        """Remove a subset or all requests from the generator"""
+        keep_ids = []
+        if batch_id is not None:
+            keep_ids = [slot.id for slot in self.slots if slot.batch_id != batch_id]
+        return self._clear(keep_ids)
 
-    def _clear(self, request_ids: List):
+    def _clear(self, keep_slot_ids: List):
         for slot in self.slots:
-            if slot.state != Slot.State.EMPTY and slot.request_id not in request_ids:
-                logger.debug(f"Removing request {slot.request_id}")
+            if slot.state != Slot.State.EMPTY and slot.id not in keep_slot_ids:
+                logger.info(f"Removing slot {slot.id} with request {slot.request_id}")
                 slot.clear()
 
     @classmethod
