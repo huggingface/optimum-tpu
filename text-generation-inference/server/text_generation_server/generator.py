@@ -200,7 +200,7 @@ class Slot:
         self._tokens = torch.cat([self._tokens, torch.tensor([next_token], dtype=self._tokens.dtype)])
         # Update mask only if it was set previously
         if self._mask is not None:
-            self._mask = torch.cat([self._mask, torch.tensor([1], device=self._device, dtype=self._mask.dtype)])
+            self._mask = torch.cat([self._mask, torch.tensor([1], dtype=self._mask.dtype)])
         self._generated_tokens += 1
         next_text = self._decode_next_tokens()
         # Now that a new token has been generated, we can append the previous one to the generated text
@@ -438,7 +438,6 @@ class TpuGeneratorSingleThread(Generator):
         position_ids = torch.zeros(
             [batch_size, 1],
             dtype=torch.int64,
-            device=self.model.device,
         )
         # init pad_token_id and input_ids
         pad_token_id = self.tokenizer.pad_token_id
@@ -452,7 +451,6 @@ class TpuGeneratorSingleThread(Generator):
             [batch_size, 1],
             fill_value=self.tokenizer.eos_token_id,
             dtype=torch.int64,
-            device=self.model.device,
         )
         for i, slot in enumerate(self.slots):
             if slot.state != Slot.State.EMPTY:
@@ -465,7 +463,6 @@ class TpuGeneratorSingleThread(Generator):
                         attention_mask = torch.zeros(
                             [batch_size, slot.attention_mask.size(-1)],
                             dtype=torch.int64,
-                            device=self.model.device,
                         )
                     attention_mask.index_put_([torch.tensor([i])], slot.attention_mask)
                 position_ids.index_put_([torch.tensor([i])], torch.tensor(slot.cur_position))
@@ -473,12 +470,16 @@ class TpuGeneratorSingleThread(Generator):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
         extra_args = {}
         if self._supports_static_cache:
-            extra_args["cache_position"] = position_ids.max().unsqueeze(0)
+            extra_args["cache_position"] = position_ids.max().unsqueeze(0).to(self.model.device)
         else:
-            extra_args["attention_mask"] = attention_mask
+            extra_args["attention_mask"] = attention_mask.to(self.model.device)
         extra_args["past_key_values"] = self.past_key_values
         return self._generate_token(
-            next_batch_id, input_ids, self.model_one_token, position_ids=position_ids, **extra_args
+            next_batch_id,
+            input_ids.to(self.model.device),
+            self.model_one_token,
+            position_ids=position_ids.to(self.model.device),
+            **extra_args,
         )
 
     def _generate_token(
