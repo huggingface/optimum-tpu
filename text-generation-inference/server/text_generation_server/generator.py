@@ -308,6 +308,7 @@ class TpuGeneratorSingleThread(Generator):
         # Specify padding options for decoder-only architecture
         tokenizer.pad_token_id = tokenizer.eos_token_id
         tokenizer.padding_side = "left"
+        tokenizer.truncation_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
         # Slots are empty to begin with, they will be populated as new batches arrive
@@ -401,18 +402,20 @@ class TpuGeneratorSingleThread(Generator):
         #   for unfinished requests.
 
         # Prepare inputs. They need to be tokenized and truncated afterwards.
-        tokenized_inputs = []
-        seq_length = 0
-        for _, slot in enumerate(self.slots):
-            cur_input = slot.cached_text
-            tokenized_input = self.tokenizer(cur_input, return_tensors="pt")
-            # Truncate the input to truncation in the slot (coming from request) and the maximum sequence length
-            tokenized_input.input_ids = tokenized_input.input_ids[:, -slot.truncate:][:self.model.config.sequence_length]
-            tokenized_input.attention_mask = tokenized_input.attention_mask[:, -slot.truncate:][:self.model.config.sequence_length]
-            tokenized_inputs.append(tokenized_input)
-            # Update the maximum sequence length
-            seq_length = max(seq_length, tokenized_input.input_ids.size(-1))
-
+        max_len = 0
+        batch_inputs = []
+        for slot in self.slots:
+            batch_inputs.append(slot.cached_text)
+            max_len = max(max_len, slot.truncate)
+        if max_len == 0:
+            max_len = self.model.config.sequence_length
+        tokenized_inputs = self.tokenizer(batch_inputs,
+                                          return_tensors="pt",
+                                          padding=True,
+                                          truncation=True,
+                                          max_length=max_len)
+        seq_length = tokenized_inputs.input_ids.size(-1)
+        seq_length = min(seq_length, self.model.config.sequence_length)
         batch_size = len(self.slots)
         # Initialize input_ids and attention_mask with padding (to make them all the same size)
         input_ids = torch.full((batch_size, seq_length), self.tokenizer.pad_token_id, dtype=torch.int64)
@@ -426,7 +429,11 @@ class TpuGeneratorSingleThread(Generator):
         # Each slot must be reset with the padded inputs and masks
         for i, slot in enumerate(self.slots):
             assert slot.state != slot.state.EMPTY
-            input_ids[i, -tokenized_inputs[i].input_ids.size(-1):] = tokenized_inputs[i].input_ids
+
+            truncation = min(tokenized_inputs.input_ids.size(-1), input_ids.size(-1))
+            if slot.truncate > 0:
+                truncation = min(truncation, slot.truncate)
+            input_ids[i, -truncation:] = tokenized_inputs.input_ids[i, -truncation:]
             slot_input_ids = input_ids[i : i + 1, :]
             # Padded input ids are also required to set logits processors and stopping criterias
             selector = TokenSelector.create(
@@ -437,7 +444,7 @@ class TpuGeneratorSingleThread(Generator):
                 seed=slot.seed,
             )
             slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
-            attention_mask[i, -tokenized_inputs[i].attention_mask.size(-1):] = tokenized_inputs[i].attention_mask
+            attention_mask[i, -truncation:] = tokenized_inputs.attention_mask[i, -truncation:]
             if self._supports_static_cache:
                 # Attention mask does not need to be tracked when using static cache
                 slot_attention_mask = None
