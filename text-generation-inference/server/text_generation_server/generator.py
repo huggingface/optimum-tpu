@@ -1,7 +1,9 @@
 import copy
 import logging
 import os
+import sys
 import time
+import traceback
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -690,33 +692,44 @@ def _mp_fn(
         xm.rendezvous("wait_command")
         command, data = mailbox.command_data
         logger.debug(f"Generator@{rank} {command.name}")
-        if command == GeneratorCommand.INFO:
-            info = generator.info
-            return_to_caller(info.SerializeToString())
-        if command == GeneratorCommand.WARMUP:
-            batch = Batch.FromString(data[0])
-            return_to_caller(generator.warmup(batch=batch))
-        if command == GeneratorCommand.PREFILL:
-            batch = Batch.FromString(data[0])
-            generations, cached_batch = generator.prefill(batch=batch)
-            s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
-            return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
-        if command == GeneratorCommand.DECODE:
-            batches = [CachedBatch.FromString(b) for b in data[0]]
-            generations, cached_batch = generator.decode(batches=batches)
-            s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
-            return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
-        if command == GeneratorCommand.FILTER:
-            batch_id, request_ids = data
-            cached_batch = generator.filter(batch_id, request_ids)
-            return_to_caller(cached_batch.SerializeToString())
-        if command == GeneratorCommand.CLEAR:
-            generator.clear()
-        if command == GeneratorCommand.DELETE:
-            if rank == 0:
-                # Set agent to ready
-                mailbox.agent_ready.set()
-            break
+        try:
+            if command == GeneratorCommand.INFO:
+                info = generator.info
+                return_to_caller(info.SerializeToString())
+            if command == GeneratorCommand.WARMUP:
+                batch = Batch.FromString(data[0])
+                return_to_caller(generator.warmup(batch=batch))
+            if command == GeneratorCommand.PREFILL:
+                batch = Batch.FromString(data[0])
+                generations, cached_batch = generator.prefill(batch=batch)
+                s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
+                return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
+            if command == GeneratorCommand.DECODE:
+                batches = [CachedBatch.FromString(b) for b in data[0]]
+                generations, cached_batch = generator.decode(batches=batches)
+                s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
+                return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
+            if command == GeneratorCommand.FILTER:
+                batch_id, request_ids = data
+                cached_batch = generator.filter(batch_id, request_ids)
+                return_to_caller(cached_batch.SerializeToString())
+            if command == GeneratorCommand.CLEAR:
+                generator.clear()
+            if command == GeneratorCommand.DELETE:
+                if rank == 0:
+                    # Set agent to ready
+                    mailbox.agent_ready.set()
+                break
+        except Exception as e:
+            logger.error(f"Error in command {command.name}")
+            mailbox.agent_error.set()
+            mailbox.agent_ready.set()
+            exc_info = sys.exc_info()
+            logger.error(''.join(traceback.format_exception(*exc_info)))
+            raise e
+        # If error was only happening on one of the threads, all of them should exit
+        if mailbox.agent_error.is_set():
+            return
 
 
 def model_loop_fn(*args):
