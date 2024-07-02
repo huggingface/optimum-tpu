@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import traceback
+from bisect import bisect_left
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -36,6 +37,28 @@ from .pb.generate_pb2 import (
 optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
+# These will do some bucketing on prefill lengths to avoid too many different sizes
+PREFILL_LENGTHS = [
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+]
+
+def take_nearest_length(length: int) -> int:
+  """Gets the nearest length to the right in a set of lengths."""
+  pos = bisect_left(PREFILL_LENGTHS, length)
+  if pos == len(PREFILL_LENGTHS):
+    return PREFILL_LENGTHS[-1]
+  return PREFILL_LENGTHS[pos]
 
 class Slot:
     """Represents a slot in a static batch"""
