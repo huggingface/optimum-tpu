@@ -618,7 +618,7 @@ class TpuGeneratorSingleThread(Generator):
     def _clear(self, keep_slot_ids: List):
         for slot in self.slots:
             if slot.state != Slot.State.EMPTY and slot.id not in keep_slot_ids:
-                logger.info(f"Removing slot {slot.id} with request {slot.request_id}")
+                logger.debug(f"Removing slot {slot.id} with request {slot.request_id}")
                 slot.clear()
 
     @classmethod
