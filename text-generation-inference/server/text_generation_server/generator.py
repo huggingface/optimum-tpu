@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.multiprocessing as mp
@@ -52,6 +52,7 @@ class Slot:
     def clear(self):
         """Clear the slot and mark it as available."""
         self._state = Slot.State.EMPTY
+        self._batch_id = None
         self._request_id = None
         self._inputs = ""
         self._generation_config = None
@@ -64,6 +65,7 @@ class Slot:
         self._generated_text = ""
         self._next_text = ""
         self._kv_cache = None
+        self._truncate = 0
 
     @property
     def id(self) -> int:
@@ -72,6 +74,10 @@ class Slot:
     @property
     def state(self) -> "Slot.State":
         return self._state
+
+    @property
+    def batch_id(self) -> int:
+        return self._batch_id
 
     @property
     def request_id(self) -> int:
@@ -93,16 +99,22 @@ class Slot:
     def cur_position(self) -> int:
         return self._next_text_token_start
 
-    def assign(self, request: Request, generation_config: GenerationConfig):
+    @property
+    def truncate(self) -> int:
+        return self._truncate
+
+    def assign(self, batch_id: int, request: Request, generation_config: GenerationConfig):
         """Assign a request to a slot.
 
         Args:
+            batch_id (`int`): The id of the batch containing the request.
             request (`Request`):
                 The request to be assigned. Contains the inputs and tokens selection parameters.
             generation_config (`transformers.GenerationConfig`):
                 The base generation config (might be modified by the request generation parameters).
         """
         self._state = Slot.State.READY
+        self._batch_id = batch_id
         self._request_id = request.id
         self._inputs = request.inputs
         self._generation_config = copy.deepcopy(generation_config)
@@ -113,9 +125,11 @@ class Slot:
         self._generation_config.typical_p = request.parameters.typical_p
         self._generation_config.do_sample = request.parameters.do_sample
         self._generation_config.repetition_penalty = request.parameters.repetition_penalty
+        self._truncate = request.truncate
         self.seed = request.parameters.seed
         # TODO: watermark
         self._generation_config.max_new_tokens = request.stopping_parameters.max_new_tokens
+        self._max_new_tokens = self._generation_config.max_new_tokens
         # TODO: stop_sequences, ignore_eos_token
 
     def reset(self, input_ids: torch.LongTensor, attention_mask: torch.LongTensor, selector: TokenSelector):
@@ -146,8 +160,9 @@ class Slot:
         """
         # Drop the last token as it will be added back when resuming the slot
         self._generated_tokens -= 1
-        # Subtract the number of cached tokens from the maximum number of tokens
-        self._generation_config.max_new_tokens -= self._generated_tokens
+        # Since generated tokens are now part of the prefill, we need to reevaluate
+        # max_new_tokens for the next generation
+        self._generation_config.max_new_tokens = self._max_new_tokens - self._generated_tokens
         self._state = Slot.State.PAUSE
 
     def resume(self):
@@ -200,7 +215,7 @@ class Slot:
         self._tokens = torch.cat([self._tokens, torch.tensor([next_token], dtype=self._tokens.dtype)])
         # Update mask only if it was set previously
         if self._mask is not None:
-            self._mask = torch.cat([self._mask, torch.tensor([1], device=self._device, dtype=self._mask.dtype)])
+            self._mask = torch.cat([self._mask, torch.tensor([1], dtype=self._mask.dtype)])
         self._generated_tokens += 1
         next_text = self._decode_next_tokens()
         # Now that a new token has been generated, we can append the previous one to the generated text
@@ -261,6 +276,7 @@ class TpuGeneratorSingleThread(Generator):
         self.special_tokens = self.tokenizer.all_special_ids
         # Slots are empty to begin with, they will be populated as new batches arrive
         self.slots = []
+        self.batch_id = 0
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
         self.past_key_values = None
@@ -298,6 +314,7 @@ class TpuGeneratorSingleThread(Generator):
         Return:
             The maximum number of tokens the model supports.
         """
+        logger.debug("Warming up the model")
         # Just check that the warmup request parameters match the model capacity
         # NOTE: later self.model.config.batch_size might become self.model.config.max_batch_size.
         if self.model.config.batch_size is not None:
@@ -310,6 +327,7 @@ class TpuGeneratorSingleThread(Generator):
                 f"Inconsistent server configuration: please make sure max-prefill-tokens does not exceed {batch_size} x max-input-length."
             )
         self.prefill(batch)
+        self.clear()
         return batch_size * self.model.config.sequence_length
 
     @torch.no_grad
@@ -337,7 +355,7 @@ class TpuGeneratorSingleThread(Generator):
             # Dynamically create a new slot for each request
             slot = Slot(self.slot_index, self.tokenizer, self.model.device)
             self.slot_index += 1
-            slot.assign(request, self.model.generation_config)
+            slot.assign(self.batch_id, request, self.model.generation_config)
             self.slots.append(slot)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
         # Reconstruct the full inputs (without padding) as seen by the model.
@@ -345,13 +363,25 @@ class TpuGeneratorSingleThread(Generator):
         # - the inputs for new requests,
         # - the inputs and the generated text that has already been cached (i.e. excluding the last generated token)
         #   for unfinished requests.
-        inputs = [slot.cached_text for slot in self.slots]
-        # Tokenize with padding
-        padded_inputs = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.model.device)
-        #  If needed truncate sequences to fit into the static dimensions
-        seq_length = min(padded_inputs.input_ids.shape[-1], self.model.config.sequence_length)
-        input_ids = padded_inputs.input_ids[:, :seq_length]
-        attention_mask = padded_inputs.attention_mask[:, :seq_length]
+
+        # Prepare inputs. They need to be tokenized and truncated afterwards.
+        tokenized_inputs = []
+        seq_length = 0
+        for _, slot in enumerate(self.slots):
+            cur_input = slot.cached_text
+            tokenized_input = self.tokenizer(cur_input, return_tensors="pt")
+            # Truncate the input to truncation in the slot (coming from request) and the maximum sequence length
+            tokenized_input.input_ids = tokenized_input.input_ids[:, -slot.truncate:][:self.model.config.sequence_length]
+            tokenized_input.attention_mask = tokenized_input.attention_mask[:, -slot.truncate:][:self.model.config.sequence_length]
+            tokenized_inputs.append(tokenized_input)
+            # Update the maximum sequence length
+            seq_length = max(seq_length, tokenized_input.input_ids.size(-1))
+
+        batch_size = len(self.slots)
+        # Initialize input_ids and attention_mask with padding (to make them all the same size)
+        input_ids = torch.full((batch_size, seq_length), self.tokenizer.pad_token_id, dtype=torch.int64)
+        attention_mask = torch.full((batch_size, seq_length), 0, dtype=torch.int64)
+
         # Pause previously active slots during generation and store their last token.
         next_tokens = []
         for slot in active_slots:
@@ -359,23 +389,25 @@ class TpuGeneratorSingleThread(Generator):
             slot.pause()
         # Each slot must be reset with the padded inputs and masks
         for i, slot in enumerate(self.slots):
-            if slot.state != slot.state.EMPTY:
-                slot_input_ids = input_ids[i : i + 1, :]
-                # Padded input ids are also required to set logits processors and stopping criterias
-                selector = TokenSelector.create(
-                    slot_input_ids,
-                    slot.generation_config,
-                    self.model,
-                    self.model.config.sequence_length,
-                    seed=slot.seed,
-                )
-                slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
-                if self._supports_static_cache:
-                    # Attention mask does not need to be tracked when using static cache
-                    slot_attention_mask = None
-                else:
-                    slot_attention_mask = attention_mask[i]
-                slot.reset(slot_input_ids, slot_attention_mask, selector)
+            assert slot.state != slot.state.EMPTY
+            input_ids[i, : tokenized_inputs[i].input_ids.size(-1)] = tokenized_inputs[i].input_ids
+            slot_input_ids = input_ids[i : i + 1, :]
+            # Padded input ids are also required to set logits processors and stopping criterias
+            selector = TokenSelector.create(
+                slot_input_ids,
+                slot.generation_config,
+                self.model,
+                self.model.config.sequence_length,
+                seed=slot.seed,
+            )
+            slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
+            attention_mask[i, : tokenized_inputs[i].attention_mask.size(-1)] = tokenized_inputs[i].attention_mask
+            if self._supports_static_cache:
+                # Attention mask does not need to be tracked when using static cache
+                slot_attention_mask = None
+            else:
+                slot_attention_mask = attention_mask[i]
+            slot.reset(slot_input_ids, slot_attention_mask, selector)
         # Clear KV cache
         self.past_key_values = None
         # Obtain position ids using attention mask.
@@ -384,20 +416,26 @@ class TpuGeneratorSingleThread(Generator):
         extra_args = {}
         if self._supports_static_cache:
             self.past_key_values = StaticCache(
-                    config=self.model.config,
-                    max_batch_size=len(self.slots),
-                    max_cache_len=self.model.config.sequence_length,
-                    device=self.model.device,
-                    dtype=self.model.dtype,
-                )
+                config=self.model.config,
+                max_batch_size=len(self.slots),
+                max_cache_len=self.model.config.sequence_length,
+                device=self.model.device,
+                dtype=self.model.dtype,
+            )
             extra_args["cache_position"] = torch.arange(seq_length, device=self.model.device)
             extra_args["past_key_values"] = self.past_key_values
         else:
             # Reset/clear KV cache
             self.past_key_values = None
         generation, next_batch = self._generate_token(
-            batch.id, input_ids, self.model, attention_mask=attention_mask, position_ids=position_ids, **extra_args
+            self.batch_id,
+            input_ids.to(self.model.device),
+            self.model,
+            attention_mask=attention_mask.to(self.model.device),
+            position_ids=position_ids.to(self.model.device),
+            **extra_args,
         )
+        self.batch_id += 1
 
         # Reactivate previously active slots for the next decode, and append
         # back their next token.
@@ -432,7 +470,6 @@ class TpuGeneratorSingleThread(Generator):
         position_ids = torch.zeros(
             [batch_size, 1],
             dtype=torch.int64,
-            device=self.model.device,
         )
         # init pad_token_id and input_ids
         pad_token_id = self.tokenizer.pad_token_id
@@ -446,7 +483,6 @@ class TpuGeneratorSingleThread(Generator):
             [batch_size, 1],
             fill_value=self.tokenizer.eos_token_id,
             dtype=torch.int64,
-            device=self.model.device,
         )
         for i, slot in enumerate(self.slots):
             if slot.state != Slot.State.EMPTY:
@@ -459,7 +495,6 @@ class TpuGeneratorSingleThread(Generator):
                         attention_mask = torch.zeros(
                             [batch_size, slot.attention_mask.size(-1)],
                             dtype=torch.int64,
-                            device=self.model.device,
                         )
                     attention_mask.index_put_([torch.tensor([i])], slot.attention_mask)
                 position_ids.index_put_([torch.tensor([i])], torch.tensor(slot.cur_position))
@@ -467,12 +502,16 @@ class TpuGeneratorSingleThread(Generator):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
         extra_args = {}
         if self._supports_static_cache:
-            extra_args["cache_position"] = position_ids.max().unsqueeze(0)
+            extra_args["cache_position"] = position_ids.max().unsqueeze(0).to(self.model.device)
         else:
-            extra_args["attention_mask"] = attention_mask
+            extra_args["attention_mask"] = attention_mask.to(self.model.device)
         extra_args["past_key_values"] = self.past_key_values
         return self._generate_token(
-            next_batch_id, input_ids, self.model_one_token, position_ids=position_ids, **extra_args
+            next_batch_id,
+            input_ids.to(self.model.device),
+            self.model_one_token,
+            position_ids=position_ids.to(self.model.device),
+            **extra_args,
         )
 
     def _generate_token(
@@ -553,7 +592,7 @@ class TpuGeneratorSingleThread(Generator):
         max_tokens = size * self.model.config.sequence_length
         return CachedBatch(id=batch_id, request_ids=request_ids, size=size, max_tokens=max_tokens)
 
-    def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
+    def filter(self, batch_id: int, keep_request_ids: List[int]) -> CachedBatch:
         """Remove requests that are not listed from the specified batch
 
         Args:
@@ -565,27 +604,25 @@ class TpuGeneratorSingleThread(Generator):
         Return:
             A `CachedBatch` containing the pending requests.
         """
-        self._clear(request_ids)
-        return self._cached_batch(batch_id, request_ids)
+        keep_slot_ids = [slot.id for slot in self.slots if slot.request_id in keep_request_ids]
+        self._clear(keep_slot_ids)
+        return self._cached_batch(batch_id, keep_request_ids)
 
-    def clear(self):
-        """Remove all requests from the generator"""
-        return self._clear([])
+    def clear(self, batch_id: Optional[int] = None):
+        """Remove a subset or all requests from the generator"""
+        keep_ids = []
+        if batch_id is not None:
+            keep_ids = [slot.id for slot in self.slots if slot.batch_id != batch_id]
+        return self._clear(keep_ids)
 
-    def _clear(self, request_ids: List):
+    def _clear(self, keep_slot_ids: List):
         for slot in self.slots:
-            if slot.state != Slot.State.EMPTY and slot.request_id not in request_ids:
-                logger.debug(f"Removing request {slot.request_id}")
+            if slot.state != Slot.State.EMPTY and slot.id not in keep_slot_ids:
+                logger.debug(f"Removing slot {slot.id} with request {slot.request_id}")
                 slot.clear()
 
     @classmethod
-    def from_pretrained(
-        cls,
-        model_path: str,
-        revision: str,
-        max_batch_size: int,
-        max_sequence_length: int
-    ):
+    def from_pretrained(cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
         """Instantiate a TpuGenerator.
 
         Args:
@@ -604,10 +641,7 @@ class TpuGeneratorSingleThread(Generator):
         logger.info("Loading model (this can take a few minutes).")
         start = time.time()
         model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            revision=revision,
-            batch_size=max_batch_size,
-            sequence_length=max_sequence_length
+            model_path, revision=revision, batch_size=max_batch_size, sequence_length=max_sequence_length
         )
         end = time.time()
         logger.info(f"Model successfully loaded in {end - start:.2f} s.")
@@ -625,12 +659,9 @@ class GeneratorCommand(Enum):
     DELETE = -1
 
 
-def _mp_fn(rank,
-           model_path: str,
-           revision: str,
-           max_batch_size: int,
-           max_sequence_length: int,
-           root_mailbox: RootMailbox):
+def _mp_fn(
+    rank, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int, root_mailbox: RootMailbox
+):
     device = xm.xla_device()
     world_size = xm.xrt_world_size()
     # create agent mailbox out of root's one
@@ -650,7 +681,6 @@ def _mp_fn(rank,
             xm.mark_step()
             mailbox.send(*data)
 
-
     while True:
         xm.rendezvous("start")
         if rank == 0:
@@ -669,7 +699,8 @@ def _mp_fn(rank,
         if command == GeneratorCommand.PREFILL:
             batch = Batch.FromString(data[0])
             generations, cached_batch = generator.prefill(batch=batch)
-            return_to_caller([g.SerializeToString() for g in generations], cached_batch.SerializeToString())
+            s_cached_batch = cached_batch.SerializeToString() if cached_batch is not None else None
+            return_to_caller([g.SerializeToString() for g in generations], s_cached_batch)
         if command == GeneratorCommand.DECODE:
             batches = [CachedBatch.FromString(b) for b in data[0]]
             generations, cached_batch = generator.decode(batches=batches)
@@ -691,6 +722,7 @@ def _mp_fn(rank,
 def model_loop_fn(*args):
     """Spawn processes in the TPUs forwarding arguments"""
     xmp.spawn(_mp_fn, args=(args), join=True, daemon=False)
+
 
 class TpuGenerator(Generator):
     """A Generator for models running on TPU.
@@ -721,7 +753,8 @@ class TpuGenerator(Generator):
     def prefill(self, batch: Batch) -> Tuple[List[Generation], CachedBatch]:
         s_generations, s_cached_batch = self.mailbox.send(GeneratorCommand.PREFILL, batch.SerializeToString())
         generations = [Generation.FromString(g) for g in s_generations]
-        return generations, CachedBatch.FromString(s_cached_batch)
+        cached_batch = CachedBatch.FromString(s_cached_batch) if s_cached_batch is not None else None
+        return generations, cached_batch
 
     def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
         s_batches = [b.SerializeToString() for b in batches]
@@ -731,9 +764,7 @@ class TpuGenerator(Generator):
         return generations, cached_batch
 
     def filter(self, batch_id: int, request_ids: List[int]) -> CachedBatch:
-        s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER,
-                                            batch_id,
-                                            request_ids)[0]
+        s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER, batch_id, request_ids)[0]
         return CachedBatch.FromString(s_cached_batch)
 
     def clear(self):
@@ -757,13 +788,7 @@ class TpuGenerator(Generator):
         self.leave()
 
     @classmethod
-    def from_pretrained(
-        cls,
-        model_path: str,
-        revision: str,
-        max_batch_size: int,
-        max_sequence_length: int
-    ):
+    def from_pretrained(cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
         """Instantiate a Generator distributed on as many cores as possible.
 
         Args:
