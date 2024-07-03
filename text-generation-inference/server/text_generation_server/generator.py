@@ -719,6 +719,16 @@ def _mp_fn(
     # create agent mailbox out of root's one
     mailbox = AgentMailbox(root_mailbox)
 
+    # re-init logger for each child process
+    logger.logger.add(
+        sys.stdout,
+        format="{message}",
+        filter="text_generation_server",
+        level="DEBUG",
+        backtrace=True,
+        diagnose=False,
+    )
+
     logger.debug(
         f"Rank {rank} on {device} real device {xm.xla_real_devices([device])} ordinal {xm.get_ordinal()} "
         + f"world size {world_size}"
