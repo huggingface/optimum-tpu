@@ -426,7 +426,7 @@ class TpuGeneratorSingleThread(Generator):
         # Each slot must be reset with the padded inputs and masks
         for i, slot in enumerate(self.slots):
             assert slot.state != slot.state.EMPTY
-            input_ids[i, : tokenized_inputs[i].input_ids.size(-1)] = tokenized_inputs[i].input_ids
+            input_ids[i, -tokenized_inputs[i].input_ids.size(-1):] = tokenized_inputs[i].input_ids
             slot_input_ids = input_ids[i : i + 1, :]
             # Padded input ids are also required to set logits processors and stopping criterias
             selector = TokenSelector.create(
@@ -437,7 +437,7 @@ class TpuGeneratorSingleThread(Generator):
                 seed=slot.seed,
             )
             slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
-            attention_mask[i, : tokenized_inputs[i].attention_mask.size(-1)] = tokenized_inputs[i].attention_mask
+            attention_mask[i, -tokenized_inputs[i].attention_mask.size(-1):] = tokenized_inputs[i].attention_mask
             if self._supports_static_cache:
                 # Attention mask does not need to be tracked when using static cache
                 slot_attention_mask = None
