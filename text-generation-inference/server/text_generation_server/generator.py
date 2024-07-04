@@ -350,7 +350,7 @@ class TpuGeneratorSingleThread(Generator):
         MARGIN = 10
         input_tokens = torch.randint(self.model.config.vocab_size, (1, max_tokens + MARGIN), dtype=torch.int64)
         text = self.tokenizer.decode(input_tokens[0], skip_special_tokens=True)
-        # These are just dummy params to allo Request creation
+        # These are just dummy params to allow Request creation
         parameters = NextTokenChooserParameters(
             temperature=1.0,
             top_k=None,
@@ -399,13 +399,14 @@ class TpuGeneratorSingleThread(Generator):
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
         bucket_seq_len = take_nearest_length(seq_len)
-        requests = []
-        for _ in range(batch_size):
-            requests.append(self._create_dummy_request(seq_len))
-            # Prefill with different truncate sizes to test all prefill lengths
-            for l in PREFILL_LENGTHS:
+        requests = [self._create_dummy_request(seq_len) for _ in range(batch_size)]
+        for _ in reversed(range(batch_size)):
+            # Prefill with different truncate sizes to test all prefill lengths. List is reversed so first longest
+            # sequences are tested and, if there is a memory failure, that will appear sooner.
+            for l in reversed(PREFILL_LENGTHS):
+                # Skip all the unsupported lengths
                 if l > bucket_seq_len:
-                    break
+                    continue
                 # Set all truncate values for all requests
                 for r in requests:
                     r.truncate = l
@@ -421,6 +422,8 @@ class TpuGeneratorSingleThread(Generator):
                 else:
                     logger.debug(f"No decode on warmup for {len(requests)}x{l}")
                 self.clear()
+            # remove the last requests to decrease the batch size
+            requests.pop()
 
         elapsed = time.time() - start
         logger.debug(f"Warmup done, took {elapsed:.2f}s")
