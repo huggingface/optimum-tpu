@@ -836,7 +836,8 @@ def _mp_fn(
                 cached_batch = generator.filter(batch_id, request_ids)
                 return_to_caller(cached_batch.SerializeToString())
             if command == GeneratorCommand.CLEAR:
-                generator.clear()
+                batch_id = data[0]
+                generator.clear(batch_id)
             if command == GeneratorCommand.DELETE:
                 if rank == 0:
                     # Set agent to ready
@@ -902,8 +903,8 @@ class TpuGenerator(Generator):
         s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER, batch_id, request_ids)[0]
         return CachedBatch.FromString(s_cached_batch)
 
-    def clear(self):
-        self.mailbox.send(GeneratorCommand.CLEAR)
+    def clear(self, batch_id: Optional[int] = None):
+        self.mailbox.send(GeneratorCommand.CLEAR, batch_id)
 
     def leave(self):
         if self.mailbox is None:
