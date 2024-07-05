@@ -56,7 +56,7 @@ class Generator(ABC):
         """Remove requests that are not listed from the specified batch"""
         raise NotImplementedError
 
-    def clear(self):
+    def clear(self, batch_id: Optional[int] = None):
         """Remove all requests from the generator"""
         raise NotImplementedError
 
