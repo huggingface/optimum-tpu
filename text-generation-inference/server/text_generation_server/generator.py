@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import pathlib
 import sys
 import time
 import traceback
@@ -17,21 +18,22 @@ from transformers.generation import GenerationConfig
 
 import optimum.tpu.xla_logger as logger
 from optimum.tpu import AutoModelForCausalLM
+from optimum.tpu.cache import initialize_cache
 from optimum.tpu.generation import TokenSelector
 from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
 
 from .generator_base import Generator
 from .pb.generate_pb2 import (
-    Batch,
-    CachedBatch,
-    FinishReason,
-    GeneratedText,
-    Generation,
-    InfoResponse,
-    NextTokenChooserParameters,
-    Request,
-    StoppingCriteriaParameters,
-    Tokens,
+  Batch,
+  CachedBatch,
+  FinishReason,
+  GeneratedText,
+  Generation,
+  InfoResponse,
+  NextTokenChooserParameters,
+  Request,
+  StoppingCriteriaParameters,
+  Tokens,
 )
 
 
@@ -759,6 +761,16 @@ class TpuGeneratorSingleThread(Generator):
             A TpuGenerator.
         """
         logger.info("Loading model (this can take a few minutes).")
+        xla_cache_path = os.path.join("/xla_cache", model_path, "tpu_cache")
+        # Initialize cache if possible
+        try:
+            logger.debug(f"Initializing cache at {xla_cache_path}")
+            pathlib.Path(xla_cache_path).mkdir(parents=True, exist_ok=True)
+            initialize_cache(xla_cache_path)
+        except PermissionError:
+            logger.error(f"Could not initialize xla cache at {xla_cache_path}." +
+                         "Please make sure the directory is writable.")
+
         start = time.time()
         model = AutoModelForCausalLM.from_pretrained(
             model_path, revision=revision, batch_size=max_batch_size, sequence_length=max_sequence_length
