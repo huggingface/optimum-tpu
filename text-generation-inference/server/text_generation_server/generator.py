@@ -446,10 +446,11 @@ class TpuGeneratorSingleThread(Generator):
         active_slots = slots[Slot.State.READY]
         # Delete all empty slots, no need to have them anymore
         empty_slots = slots[Slot.State.EMPTY]
-        if len(empty_slots) < len(batch.requests):
+        model_batch_size = self.model.config.batch_size
+        if model_batch_size is not None and model_batch_size < len(active_slots) + len(batch.requests):
             raise ValueError(
-                f"Cannot prefill {len(batch.requests)} new request(s) with only {len(empty_slots)} empty slots."
-                f" Please align max_batch_size with the static batch size: {self.model.batch_size}."
+                f"Cannot prefill {len(batch.requests)} new request(s)."
+                f" Maximum batch size supported is: {model_batch_size}."
             )
         for slot in empty_slots:
             self.slots.remove(slot)
