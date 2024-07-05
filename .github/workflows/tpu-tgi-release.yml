@@ -5,7 +5,7 @@ on:
     types: [published]
   push:
     branches:
-      - debug-tgi-ie-pt2
+      - debug-tgi-ie-pt3
 
 jobs:
   docker:
