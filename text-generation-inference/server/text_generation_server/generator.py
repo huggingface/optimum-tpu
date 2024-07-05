@@ -40,7 +40,7 @@ optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
 # These will do some bucketing on prefill lengths to avoid too many different sizes
-PREFILL_LENGTHS = [
+PREFILL_LENGTHS = list(range(6, 16)) + [
     16,
     32,
     64,
