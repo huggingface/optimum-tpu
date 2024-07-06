@@ -11,6 +11,8 @@ class RootMailbox:
         self.root_command = manager.list()
         self.agent_ready = manager.Event()
         self.output_data = manager.list()
+        self.agent_error = manager.Event()
+        self.agent_error.clear()
 
     def send(self, command: int, *args) -> ListProxy:
         """Send a command and arguments to the agents and wait for the response.
@@ -30,6 +32,8 @@ class RootMailbox:
         self.root_bell.set()
         # wait again until agent is ready, meaning command has been processed
         self.agent_ready.wait()
+        if self.agent_error.is_set():
+            raise RuntimeError("Error on one of threads, stopping.")
         ret = self.output_data
         return ret
 
@@ -41,6 +45,7 @@ class AgentMailbox:
         self.root_command = root_mailbox.root_command
         self.agent_ready = root_mailbox.agent_ready
         self.output_data = root_mailbox.output_data
+        self.agent_error = root_mailbox.agent_error
 
     def receive(self) -> ListProxy:
         """Wait for a command from the root process and return it.

@@ -17,15 +17,19 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
         self.server_urls = server_urls
 
     async def Info(self, request, context):
+        logger.debug("Info")
         return self.generator.info
 
     async def Health(self, request, context):
+        logger.debug("Health")
         return generate_pb2.HealthResponse()
 
     async def ServiceDiscovery(self, request, context):
+        logger.debug("ServiceDiscovery")
         return generate_pb2.ServiceDiscoveryResponse(urls=self.server_urls)
 
     async def ClearCache(self, request, context):
+        logger.debug("ClearCache")
         if request.HasField("id"):
             self.generator.clear(request.id)
         else:
@@ -33,18 +37,25 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
         return generate_pb2.ClearCacheResponse()
 
     async def FilterBatch(self, request, context):
+        logger.debug("FilterBatch")
         filtered_batch = self.generator.filter(request.batch_id, request.request_ids)
         return generate_pb2.FilterBatchResponse(batch=filtered_batch)
 
     async def Warmup(self, request, context):
+        logger.info("Warmup (this can take several minutes)")
         max_tokens = self.generator.warmup(request.batch)
-        return generate_pb2.WarmupResponse(max_supported_total_tokens=max_tokens)
+        ret = generate_pb2.WarmupResponse(max_supported_total_tokens=max_tokens)
+        logger.info("Warmup done")
+        return ret
 
     async def Prefill(self, request, context):
+        logger.debug("Prefill")
+        batch = request.batch
         generations, batch = self.generator.prefill(request.batch)
         return generate_pb2.PrefillResponse(generations=generations, batch=batch)
 
     async def Decode(self, request, context):
+        logger.debug("Decode")
         generations, batch = self.generator.decode(request.batches)
         return generate_pb2.DecodeResponse(generations=generations, batch=batch)
 

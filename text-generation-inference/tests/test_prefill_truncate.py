@@ -13,23 +13,23 @@ def test_prefill_truncate():
     generator = TpuGenerator.from_pretrained(
         model_path, revision="", max_batch_size=1, max_sequence_length=sequence_length
     )
-    input_text = "This is a secret part. Once upon a time,"
+    input_text = "This is something I will tell by the end of the story"
 
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=sequence_length)
     generations, _ = generator.prefill(batch)
     assert len(generations) == 1
-    assert generations[0].tokens.ids == [635]
-    assert generations[0].tokens.texts == [" there"]
+    assert generations[0].tokens.ids == [31843]
+    assert generations[0].tokens.texts == ["."]
 
     # Now re-test but with truncate
     generator.clear()
 
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
-    # This will only leave 5 tokens
-    request.truncate = 5
+    # This will only leave last tokens
+    request.truncate = 6
     batch = Batch(id=0, requests=[request], size=1, max_tokens=sequence_length)
     generations, _ = generator.prefill(batch)
     assert len(generations) == 1
-    assert generations[0].tokens.ids == [260]
-    assert generations[0].tokens.texts == [" a"]
+    assert generations[0].tokens.ids == [291]
+    assert generations[0].tokens.texts == [" and"]

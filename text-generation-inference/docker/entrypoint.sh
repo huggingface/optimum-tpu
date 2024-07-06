@@ -5,6 +5,18 @@
 ulimit -l 68719476736
 
 # Hugging Face Hub related
+if [[ -z "${BATCH_SIZE}" ]]; then
+  BATCH_SIZE=4
+fi
+export BATCH_SIZE="${BATCH_SIZE}"
+
+if [[ -z "${JSON_OUTPUT_DISABLE}" ]]; then
+  JSON_OUTPUT_DISABLE=--json-output
+else
+  JSON_OUTPUT_DISABLE=""
+fi
+export JSON_OUTPUT_DISABLE="${JSON_OUTPUT_DISABLE}"
+
 if [[ -z "${MODEL_ID}" ]]; then
   echo "MODEL_ID must be set"
   exit 1
@@ -12,6 +24,7 @@ fi
 export MODEL_ID="${MODEL_ID}"
 
 text-generation-launcher --port 8080 \
-  --max-batch-size 4 \
+  --max-batch-size ${BATCH_SIZE} \
+  ${JSON_OUTPUT_DISABLE} \
   --model-id ${MODEL_ID}
 
