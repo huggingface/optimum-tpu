@@ -40,7 +40,7 @@ optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
 # These will do some bucketing on prefill lengths to avoid too many different sizes
-PREFILL_LENGTHS = [
+PREFILL_LENGTHS = list(range(6, 16)) + [
     16,
     32,
     64,
@@ -446,6 +446,12 @@ class TpuGeneratorSingleThread(Generator):
         active_slots = slots[Slot.State.READY]
         # Delete all empty slots, no need to have them anymore
         empty_slots = slots[Slot.State.EMPTY]
+        model_batch_size = self.model.config.batch_size
+        if model_batch_size is not None and model_batch_size < len(active_slots) + len(batch.requests):
+            raise ValueError(
+                f"Cannot prefill {len(batch.requests)} new request(s)."
+                f" Maximum batch size supported is: {model_batch_size}."
+            )
         for slot in empty_slots:
             self.slots.remove(slot)
         # Assign each request to an empty slot
@@ -836,7 +842,8 @@ def _mp_fn(
                 cached_batch = generator.filter(batch_id, request_ids)
                 return_to_caller(cached_batch.SerializeToString())
             if command == GeneratorCommand.CLEAR:
-                generator.clear()
+                batch_id = data[0]
+                generator.clear(batch_id)
             if command == GeneratorCommand.DELETE:
                 if rank == 0:
                     # Set agent to ready
@@ -902,8 +909,8 @@ class TpuGenerator(Generator):
         s_cached_batch = self.mailbox.send(GeneratorCommand.FILTER, batch_id, request_ids)[0]
         return CachedBatch.FromString(s_cached_batch)
 
-    def clear(self):
-        self.mailbox.send(GeneratorCommand.CLEAR)
+    def clear(self, batch_id: Optional[int] = None):
+        self.mailbox.send(GeneratorCommand.CLEAR, batch_id)
 
     def leave(self):
         if self.mailbox is None:
