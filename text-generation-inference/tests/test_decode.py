@@ -44,7 +44,7 @@ def test_decode_single(params):
         DecodeTestParams(
             model_id="google/gemma-7b",
             sequence_length=128,
-            expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
+            expected_text="\n\nThe first line of George Orwell’s <em>1984</em> is a perfect example",
         ),
         DecodeTestParams(
             model_id="mistralai/Mistral-7B-v0.3",
