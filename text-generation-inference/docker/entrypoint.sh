@@ -6,7 +6,7 @@ ulimit -l 68719476736
 
 # Hugging Face Hub related
 if [[ -z "${BATCH_SIZE}" ]]; then
-  BATCH_SIZE=4
+  BATCH_SIZE=2
 fi
 export BATCH_SIZE="${BATCH_SIZE}"
 
