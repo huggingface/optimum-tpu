@@ -12,12 +12,13 @@ import torch
 import torch.multiprocessing as mp
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
-from transformers import AutoTokenizer, PreTrainedTokenizerBase, StaticCache
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
 
 import optimum.tpu.xla_logger as logger
 from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
+from optimum.tpu.static_cache_xla import StaticCacheXla
 from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
 
 from .generator_base import Generator
@@ -529,7 +530,7 @@ class TpuGeneratorSingleThread(Generator):
 
         extra_args = {}
         if self._supports_static_cache:
-            self.past_key_values = StaticCache(
+            self.past_key_values = StaticCacheXla(
                 config=self.model.config,
                 max_batch_size=len(self.slots),
                 max_cache_len=self.model.config.sequence_length,
