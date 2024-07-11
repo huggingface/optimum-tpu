@@ -505,13 +505,21 @@ class TpuGeneratorSingleThread(Generator):
             input_ids[i, -truncation:] = tokenized_inputs.input_ids[i, -truncation:]
             slot_input_ids = input_ids[i : i + 1, :]
             # Padded input ids are also required to set logits processors and stopping criterias
-            selector = TokenSelector.create(
-                slot_input_ids,
-                slot.generation_config,
-                self.model,
-                self.model.config.sequence_length,
-                seed=slot.seed,
-            )
+            try:
+                selector = TokenSelector.create(
+                    slot_input_ids,
+                    slot.generation_config,
+                    self.model,
+                    self.model.config.sequence_length,
+                    seed=slot.seed,
+                )
+            except ValueError as e:
+                # This is very unlikely, but it seems it could be possible if router does not check values beforehand.
+                # In that case, we just skip the slot, and mark it as empty. This should prevent returning this to the
+                # router.
+                logger.error(f"Invalid generation parameters for slot {slot.id}. Skipping it. Error: {e}")
+                slot.clear()
+                continue
             slot_input_ids = slot_input_ids.squeeze(dim=0).type(torch.int64)
             attention_mask[i, -truncation:] = tokenized_inputs.attention_mask[i, -truncation:]
             if self._supports_static_cache:
