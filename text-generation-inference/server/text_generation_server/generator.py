@@ -449,10 +449,14 @@ class TpuGeneratorSingleThread(Generator):
         empty_slots = slots[Slot.State.EMPTY]
         model_batch_size = self.model.config.batch_size
         if model_batch_size is not None and model_batch_size < len(active_slots) + len(batch.requests):
-            raise ValueError(
+            # If raising an error here wouldn't crash the server, we could raise a ValueError
+            error = ValueError(
                 f"Cannot prefill {len(batch.requests)} new request(s)."
                 f" Maximum batch size supported is: {model_batch_size}."
             )
+            # but since it's not possible, we just log the error and return an empty generation
+            logger.error(error)
+            return [], None
         for slot in empty_slots:
             self.slots.remove(slot)
         # Assign each request to an empty slot
