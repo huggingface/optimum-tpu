@@ -48,8 +48,6 @@ class FusedLogitsWarper:
         Returns:
             a `FusedLogitsWarper` or None if neither top-k nor top-p are configured.
         """
-        if generation_config.do_sample and generation_config.top_k == 0 and generation_config.top_p == 1.0:
-            raise ValueError("Multinomial sampling requires at least top-k or top-p to be specified.")
         return cls(generation_config.temperature, generation_config.top_k, generation_config.top_p)
 
     def __call__(self, logits: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.LongTensor]:
@@ -58,9 +56,6 @@ class FusedLogitsWarper:
 
         do_top_k = self.top_k > 0 and self.top_k < logits.shape[-1]
         do_top_p = self.top_p < 1.0 and self.top_p > 0.0
-
-        if not do_top_k and not do_top_p:
-            return logits, None
 
         if do_top_k:
             sorted_logits, sorted_indices = torch.topk(logits, self.top_k)
