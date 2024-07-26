@@ -12,12 +12,14 @@ clean:
 
 # List static sources to be deployed in the package
 src_dir := $(mkfile_dir)/$(pkg_name)
-sources := $(wildcard $(src_dir)/*.py)
+rwildcard_py = $(wildcard $(1)/*.py) $(foreach d,$(wildcard $(1)/*),$(call rwildcard_py,$d))
+sources := $(call rwildcard_py,$(src_dir))
 deployed_sources := $(subst $(src_dir), $(pkg_dir), $(sources))
 
 # Static files are just copied
 
 define COPY
+	mkdir -p $(dir $@)
 	cp -f $< $@
 endef
 
