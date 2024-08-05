@@ -61,6 +61,7 @@ class AutoModelForCausalLM(BaseAutoModelForCausalLM):
         else:
             device = "xla"
         cls = config_name_to_class(pretrained_model_name_or_path)
+        # Check Bihan
         model = cls.from_pretrained(pretrained_model_name_or_path, *model_args, **kwargs)
         model.to(device)
 
