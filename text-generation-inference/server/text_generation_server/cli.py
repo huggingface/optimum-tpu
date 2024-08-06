@@ -19,6 +19,7 @@ def serve(
     logger_level: str = "INFO",
     json_output: bool = False,
     otlp_service_name: str = "text-generation-inference.server",
+    max_input_tokens: Optional[int] = None,
 ):
     """This is the main entry-point for the server CLI.
 
