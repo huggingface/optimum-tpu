@@ -1,5 +1,3 @@
-#pip install datasets
-#pip install accelerate
 from optimum.tpu import fsdp_v2
 fsdp_v2.use_fsdp_v2()
 
