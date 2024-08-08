@@ -1,9 +1,8 @@
 name: PyPI Release
 on:
+  release:
+    types: [published]
   workflow_dispatch:
-  push:
-    tags:
-      - v*
 
 env:
   PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_DIST }}
