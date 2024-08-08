@@ -119,9 +119,10 @@ class TokenSelector:
                 f"Adjusting the maximum generation length ({max_length}) to the model maximum sequence length ({max_seq_length})"
             )
             generation_config.max_length = max_seq_length
-            # Llama 3.1 adjustment
-            generation_config._eos_token_tensor = None
 
+        # Llama 3.1 adjustment
+        generation_config._eos_token_tensor = None
+        logger.debug(f"Generation config: {generation_config._eos_token_tensor}")
         # Instantiate transformers library processors and criterias
         logits_processor = model._get_logits_processor(
             generation_config,
