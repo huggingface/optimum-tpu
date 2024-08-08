@@ -21,7 +21,7 @@ description = "Optimum TPU is the interface between the Hugging Face Transformer
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "Development Status :: 1 - Pre-Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
