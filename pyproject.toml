@@ -57,7 +57,7 @@ build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
-quality = ["black", "ruff", "isort", "hf_doc_builder @ git+https://github.com/huggingface/doc-builder.git"]
+quality = ["black", "ruff", "isort"]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"
