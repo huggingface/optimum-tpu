@@ -340,6 +340,8 @@ class LlamaAttention(nn.Module):
                 base=self.rope_theta,
             )
         else:
+            # Set Default rope_scaling to dynamic
+            self.config.rope_scaling.setdefault("type", "dynamic")
             scaling_type = self.config.rope_scaling["type"]
             scaling_factor = self.config.rope_scaling["factor"]
             if scaling_type == "linear":

@@ -120,9 +120,7 @@ class TokenSelector:
             )
             generation_config.max_length = max_seq_length
 
-        # Llama 3.1 adjustment
         generation_config._eos_token_tensor = None
-        logger.debug(f"Generation config: {generation_config._eos_token_tensor}")
         # Instantiate transformers library processors and criterias
         logits_processor = model._get_logits_processor(
             generation_config,
