@@ -119,7 +119,7 @@ class TokenSelector:
                 f"Adjusting the maximum generation length ({max_length}) to the model maximum sequence length ({max_seq_length})"
             )
             generation_config.max_length = max_seq_length
-            #For llama 3.1
+            # Llama 3.1 adjustment
             generation_config._eos_token_tensor = None
 
         # Instantiate transformers library processors and criterias
