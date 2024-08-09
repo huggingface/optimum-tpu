@@ -3,7 +3,6 @@ import logging
 from typing import List, Optional, Union
 
 import torch
-import torch_xla.core.xla_model as xm
 from transformers.generation import (
     GenerationConfig,
     GenerationMixin,
@@ -53,7 +52,6 @@ class TokenSelector:
         self.eos_token_ids = eos_token_ids
         self.pad_token_id = pad_token_id
         self.logits_warper = logits_warper
-        xm.set_rng_state(seed)
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
 
