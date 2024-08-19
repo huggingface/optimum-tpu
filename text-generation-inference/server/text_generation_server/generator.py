@@ -608,7 +608,7 @@ class TpuGeneratorSingleThread(Generator):
         # Create blank inputs covering all slots (even empty ones)
         input_ids = torch.full(
             [batch_size, 1],
-            fill_value=self.tokenizer.eos_token_id,
+            fill_value=pad_token_id,
             dtype=torch.int64,
         )
         cache_position = torch.zeros([1], dtype=torch.int64)
