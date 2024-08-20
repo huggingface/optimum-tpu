@@ -47,8 +47,7 @@ Then, the tokenizer and model need to be loaded. We will choose [`meta-llama/Met
 
 ```python
 import torch
-from transformers import AutoTokenizer
-from optimum.tpu import AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_id = "meta-llama/Meta-Llama-3-8B"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
