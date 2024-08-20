@@ -68,7 +68,11 @@ data = data.map(lambda samples: tokenizer(samples["quote"]), batched=True)
 You then need to specify the FSDP training arguments to enable the sharding feature,the function will deduce the classes that should be sharded:
 
 ```python
-fsdp_training_args = fsdp_v2.get_fsdp_training_args(model)
+cls_to_wrap = "LlamaDecoderLayer"
+fsdp_training_args = {
+    "fsdp": "full_shard",
+    "fsdp_config": fsdp_v2.get_fsdp_config(cls_to_wrap),
+}
 ```
 
 Now training can be done as simply as using the standard `Trainer` class:
