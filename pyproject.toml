@@ -21,7 +21,7 @@ description = "Optimum TPU is the interface between the Hugging Face Transformer
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "Development Status :: 1 - Pre-Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -57,7 +57,7 @@ build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
-quality = ["black", "ruff", "isort", "hf_doc_builder @ git+https://github.com/huggingface/doc-builder.git"]
+quality = ["black", "ruff", "isort"]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"

@@ -32,6 +32,7 @@ jobs:
       - name: Setup environment
         run: |
           pip install -U pip
+          pip install git+https://github.com/huggingface/doc-builder.git
           pip install ".[quality]" -f https://storage.googleapis.com/libtpu-releases/index.html
 
       - name: Make documentation
