@@ -47,14 +47,13 @@ Then, the tokenizer and model need to be loaded. We will choose [`meta-llama/Met
 
 ```python
 import torch
-from transformers import AutoTokenizer
-from optimum.tpu import AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_id = "meta-llama/Meta-Llama-3-8B"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 # Add custom token for padding Llama
 tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
-model = AutoModelForCausalLM.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
 ```
 
 To tune the model with the [Abirate/english_quotes](https://huggingface.co/datasets/Abirate/english_quotes) dataset, you can load it and obtain the `quote` column:

@@ -82,9 +82,11 @@ def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
     model_type = model.config.model_type
     matched_model = False
     if model_type == "gemma":
+        from transformers import GemmaForCausalLM as HFGemmaForCausalLLM
+
         from .modeling_gemma import GemmaForCausalLM
 
-        if isinstance(model, GemmaForCausalLM):
+        if isinstance(model, GemmaForCausalLM) or isinstance(model, HFGemmaForCausalLLM):
             logger = logging.get_logger(__name__)
             from torch_xla import __version__ as xla_version
             if xla_version == "2.3.0":
@@ -94,9 +96,11 @@ def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
             cls_to_wrap = "GemmaDecoderLayer"
             matched_model = True
     elif model_type == "llama":
+        from transformers import LlamaForCausalLM as HFLlamaForCausalLLM
+
         from .modeling_llama import LlamaForCausalLM
 
-        if isinstance(model, LlamaForCausalLM):
+        if isinstance(model, LlamaForCausalLM) or isinstance(model, HFLlamaForCausalLLM):
             cls_to_wrap = "LlamaDecoderLayer"
             matched_model = True
 
