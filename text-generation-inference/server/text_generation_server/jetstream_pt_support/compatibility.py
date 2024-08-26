@@ -17,19 +17,8 @@ from typing import Any
 
 from transformers import AutoConfig
 
+from optimum.tpu import jetstream_pt_available
 
-def verify_imports() -> bool:
-    """Check if the necessary imports to use jetstream_pt are available.
-    """
-    try:
-        # Import torch_xla2 first!
-        import torch_xla2  # noqa: F401, isort:skip
-
-        import jetstream_pt  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
 
 def check(model_path: str) -> bool:
     """Checks if the model is supported by Jetstream Pytorch on Optimum TPU and if the required dependencies to provide
@@ -37,10 +26,12 @@ def check(model_path: str) -> bool:
     """
     config = AutoConfig.from_pretrained(model_path)
     # For now only Llama 2 with tokenizer.model is supported
-    if config.model_type == "llama" and os.path.exists(
+    if config.model_type != "llama" or not os.path.exists(
         os.path.join(model_path, "tokenizer.model")
     ):
-        return verify_imports()
+        return False
+    if jetstream_pt_available():
+        return True
     return False
 
 
