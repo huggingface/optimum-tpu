@@ -1,13 +1,10 @@
 # Import torch_xla2 first
-import torch_xla2 # isort:skip
+import torch_xla2  # isort:skip
 
-
-import os
 from typing import Any
 
 import jax
-import llama_model_exportable_hf as llama_model
-from jetstream_pt import engine, fetch_models, torchjax
+from jetstream_pt import fetch_models, torchjax
 from jetstream_pt.environment import (
     JetEngineEnvironment,
     JetEngineEnvironmentData,
@@ -16,17 +13,8 @@ from jetstream_pt.environment import (
 from loguru import logger
 from transformers import AutoConfig
 
-
-# TODO: isolate this one
-def supports_jetstream_pytorch(model_path: str) -> bool:
-    config = AutoConfig.from_pretrained(
-        model_path
-    )  # For now only Llama 2 with tokenizer.model is supported
-    if config.model_type == "llama" and os.path.exists(
-        os.path.join(model_path, "tokenizer.model")
-    ):
-        return True
-    return False
+from .engine import HfEngine
+from .llama_model_exportable_hf import TransformerHf
 
 
 def load_llama_model_info(model_path: str) -> Any:
@@ -35,24 +23,22 @@ def load_llama_model_info(model_path: str) -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
     head_dim = config.hidden_size // num_heads
+    n_reps = config.num_key_value_heads // num_heads
     model_info = fetch_models.ModelInfo(
-        llama_model.TransformerHf,
+        TransformerHf,
         num_layers=num_layers,
         num_heads=num_heads,
         head_dim=head_dim,
+        n_reps=n_reps,
     )
     return model_info
 
 
-# TODO: do a similar function that just checks if the model can be loaded with Jetstream PyTorch
 def load_model_info(model_path: str) -> Any:
-    config = AutoConfig.from_pretrained(
-        model_path
-    )  # For now only Llama 2 with tokenizer.model is supported
-    if config.model_type == "llama" and os.path.exists(
-        os.path.join(model_path, "tokenizer.model")
-    ):
+    config = AutoConfig.from_pretrained(model_path)  # For now only Llama 2 is supported
+    if config.model_type == "llama":
         return load_llama_model_info(model_path)
+    # Other models supports can be added here later
     return None
 
 
@@ -61,16 +47,17 @@ def create_engine_env_data(
     batch_size: int,
     sequence_length: int,
     max_input_tokens: int,
-    max_cache_length: int,
+    max_output_tokens: int,
 ) -> Any:
     model_info = load_model_info(model_path)
     if model_info is None:
         return None
 
     shard_on_batch = False
+    max_cache_length = max_input_tokens + max_output_tokens
 
     env_data = JetEngineEnvironmentData(
-        tokenizer_path=os.path.join(model_path, "tokenizer.model"),
+        tokenizer_path="", # Tokenizer is not user, HF tokenizer is used instead
         checkpoint_path=model_path,
         checkpoint_format="safetensors",
         batch_size=batch_size,
@@ -81,6 +68,7 @@ def create_engine_env_data(
         bf16_enable=True,
         sharding_config_path="",
         shard_on_batch=shard_on_batch,
+        n_reps=model_info.n_reps,
     )
     env_data.cache_shape = (
         batch_size,
@@ -95,7 +83,7 @@ def create_engine_env_data(
 def create_model(model_path: str, env: Any) -> Any:
     config = AutoConfig.from_pretrained(model_path)
     if config.model_type == "llama":
-        return llama_model.TransformerHf.from_config(config, env)
+        return TransformerHf.from_config(config, env)
 
 
 def instantiate_model_from_repo_id(
@@ -124,7 +112,7 @@ def instantiate_model_from_repo_id(
 def shard_weights(env, weights, weight_shardings):
     """Shard weights according to weight_shardings"""
     for k, v in weight_shardings.items():
-        logger.debug("SHARDING", k, v)
+        logger.debug(f"SHARDING {k} {v}")
     sharded = {}
     for key, val in weights.items():
         sharding = env.sharding_by_axis(weight_shardings.get(key, -1))
@@ -140,12 +128,10 @@ def create_engine(
     batch_size: int,
     sequence_length: int,
     max_input_tokens: int,
-    max_cache_length: int,
-) -> Any:
+    max_output_tokens: int,
+) -> HfEngine:
     # NOTE: for now no quantization is done
-    env_data = create_engine_env_data(
-        model_path, batch_size, sequence_length, max_input_tokens, max_cache_length
-    )
+    env_data = create_engine_env_data(model_path, batch_size, sequence_length, max_input_tokens, max_output_tokens)
     if env_data is None:
         return None
 
@@ -154,7 +140,7 @@ def create_engine(
     weight_shardings = model.get_sharding_annotations()
     sharded_weights = shard_weights(env, model.state_dict(), weight_shardings)
 
-    return engine.PyTorchEngine(
+    return HfEngine(
         pt_model=model,
         env=env,
         weights=torchjax.from_torch_with_copy(sharded_weights),
