@@ -37,6 +37,11 @@ def test_decode_single(params):
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(
+            model_id="meta-llama/Meta-Llama-3.1-8B",
+            sequence_length=256,
+            expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,",
+        ),
+        DecodeTestParams(
             model_id="meta-llama/Meta-Llama-3-8B",
             sequence_length=256,
             expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,",
@@ -52,7 +57,7 @@ def test_decode_single(params):
             expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the v",
         ),
     ],
-    ids=["Meta-Llama-3-8B", "gemma-7b", "Mistral-7B-v0.3"],
+    ids=["Meta-Llama-3.1-8B", "Meta-Llama-3-8B", "gemma-7b", "Mistral-7B-v0.3"],
 )
 def test_decode_single_slow(params):
     _test_decode_single(params)
