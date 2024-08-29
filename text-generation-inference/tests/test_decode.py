@@ -15,6 +15,7 @@ class DecodeTestParams:
     model_id: str
     sequence_length: int
     expected_text: str
+    do_sample: bool = False
 
 
 @pytest.mark.parametrize("params",
@@ -68,7 +69,7 @@ def _test_decode_single(params):
     generator = AutoGenerator.from_pretrained(
         model_path, revision="", max_batch_size=1, max_sequence_length=params.sequence_length
     )
-    request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
+    request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=params.do_sample)
     batch = Batch(id=0, requests=[request], size=1, max_tokens=params.sequence_length)
     generations, next_batch = generator.prefill(batch)
     # We already generated one token: call decode max_new_tokens - 1 times
@@ -86,9 +87,13 @@ def _test_decode_single(params):
     output = generations[0].generated_text
     assert output.generated_tokens == max_new_tokens
     assert output.finish_reason == 0
-    assert output.text == params.expected_text
+    if params.do_sample:
+        assert output.text != params.expected_text
+    else:
+        assert output.text == params.expected_text
 
 
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(
@@ -99,7 +104,8 @@ def _test_decode_single(params):
     ],
     ids=["Llama-2-7b-hf"],
 )
-def test_decode_single_jetstream_pytorch(params):
+def test_decode_single_jetstream_pytorch(params, do_sample):
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
+    params.do_sample = do_sample
     _test_decode_single(params)
