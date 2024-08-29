@@ -18,6 +18,8 @@ def serve(
     uds_path: str = "/tmp/text-generation-server",
     logger_level: str = "INFO",
     json_output: bool = False,
+    otlp_service_name: str = "text-generation-inference.server",
+    max_input_tokens: Optional[int] = None,
 ):
     """This is the main entry-point for the server CLI.
 
@@ -54,6 +56,10 @@ def serve(
 
     if trust_remote_code is not None:
         logger.warning("'trust_remote_code' argument is not supported and will be ignored.")
+    if otlp_service_name is not None:
+        logger.warning("'otlp_service_name' argument is not supported and will be ignored.")
+    if max_input_tokens is not None:
+        logger.warning("'max_input_tokens' argument is not supported and will be ignored.")
 
     # Import here after the logger is added to log potential import exceptions
     from optimum.tpu.model import fetch_model
