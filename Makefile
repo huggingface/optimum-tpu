@@ -40,6 +40,7 @@ $(PACKAGE_DIST) $(PACKAGE_WHEEL): $(PACKAGE_FILES)
 
 clean:
 	rm -rf dist
+	make -C text-generation-inference/server/ clean
 
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
