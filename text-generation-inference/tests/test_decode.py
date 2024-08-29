@@ -3,9 +3,11 @@ from dataclasses import dataclass
 
 import pytest
 from helpers import create_request, prepare_model
-from text_generation_server.generator import TpuGenerator
+from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 from tqdm import tqdm
+
+from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
 
 @dataclass
@@ -63,7 +65,7 @@ def _test_decode_single(params):
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
     max_new_tokens = 20
 
-    generator = TpuGenerator.from_pretrained(
+    generator = AutoGenerator.from_pretrained(
         model_path, revision="", max_batch_size=1, max_sequence_length=params.sequence_length
     )
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
@@ -85,3 +87,19 @@ def _test_decode_single(params):
     assert output.generated_tokens == max_new_tokens
     assert output.finish_reason == 0
     assert output.text == params.expected_text
+
+
+@pytest.mark.parametrize("params",
+    [
+        DecodeTestParams(
+            model_id="meta-llama/Llama-2-7b-hf",
+            sequence_length=256,
+            expected_text="\n\nThe clocks were striking thirteen\nThe clocks were striking thirteen\n",
+        ),
+    ],
+    ids=["Llama-2-7b-hf"],
+)
+def test_decode_single_jetstream_pytorch(params):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    _test_decode_single(params)

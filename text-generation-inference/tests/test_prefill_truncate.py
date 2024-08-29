@@ -1,5 +1,5 @@
 from helpers import create_request, prepare_model
-from text_generation_server.generator import TpuGeneratorSingleThread as TpuGenerator
+from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 
 
@@ -10,7 +10,7 @@ def test_prefill_truncate():
     model_path = prepare_model(model_id, sequence_length)
     max_new_tokens = 20
 
-    generator = TpuGenerator.from_pretrained(
+    generator = AutoGenerator.from_pretrained(
         model_path, revision="", max_batch_size=1, max_sequence_length=sequence_length
     )
     input_text = "This is something I will tell by the end of the story"
