@@ -4,6 +4,7 @@ import torch_xla2  # isort:skip
 from typing import Any
 
 import jax
+import jax.numpy as jnp
 from jetstream_pt import fetch_models, torchjax
 from jetstream_pt.environment import (
     JetEngineEnvironment,
@@ -109,15 +110,43 @@ def instantiate_model_from_repo_id(
     return model
 
 
+def _get_needed_padding(value: int, multiple: int) -> int:
+    return (multiple - value % multiple) % multiple
+
+
+def _pad_array_up_to(v: jnp.ndarray, axis: int, multiple: int) -> jnp.ndarray:
+    a = [(0, 0) for _ in range(len(v.shape))]
+    a[axis] = (0, _get_needed_padding(v.shape[axis], multiple))
+    return jnp.pad(v, a)
+
+
+def pad_to_shard(env, val, axis: int):
+    # if axis is -1, then no sharding is done, everything is replicated
+    if axis == -1 or axis is None:
+        return val
+    sharding = env.sharding_by_axis(axis)
+    axis_name = sharding.spec[axis]
+    size_to_pad = env.mesh.shape[axis_name]
+    padded_val = _pad_array_up_to(val, axis, size_to_pad)
+    print(f"➡️ ➡️ ➡️  Padded {val.shape} to {padded_val.shape}")
+    return padded_val
+
+
 def shard_weights(env, weights, weight_shardings):
     """Shard weights according to weight_shardings"""
     for k, v in weight_shardings.items():
         logger.debug(f"SHARDING {k} {v}")
     sharded = {}
     for key, val in weights.items():
-        sharding = env.sharding_by_axis(weight_shardings.get(key, -1))
+        axis = weight_shardings.get(key, -1)
+        sharding = env.sharding_by_axis(axis)
+
+        if key == 'output.weight':
+            print(f"🔪 🔪 🔪 🔪 🔪 Sharding {key}")
+            breakpoint()
         with jax.default_device(jax.devices("cpu")[0]):
             arr = torch_xla2.tensor.t2j(val)
+            arr = pad_to_shard(env, arr, axis)
         arr = jax.device_put(arr, sharding)
         sharded[key] = torchjax.to_torch(arr)
     return sharded
@@ -134,7 +163,6 @@ def create_engine(
     env_data = create_engine_env_data(model_path, batch_size, sequence_length, max_input_tokens, max_output_tokens)
     if env_data is None:
         return None
-
     env = JetEngineEnvironment(env_data)
     model = instantiate_model_from_repo_id(model_path, env)
     weight_shardings = model.get_sharding_annotations()

@@ -62,6 +62,11 @@ def test_decode_single_slow(params):
 
 
 def _test_decode_single(params):
+    from transformers import AutoTokenizer
+    model_id = "Trendyol/Trendyol-LLM-7b-base-v0.1"
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    print(tokenizer.encode("hi there"))
+    return
     model_path = prepare_model(params.model_id, params.sequence_length)
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
     max_new_tokens = 20
@@ -97,7 +102,8 @@ def _test_decode_single(params):
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(
-            model_id="meta-llama/Llama-2-7b-hf",
+            # model_id="meta-llama/Llama-2-7b-hf",
+            model_id="Trendyol/Trendyol-LLM-7b-base-v0.1",
             sequence_length=256,
             expected_text="\n\nThe clocks were striking thirteen\nThe clocks were striking thirteen\n",
         ),
