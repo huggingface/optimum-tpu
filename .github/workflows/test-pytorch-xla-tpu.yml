@@ -20,7 +20,7 @@ jobs:
     runs-on: optimum-tpu
     container:
       # Use a nightly image that works with TPU (release was not working)
-      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:48b1d3ab080613fd88234019daf77ef7812b518acb13c54ddad03bf770d6ac57
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
       options: --shm-size "16gb" --ipc host --privileged
     env:
       PJRT_DEVICE: TPU
