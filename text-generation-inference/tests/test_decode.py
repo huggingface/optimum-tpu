@@ -93,6 +93,7 @@ def _test_decode_single(params):
         assert output.text == params.expected_text
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
 @pytest.mark.parametrize("params",
     [
@@ -104,7 +105,7 @@ def _test_decode_single(params):
     ],
     ids=["Llama-2-7b-hf"],
 )
-def test_decode_single_jetstream_pytorch(params, do_sample):
+def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
     params.do_sample = do_sample
