@@ -102,8 +102,13 @@ def _test_decode_single(params):
             sequence_length=256,
             expected_text="\n\nThe clocks were striking thirteen\nThe clocks were striking thirteen\n",
         ),
+        DecodeTestParams(
+            model_id="meta-llama/Meta-Llama-3-8B",
+            sequence_length=256,
+            expected_text=" Winston Winston Smith, his chin on his hands, and the clock in the Ministry of Truth, M",
+        ),
     ],
-    ids=["Llama-2-7b-hf"],
+    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
 )
 def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     if not jetstream_pt_available():
