@@ -118,7 +118,8 @@ def shard_weights(env, weights, weight_shardings):
     for key, val in weights.items():
         sharding = env.sharding_by_axis(weight_shardings.get(key, -1))
         with jax.default_device(jax.devices("cpu")[0]):
-            arr = torch_xla2.tensor.t2j(val)
+            # Note we clone to avoid a core-dump that might happen otherwise when calling device_put
+            arr = torch_xla2.tensor.t2j(val.clone())
         arr = jax.device_put(arr, sharding)
         sharded[key] = torchjax.to_torch(arr)
     return sharded

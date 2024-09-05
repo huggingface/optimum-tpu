@@ -110,3 +110,21 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
         pytest.skip("Jetstream PyTorch is not available")
     params.do_sample = do_sample
     _test_decode_single(params)
+
+
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
+@pytest.mark.parametrize("params",
+    [
+        DecodeTestParams(
+            model_id="Maykeye/TinyLLama-v0",
+            sequence_length=256,
+            expected_text=" She She had a big and it had a big, blue, and a big, red and a",
+        ),
+    ],
+    ids=["TinyLLama-v0"],
+)
+def test_decode_single_jetstream_pytorch(params, do_sample):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    params.do_sample = do_sample
+    _test_decode_single(params)
