@@ -215,6 +215,8 @@ class Slot:
         Return:
             int: A scalar of the selected token.
         """
+        if len(logits.shape) == 1:
+            logits = logits.reshape(1, -1)
         return self._selector.select(self._tokens, logits)[0]
 
     @property
@@ -452,11 +454,11 @@ class TpuGeneratorJetStream(Generator):
             # To allow jit'ing the select function, we need to wrap it in a partial
             slot_select = jax.tree_util.Partial(slot.select)
             # Ask for prefill and insert
-            prefill_results, _result_tokens = self.engine.prefill_ex(
+            prefill_results, _result_tokens = self.engine.prefill(
                 params=self.params,
                 padded_tokens=input_ids,
                 true_length=true_lengths,
-                sampling_fn=slot_select,
+                sampler=slot_select,
             )
             next_token = prefill_results.token.item()
             self.decode_state = self.engine.insert(prefill_results, self.decode_state, slot.id)
