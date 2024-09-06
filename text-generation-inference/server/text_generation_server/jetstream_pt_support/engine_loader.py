@@ -25,11 +25,12 @@ def load_llama_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
     head_dim = config.hidden_size // num_heads
-    n_reps = num_heads // config.num_key_value_heads
+    num_kv_heads = config.num_key_value_heads
+    n_reps = num_heads // num_kv_heads
     model_info = fetch_models.ModelInfo(
         TransformerHf,
         num_layers=num_layers,
-        num_heads=num_heads,
+        num_kv_heads=num_kv_heads,
         head_dim=head_dim,
         n_reps=n_reps,
     )
@@ -76,7 +77,7 @@ def create_engine_env_data(
     )
     env_data.cache_shape = (
         batch_size,
-        config.num_key_value_heads,
+        model_info.num_kv_heads,
         max_cache_length,
         model_info.head_dim,
     )
