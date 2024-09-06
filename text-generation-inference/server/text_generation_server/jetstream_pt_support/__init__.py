@@ -12,4 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .compatibility import check, create_engine
+from .compatibility import create_engine, model_can_use_jetstream_pt

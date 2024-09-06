@@ -20,7 +20,7 @@ from transformers import AutoConfig
 from optimum.tpu import jetstream_pt_available
 
 
-def check(model_path: str) -> bool:
+def model_can_use_jetstream_pt(model_path: str) -> bool:
     """Checks if the model is supported by Jetstream Pytorch on Optimum TPU and if the required dependencies to provide
     the engine are installed.
     """
@@ -42,7 +42,7 @@ def create_engine(
     max_input_tokens: int,
     max_output_tokens: int,
 ) -> Any:
-    if not check(model_path):
+    if not model_can_use_jetstream_pt(model_path):
         # The model is not compatible with Jetstream PyTorch, just exit
         return None
 

@@ -1,5 +1,5 @@
 from .generator_base import Generator
-from .jetstream_pt_support import check
+from .jetstream_pt_support import model_can_use_jetstream_pt
 
 
 class AutoGenerator:
