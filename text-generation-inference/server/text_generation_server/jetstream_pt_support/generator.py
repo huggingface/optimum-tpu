@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torch_xla2
 from jetstream.engine.token_utils import pad_tokens, take_nearest_length
+from jetstream_pt.engine import PyTorchEngine
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
@@ -27,7 +28,6 @@ from ..pb.generate_pb2 import (
     StoppingCriteriaParameters,
     Tokens,
 )
-from .engine import HfEngine
 from .engine_loader import create_engine
 from .token_selector import TokenSelector
 
@@ -243,7 +243,7 @@ class TpuGeneratorJetStream(Generator):
 
     def __init__(
         self,
-        engine: HfEngine,
+        engine: PyTorchEngine,
         tokenizer: PreTrainedTokenizerBase,
     ):
         self.engine = engine

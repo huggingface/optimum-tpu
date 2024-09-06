@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import jax
 from jetstream_pt import fetch_models, torchjax
+from jetstream_pt.engine import PyTorchEngine
 from jetstream_pt.environment import (
     JetEngineEnvironment,
     JetEngineEnvironmentData,
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
     from transformers import PretrainedConfig
 from transformers import AutoConfig
 
-from .engine import HfEngine
 from .llama_model_exportable_hf import TransformerHf
 
 
@@ -136,7 +136,7 @@ def create_engine(
     sequence_length: int,
     max_input_tokens: int,
     max_output_tokens: int,
-) -> HfEngine:
+) -> PyTorchEngine:
     # NOTE: for now no quantization is done
     env_data = create_engine_env_data(model_path, batch_size, sequence_length, max_input_tokens, max_output_tokens)
     if env_data is None:
@@ -147,7 +147,7 @@ def create_engine(
     weight_shardings = model.get_sharding_annotations()
     sharded_weights = shard_weights(env, model.state_dict(), weight_shardings)
 
-    return HfEngine(
+    return PyTorchEngine(
         pt_model=model,
         env=env,
         weights=torchjax.from_torch_with_copy(sharded_weights),
