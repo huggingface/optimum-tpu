@@ -1,3 +1,5 @@
+from loguru import logger
+
 from .generator_base import Generator
 from .jetstream_pt_support import model_can_use_jetstream_pt
 
@@ -23,12 +25,14 @@ class AutoGenerator:
         Returns:
             A TpuGenerator.
         """
-        if check(model_path):
+        if model_can_use_jetstream_pt(model_path):
+            logger.debug("Using Jetstream PyTorch generator.")
             from .jetstream_pt_support.generator import TpuGeneratorJetStream
             return TpuGeneratorJetStream.from_pretrained(
                 model_path, revision=revision, max_batch_size=max_batch_size, max_sequence_length=max_sequence_length
             )
         else:
+            logger.debug("Using PyTorch/XLA generator.")
             from .generator import TpuGenerator
             return TpuGenerator.from_pretrained(
                 model_path, revision=revision, max_batch_size=max_batch_size, max_sequence_length=max_sequence_length
