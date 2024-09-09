@@ -15,12 +15,3 @@ class HfEngine(engine.PyTorchEngine):
         weights=None,
     ):
         super().__init__(pt_model, env, weights)
-
-    def generate_ex(
-        self, params: Any, decode_state: engine.DecodeState, sampling_fn: Callable[[Any, int], jax.Array]
-    ) -> tuple[engine.DecodeState, engine_api.ResultTokens]:
-        sampling_fn_backup = self._sampling
-        self._sampling = sampling_fn
-        new_decode_state, result_tokens = self.generate(params, decode_state)
-        self._sampling = sampling_fn_backup
-        return new_decode_state, result_tokens

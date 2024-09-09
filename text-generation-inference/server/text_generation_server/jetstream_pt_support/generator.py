@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from enum import Enum
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -479,6 +479,17 @@ class TpuGeneratorJetStream(Generator):
         logger.debug("Model ready for decoding")
         return generations, batch
 
+    def _select_from_slots(self, logits: jnp.ndarray, batch_size: int=0) -> jnp.ndarray:
+        pad_token_id = self.tokenizer.pad_token_id
+        batch_size = logits.shape[0]
+        tokens = jnp.full((batch_size, 1), pad_token_id)
+        active_slots = [slot for slot in self.slots if slot.state == slot.State.READY]
+        for slot in active_slots:
+            # Every slot might have a different selection criteria, so we are obliged to call select in a loop
+            next_token = slot.select(logits)
+            tokens = tokens.at[slot.id].set(next_token)
+        return tokens
+
     def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
         """Decode the specified prefilled requests.
 
@@ -512,19 +523,9 @@ class TpuGeneratorJetStream(Generator):
         if len(active_slots) < len(request_ids):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
 
-        # Define a custom function to select the next token for each slot
-        pad_token_id = self.tokenizer.pad_token_id
-
-        def select_from_slots(logits: Any, batch_size: int) -> jnp.ndarray:
-            tokens = jnp.full((batch_size, 1), pad_token_id)
-            for slot in active_slots:
-                # Every slot might have a different selection criteria, so we are obliged to call select in a loop
-                next_token = slot.select(logits)
-                tokens = tokens.at[slot.id].set(next_token)
-            return tokens
-
-        select_fn = select_from_slots
-        self.decode_state, result_tokens = self.engine.generate_ex(self.params, self.decode_state, select_fn)
+        # Use a custom function to select the next token for each slot
+        select_fn = jax.tree_util.Partial(self._select_from_slots)
+        self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state, select_fn)
 
         newly_empty = []
         generations = []
