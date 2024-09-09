@@ -2,7 +2,9 @@ import copy
 import logging
 from typing import List, Optional, Union
 
-import torch
+import jax
+import jax.numpy as jnp
+from jetstream.engine import sampling_utils
 from transformers.generation import (
     GenerationConfig,
     GenerationMixin,
@@ -20,11 +22,12 @@ logger = logging.getLogger(__name__)
 class TokenSelector:
     """Implements the token selection logic corresponding to a generation configuration.
 
-    This class combines and uses the logits processors and stopping criterias implemented in
+    This class combines and uses the logits processors and stopping criteria implemented in
     the transformers library.
 
     The algorithm to select these objects is heavily inspired by the transformers `GenerationMixin.generate()`
-    method, but the actual token selection methods are specific.
+    method, but the actual token selection methods are specific, and partially adapted from Jetstream/Pytorch sampling
+    implementation.
 
     The reason why this class does not inherit from `GenerationMixin` is because it does not
     include the code to produce the tokens logits.
@@ -41,7 +44,7 @@ class TokenSelector:
         mode: GenerationMode,
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
-        eos_token_ids: Union[int,List[int]],
+        eos_token_ids: Union[int, List[int]],
         pad_token_id: int,
         logits_warper: Optional[LogitsProcessorList] = None,
         seed: Optional[int] = 0,
@@ -52,13 +55,12 @@ class TokenSelector:
         self.eos_token_ids = eos_token_ids
         self.pad_token_id = pad_token_id
         self.logits_warper = logits_warper
-        self.generator = torch.Generator()
-        self.generator.manual_seed(seed)
+        self.key = jax.random.PRNGKey(seed)
 
     @classmethod
     def create(
         cls,
-        input_ids: torch.Tensor,
+        input_ids: jnp.ndarray,
         generation_config: GenerationConfig,
         model: GenerationMixin,
         max_seq_length: int,
@@ -68,7 +70,7 @@ class TokenSelector:
         r"""Creates the `TokenSelector` for a specific generation configuration.
 
         Args:
-            input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
+            input_ids (`jnp.ndarray` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             generation_config (`~transformers.generation.GenerationConfig`, *optional*):
                 The generation configuration to parametrize the token selection.
@@ -82,7 +84,7 @@ class TokenSelector:
             seed(`Optional[int]`):
                 The optional seed for sampling. Defaults to zero.
         Return:
-            `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
+            The `TokenSelector` instance.
         """
         generation_config.validate()
         generation_config = copy.deepcopy(generation_config)
@@ -157,31 +159,41 @@ class TokenSelector:
             seed=seed,
         )
 
-    def select(self, input_ids: torch.LongTensor, logits: torch.Tensor) -> torch.LongTensor:
+    def select(self, input_ids: jnp.ndarray, logits: jnp.ndarray) -> jnp.ndarray:
         """Select the next tokens from the candidate logits.
 
         Args:
-            input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
+            input_ids (`jnp.ndarray` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation (not used in all generation modes).
-            logits (`torch.Tensor` of shape `(batch_size, sequence_length)`):
+            logits (`jnp.ndarray` of shape `(batch_size, sequence_length)`):
                 The logits corresponding to the generated tokens.
 
         Return:
-            `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
+            `jnp.ndarray`: A `jnp.ndarray` containing the selected tokens.
         """
         scores = self.logits_processor(input_ids, logits)
         if self.mode == GenerationMode.SAMPLE:
             return self._sample(scores)
         else:
-            return torch.argmax(scores, dim=-1)
+            return jnp.argmax(scores, axis=-1)
 
-    def _sample(self, scores: torch.Tensor) -> torch.LongTensor:
-        # Get [batch_size, kept] scores and indices instead of [batch_size, vocab_size] scores
-        scores, next_token_indices = self.logits_warper(scores)
+    def _sample(self, scores: jnp.ndarray) -> jnp.ndarray:
+        do_top_k = self.logits_warper.top_k > 0 and self.logits_warper.top_k < scores.shape[-1]
+        do_top_p = self.logits_warper.top_p < 1.0 and self.logits_warper.top_p > 0.0
 
-        # sample
-        probs = torch.nn.functional.softmax(scores, dim=-1)
-        next_tokens = torch.multinomial(probs, num_samples=1, generator=self.generator)
-        # Convert the filtered tokens to actual vocabulary tokens
-        next_tokens = torch.gather(next_token_indices, 1, next_tokens)
-        return next_tokens.squeeze(1)
+        if do_top_k:
+            return sampling_utils.sample_topk_logits(
+                scores,
+                self.logits_warper.top_k,
+                self.logits_warper.temperature,
+                self.key,
+            )
+        elif do_top_p:
+            return sampling_utils.sample_nucleus_topp_logits(
+                scores,
+                self.logits_warper.top_p,
+                self.logits_warper.temperature,
+                self.key,
+            )
+
+        return jax.random.categorical(self.key, scores / self.logits_warper.temperature)

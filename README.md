@@ -45,7 +45,20 @@ Other TPU versions will be supported along the way.
 As part of the integration, we do support a [text-generation-inference (TGI)](https://github.com/huggingface/optimum-tpu/tree/main/text-generation-inference) backend allowing to deploy and serve
 incoming HTTP requests and execute them on Cloud TPUs.
 
-Please see the [TGI specific documentation]() on how to get started
+Please see the [TGI specific documentation](text-generation-inference) on how to get started.
+
+### JetStream Pytorch Engine
+
+`optimum-tpu` provides an optional support of JetStream Pytorch engine inside of TGI. This support can be installed using the dedicated command:
+
+```shell
+pip install "optimum-tpu[jetstream-pt]" \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
+  -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+To enable the support, export the environment variable `JETSTREAM_PT=1`.
 
 ## Training
 

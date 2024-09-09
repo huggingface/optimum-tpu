@@ -1,7 +1,7 @@
 
 import pytest
 from helpers import create_request, prepare_model
-from text_generation_server.generator import TpuGenerator
+from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 from tqdm import tqdm
 
@@ -16,7 +16,7 @@ def model_path():
 
 
 def test_info(model_path):
-    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=1)
+    generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=1)
     info = generator.info
     assert info.requires_padding is True
     assert info.device_type == "xla"
@@ -44,7 +44,7 @@ def test_info(model_path):
 )
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
-    generator = TpuGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
+    generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
@@ -65,7 +65,7 @@ def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_
 
 
 def test_decode_multiple(model_path):
-    generator = TpuGenerator.from_pretrained(model_path,
+    generator = AutoGenerator.from_pretrained(model_path,
                                              revision="",
                                              max_batch_size=2,
                                              max_sequence_length=SEQUENCE_LENGTH)

@@ -1,6 +1,5 @@
 import pytest
 import torch
-from text_generation_server.generator import Slot
 from text_generation_server.pb.generate_pb2 import Request
 from transformers import AutoTokenizer, GenerationConfig
 
@@ -31,6 +30,7 @@ def tokenizer(request):
     ids=["spaces", "chinese-utf8", "emojis"],
 )
 def test_decode_streaming(tokenizer, input_text, generated_text):
+    from text_generation_server.generator import Slot
     # Note: device used is cpu to make it faster
     slot = Slot(0, tokenizer, "cpu")
     request = Request(id=0, inputs=input_text)

@@ -12,8 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from pkg_resources import parse_version
+from packaging.version import parse
 
 
 __version__ = "0.1.5"
-VERSION = parse_version(__version__)
+VERSION = parse(__version__)

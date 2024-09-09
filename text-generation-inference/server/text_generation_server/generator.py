@@ -590,6 +590,19 @@ class TpuGeneratorSingleThread(Generator):
         # just carry on with decoding. We adopt the id of the first
         # batch in the list as our next batch id.
         next_batch_id = batches[0].id
+        request_ids = []
+        for batch in batches:
+            request_ids += batch.request_ids
+        cleared_request_ids = []
+        for slot in self.slots:
+            if slot.state == slot.State.READY and slot.request_id not in request_ids:
+                cleared_request_ids.append(slot.request_id)
+                slot.clear()
+        if len(cleared_request_ids) > 0:
+            logger.info(f"Clearing slot for requests {cleared_request_ids} as they are not requested.")
+        active_slots = [slot for slot in self.slots if slot.state == slot.State.READY]
+        if len(active_slots) < len(request_ids):
+            logger.error("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
         # Reconstruct input_ids and attention_mask from slots
         input_ids = None
         attention_mask = None
@@ -608,7 +621,7 @@ class TpuGeneratorSingleThread(Generator):
         # Create blank inputs covering all slots (even empty ones)
         input_ids = torch.full(
             [batch_size, 1],
-            fill_value=self.tokenizer.eos_token_id,
+            fill_value=pad_token_id,
             dtype=torch.int64,
         )
         cache_position = torch.zeros([1], dtype=torch.int64)

@@ -6,7 +6,7 @@ from grpc import aio
 from grpc_reflection.v1alpha import reflection
 from loguru import logger
 
-from .generator import Generator, TpuGenerator
+from .auto_generator import AutoGenerator, Generator
 from .interceptor import ExceptionInterceptor
 from .pb import generate_pb2, generate_pb2_grpc
 
@@ -73,7 +73,7 @@ def serve(
         server_urls = [local_url]
 
         try:
-            generator = TpuGenerator.from_pretrained(
+            generator = AutoGenerator.from_pretrained(
                 model_path,
                 revision=revision,
                 max_batch_size=max_batch_size,
