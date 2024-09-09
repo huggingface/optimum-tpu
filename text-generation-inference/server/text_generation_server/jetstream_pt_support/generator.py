@@ -38,6 +38,7 @@ optimum_logger.setLevel("CRITICAL")
 
 # These will do some bucketing on prefill lengths to avoid too many different sizes
 PREFILL_LENGTHS = [
+    16,
     32,
     64,
     128,
@@ -329,30 +330,29 @@ class TpuGeneratorJetStream(Generator):
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
         bucket_seq_len = take_nearest_length(PREFILL_LENGTHS, seq_len)
-        dummy_request = self._create_dummy_request(seq_len)
         decode_done = False
         for l in reversed(PREFILL_LENGTHS):
             # Skip all the unsupported lengths
             if l > bucket_seq_len:
                 continue
-            # Set all truncate values for all requests
-            dummy_request.truncate = l
-            dummy_request.stopping_parameters.max_new_tokens = 10
+            # create a dummy request with the current sequence length
+            dummy_request = self._create_dummy_request(l)
+            # We define few max_new_tokens to request at least one (by prefill) and another by decode.
+            MAX_NEW_TOKENS = 10
+            dummy_request.stopping_parameters.max_new_tokens = MAX_NEW_TOKENS
             warmup_batch = Batch(id=0,
                                     requests=[dummy_request],
                                     size=1,
                                     max_tokens=batch.max_tokens)
             logger.debug(f"Warmup for requests, len {l} seq_len {seq_len}")
             _generations, next_batch = self.prefill(warmup_batch)
-            if not decode_done and next_batch is not None:
+            if next_batch is not None:
                 self.decode([next_batch])
                 decode_done = True
             self.clear()
         if not decode_done:
             logger.debug("No decode done during warmup")
 
-        self.prefill(batch)
-        self.clear()
         elapsed = time.time() - start
         logger.debug(f"Warmup done, took {elapsed:.2f}s")
         seq_len = self.engine.env.seq_len
@@ -390,11 +390,13 @@ class TpuGeneratorJetStream(Generator):
             max_length=max_length,
             add_special_tokens=False,
         )
+        # max_prefill_length must be a power of 2
+        max_prefill_length = take_nearest_length(PREFILL_LENGTHS, self.model.config.sequence_length)
         tokens, true_length = pad_tokens(input_ids[0],
                                          self.tokenizer.bos_token_id,
                                          self.tokenizer.pad_token_id,
                                          is_bos=True,
-                                         max_prefill_length=self.model.config.sequence_length,
+                                         max_prefill_length=max_prefill_length,
                                          jax_padding=True,
                                          )
         return tokens, true_length
