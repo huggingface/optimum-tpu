@@ -36,7 +36,7 @@ def load_llama_model_info(config: "PretrainedConfig") -> Any:
     return model_info
 
 
-def load_model_info(config: PretrainedConfig) -> Any:
+def load_model_info(config: "PretrainedConfig") -> Any:
     # For now only Llama is supported
     if config.model_type == "llama":
         return load_llama_model_info(config)
