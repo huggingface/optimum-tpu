@@ -1,7 +1,7 @@
 # Import torch_xla2 first
 import torch_xla2  # isort:skip
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jax
 from jetstream_pt import fetch_models, torchjax
@@ -11,19 +11,21 @@ from jetstream_pt.environment import (
     QuantizationConfig,
 )
 from loguru import logger
+
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
 from transformers import AutoConfig
 
 from .engine import HfEngine
 from .llama_model_exportable_hf import TransformerHf
 
 
-def load_llama_model_info(model_path: str) -> Any:
-    # First get config
-    config = AutoConfig.from_pretrained(model_path)
+def load_llama_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
     head_dim = config.hidden_size // num_heads
-    n_reps = config.num_key_value_heads // num_heads
+    n_reps = num_heads // config.num_key_value_heads
     model_info = fetch_models.ModelInfo(
         TransformerHf,
         num_layers=num_layers,
@@ -34,10 +36,10 @@ def load_llama_model_info(model_path: str) -> Any:
     return model_info
 
 
-def load_model_info(model_path: str) -> Any:
-    config = AutoConfig.from_pretrained(model_path)  # For now only Llama 2 is supported
+def load_model_info(config: "PretrainedConfig") -> Any:
+    # For now only Llama is supported
     if config.model_type == "llama":
-        return load_llama_model_info(model_path)
+        return load_llama_model_info(config)
     # Other models supports can be added here later
     return None
 
@@ -49,7 +51,9 @@ def create_engine_env_data(
     max_input_tokens: int,
     max_output_tokens: int,
 ) -> Any:
-    model_info = load_model_info(model_path)
+    # First get config
+    config = AutoConfig.from_pretrained(model_path)
+    model_info = load_model_info(config)
     if model_info is None:
         return None
 
@@ -72,7 +76,7 @@ def create_engine_env_data(
     )
     env_data.cache_shape = (
         batch_size,
-        model_info.num_heads,
+        config.num_key_value_heads,
         max_cache_length,
         model_info.head_dim,
     )
@@ -91,7 +95,8 @@ def instantiate_model_from_repo_id(
     env: Any,
 ):
     """Create model instance by hf model_dir, and its config"""
-    model_info = load_model_info(model_dir)
+    config = AutoConfig.from_pretrained(model_dir)
+    model_info = load_model_info(config)
     # at this point we can be quite optimistic and just assert
     assert model_info is not None
 
@@ -117,7 +122,8 @@ def shard_weights(env, weights, weight_shardings):
     for key, val in weights.items():
         sharding = env.sharding_by_axis(weight_shardings.get(key, -1))
         with jax.default_device(jax.devices("cpu")[0]):
-            arr = torch_xla2.tensor.t2j(val)
+            # Note we clone to avoid a core-dump that might happen otherwise when calling device_put
+            arr = torch_xla2.tensor.t2j(val.clone())
         arr = jax.device_put(arr, sharding)
         sharded[key] = torchjax.to_torch(arr)
     return sharded

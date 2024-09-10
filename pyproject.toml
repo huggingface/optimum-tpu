@@ -61,7 +61,7 @@ quality = ["black", "ruff", "isort"]
 # Jetstream/Pytorch support is experimental for now, requires installation from fixed commit.
 # Pallas is pulled because it will install a compatible version of jax[tpu].
 jetstream-pt = [
-    "jetstream-pt @ git+https://github.com/google/jetstream-pytorch.git#df92015289953c506004e674d57651b03e4e89f2",
+    "jetstream-pt @ git+https://github.com/google/jetstream-pytorch.git@df92015289953c506004e674d57651b03e4e89f2",
     "torch-xla[pallas] == 2.4.0"
 ]
 

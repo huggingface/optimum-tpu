@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
 from typing import Any
 
 from transformers import AutoConfig
@@ -25,10 +24,8 @@ def model_can_use_jetstream_pt(model_path: str) -> bool:
     the engine are installed.
     """
     config = AutoConfig.from_pretrained(model_path)
-    # For now only Llama 2 with tokenizer.model is supported
-    if config.model_type != "llama" or not os.path.exists(
-        os.path.join(model_path, "tokenizer.model")
-    ):
+    # For now only Llama is supported
+    if config.model_type != "llama":
         return False
     if jetstream_pt_available():
         return True

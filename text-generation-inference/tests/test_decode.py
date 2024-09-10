@@ -93,6 +93,7 @@ def _test_decode_single(params):
         assert output.text == params.expected_text
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
 @pytest.mark.parametrize("params",
     [
@@ -101,8 +102,31 @@ def _test_decode_single(params):
             sequence_length=256,
             expected_text="\n\nThe clocks were striking thirteen\nThe clocks were striking thirteen\n",
         ),
+        DecodeTestParams(
+            model_id="meta-llama/Meta-Llama-3-8B",
+            sequence_length=256,
+            expected_text=" Winston Winston Smith, his chin on his hands, and the clock in the Ministry of Truth, M",
+        ),
     ],
-    ids=["Llama-2-7b-hf"],
+    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
+)
+def test_decode_single_jetstream_pytorch_slow(params, do_sample):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    params.do_sample = do_sample
+    _test_decode_single(params)
+
+
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
+@pytest.mark.parametrize("params",
+    [
+        DecodeTestParams(
+            model_id="Maykeye/TinyLLama-v0",
+            sequence_length=256,
+            expected_text=" She She had a big and it had a big, blue, and a big, red and a",
+        ),
+    ],
+    ids=["TinyLLama-v0"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     if not jetstream_pt_available():
