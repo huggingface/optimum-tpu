@@ -118,7 +118,6 @@ class TokenSelector:
             )
             generation_config.max_length = max_seq_length
 
-        generation_config._eos_token_tensor = None
         # Instantiate transformers library processors and criterias
         logits_processor = model._get_logits_processor(
             generation_config,
