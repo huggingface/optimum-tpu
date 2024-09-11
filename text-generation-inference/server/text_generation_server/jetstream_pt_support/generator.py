@@ -532,7 +532,7 @@ class TpuGeneratorJetStream(Generator):
             # Get the next token.
             # Note that for now we ignore is_valid and length as we don't use them, we will re-parse these in post
             # generation.
-            next_token, _is_valid, _length = result_tokens.data[slot.id]
+            next_token = self.decode_state.tokens[slot.id].item()
 
             if slot.state != Slot.State.READY:
                 logger.error(f"Unexpected Slot {slot.id} is not ready for decoding, skipping.")

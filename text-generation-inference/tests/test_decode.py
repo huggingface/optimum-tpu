@@ -100,12 +100,12 @@ def _test_decode_single(params):
         DecodeTestParams(
             model_id="meta-llama/Llama-2-7b-hf",
             sequence_length=256,
-            expected_text="\n\nThe clocks were striking thirteen\nThe clocks were striking thirteen\n",
+            expected_text="\nThe clocks were striking thirteen\nThe clocks were striking thirteen\nThe",
         ),
         DecodeTestParams(
             model_id="meta-llama/Meta-Llama-3-8B",
             sequence_length=256,
-            expected_text=" Winston Winston Smith, his chin on his hands, and the clock in the Ministry of Truth, M",
+            expected_text=" Winston Smith, his chin on his hands, and the clock in the Ministry of Truth, Minit",
         ),
     ],
     ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
@@ -123,7 +123,7 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
         DecodeTestParams(
             model_id="Maykeye/TinyLLama-v0",
             sequence_length=256,
-            expected_text=" She She had a big and it had a big, blue, and a big, red and a",
+            expected_text=" She had a big and it had a big, blue, and a big, red and a big",
         ),
     ],
     ids=["TinyLLama-v0"],
