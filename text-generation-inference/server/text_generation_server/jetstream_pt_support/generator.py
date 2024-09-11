@@ -133,6 +133,8 @@ class Slot:
         self._generation_config.typical_p = request.parameters.typical_p
         self._generation_config.do_sample = request.parameters.do_sample
         self._generation_config.repetition_penalty = request.parameters.repetition_penalty
+        # Workaround to avoid bug in token_utils in transformers.
+        self._generation_config._eos_token_tensor = getattr(self._generation_config, "_eos_token_tensor", None)
         self._truncate = request.truncate
         self.seed = request.parameters.seed
         # TODO: watermark
