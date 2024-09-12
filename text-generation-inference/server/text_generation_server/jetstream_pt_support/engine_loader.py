@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import jax
 from jetstream_pt import fetch_models, torchjax
+from jetstream_pt.engine import PyTorchEngine
 from jetstream_pt.environment import (
     JetEngineEnvironment,
     JetEngineEnvironmentData,
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
     from transformers import PretrainedConfig
 from transformers import AutoConfig
 
-from .engine import HfEngine
 from .llama_model_exportable_hf import TransformerHf
 
 
@@ -25,11 +25,12 @@ def load_llama_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
     head_dim = config.hidden_size // num_heads
-    n_reps = num_heads // config.num_key_value_heads
+    num_kv_heads = config.num_key_value_heads
+    n_reps = num_heads // num_kv_heads
     model_info = fetch_models.ModelInfo(
         TransformerHf,
         num_layers=num_layers,
-        num_heads=num_heads,
+        num_kv_heads=num_kv_heads,
         head_dim=head_dim,
         n_reps=n_reps,
     )
@@ -76,7 +77,7 @@ def create_engine_env_data(
     )
     env_data.cache_shape = (
         batch_size,
-        config.num_key_value_heads,
+        model_info.num_kv_heads,
         max_cache_length,
         model_info.head_dim,
     )
@@ -135,7 +136,7 @@ def create_engine(
     sequence_length: int,
     max_input_tokens: int,
     max_output_tokens: int,
-) -> HfEngine:
+) -> PyTorchEngine:
     # NOTE: for now no quantization is done
     env_data = create_engine_env_data(model_path, batch_size, sequence_length, max_input_tokens, max_output_tokens)
     if env_data is None:
@@ -146,7 +147,7 @@ def create_engine(
     weight_shardings = model.get_sharding_annotations()
     sharded_weights = shard_weights(env, model.state_dict(), weight_shardings)
 
-    return HfEngine(
+    return PyTorchEngine(
         pt_model=model,
         env=env,
         weights=torchjax.from_torch_with_copy(sharded_weights),

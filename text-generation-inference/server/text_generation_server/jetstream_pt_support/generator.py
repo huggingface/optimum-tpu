@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from enum import Enum
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torch_xla2
 from jetstream.engine.token_utils import pad_tokens, take_nearest_length
+from jetstream_pt.engine import PyTorchEngine
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
@@ -27,7 +28,6 @@ from ..pb.generate_pb2 import (
     StoppingCriteriaParameters,
     Tokens,
 )
-from .engine import HfEngine
 from .engine_loader import create_engine
 from .token_selector import TokenSelector
 
@@ -215,6 +215,8 @@ class Slot:
         Return:
             int: A scalar of the selected token.
         """
+        if len(logits.shape) == 1:
+            logits = logits.reshape(1, -1)
         return self._selector.select(self._tokens, logits)[0]
 
     @property
@@ -241,7 +243,7 @@ class TpuGeneratorJetStream(Generator):
 
     def __init__(
         self,
-        engine: HfEngine,
+        engine: PyTorchEngine,
         tokenizer: PreTrainedTokenizerBase,
     ):
         self.engine = engine
@@ -452,11 +454,11 @@ class TpuGeneratorJetStream(Generator):
             # To allow jit'ing the select function, we need to wrap it in a partial
             slot_select = jax.tree_util.Partial(slot.select)
             # Ask for prefill and insert
-            prefill_results, _result_tokens = self.engine.prefill_ex(
+            prefill_results, _result_tokens = self.engine.prefill(
                 params=self.params,
                 padded_tokens=input_ids,
                 true_length=true_lengths,
-                sampling_fn=slot_select,
+                sampler=slot_select,
             )
             next_token = prefill_results.token.item()
             self.decode_state = self.engine.insert(prefill_results, self.decode_state, slot.id)
@@ -476,6 +478,16 @@ class TpuGeneratorJetStream(Generator):
         self.batch_id += 1
         logger.debug("Model ready for decoding")
         return generations, batch
+
+    def _select_from_slots(self, logits: jnp.ndarray, batch_size: int=0) -> jnp.ndarray:
+        pad_token_id = self.tokenizer.pad_token_id
+        batch_size = logits.shape[0]
+        tokens = jnp.full((batch_size, 1), pad_token_id)
+        for slot in filter(lambda slot: slot.state == slot.State.READY, self.slots):
+            # Every slot might have a different selection criteria, so we are obliged to call select in a loop
+            next_token = slot.select(logits)
+            tokens = tokens.at[slot.id].set(next_token)
+        return tokens
 
     def decode(self, batches: List[CachedBatch]) -> Tuple[List[Generation], CachedBatch]:
         """Decode the specified prefilled requests.
@@ -510,19 +522,9 @@ class TpuGeneratorJetStream(Generator):
         if len(active_slots) < len(request_ids):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
 
-        # Define a custom function to select the next token for each slot
-        pad_token_id = self.tokenizer.pad_token_id
-
-        def select_from_slots(logits: Any, batch_size: int) -> jnp.ndarray:
-            tokens = jnp.full((batch_size, 1), pad_token_id)
-            for slot in active_slots:
-                # Every slot might have a different selection criteria, so we are obliged to call select in a loop
-                next_token = slot.select(logits)
-                tokens = tokens.at[slot.id].set(next_token)
-            return tokens
-
-        select_fn = select_from_slots
-        self.decode_state, result_tokens = self.engine.generate_ex(self.params, self.decode_state, select_fn)
+        # Use a custom function to select the next token for each slot
+        select_fn = jax.tree_util.Partial(self._select_from_slots)
+        self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state, select_fn)
 
         newly_empty = []
         generations = []
