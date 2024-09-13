@@ -79,6 +79,7 @@ class Slot:
         self._generated_text = ""
         self._next_text = ""
         self._truncate = 0
+        self._seed = 0
 
     @property
     def id(self) -> int:
@@ -135,7 +136,7 @@ class Slot:
         self._generation_config.do_sample = request.parameters.do_sample
         self._generation_config.repetition_penalty = request.parameters.repetition_penalty
         self._truncate = request.truncate
-        self.seed = request.parameters.seed
+        self._seed = request.parameters.seed
         # TODO: watermark
         self._generation_config.max_new_tokens = request.stopping_parameters.max_new_tokens
         self._max_new_tokens = self._generation_config.max_new_tokens
@@ -237,6 +238,10 @@ class Slot:
     @property
     def empty(self) -> bool:
         return len(self._tokens) == 0
+
+    @property
+    def seed(self) -> int:
+        return self._seed
 
 
 class TpuGeneratorJetStream(Generator):
