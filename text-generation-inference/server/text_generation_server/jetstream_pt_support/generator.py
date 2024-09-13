@@ -501,6 +501,13 @@ class TpuGeneratorJetStream(Generator):
         Return:
             A list of `Generation` for each request and a `CachedBatch` containing all pending requests.
         """
+
+        # In python we should use type duck, but if elements passed on the list are not of the right type, this will
+        # prevent raising an error and wasting time. Return an empty generation instead.
+        if any(not isinstance(item, CachedBatch) for item in batches):
+            logger.error("Unexpected type in decode, expected CachedBatch")
+            return [], None
+
         # batches contains a list composed of ongoing requests:
         # - the batch id returned by the last decode,
         # - the batch id(s) returned by the last prefill(s)
