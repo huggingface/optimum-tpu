@@ -109,7 +109,10 @@ COPY . /opt/optimum-tpu
 
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
 RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
-    python3 -m pip install -e /opt/optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
+    python3 -m pip install -e /opt/optimum-tpu[jetstream-pt] \
+        -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+        -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
+        -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install router
 COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
