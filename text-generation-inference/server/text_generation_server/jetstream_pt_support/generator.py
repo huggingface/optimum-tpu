@@ -476,6 +476,7 @@ class TpuGeneratorJetStream(Generator):
                 self.slots.append(slot)
                 len_active_slots += 1
 
+        batch = None
         if len_active_slots > 0:
             # Whatever initial batch these requests came from, we always return all pending requests in a single batch
             request_ids = [slot.request_id for slot in self.slots if slot.state == Slot.State.READY]
