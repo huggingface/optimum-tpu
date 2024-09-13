@@ -244,6 +244,16 @@ class Slot:
         return self._seed
 
 
+class PrefillSlot:
+    def __init__(self):
+        self._curslot = None
+
+    def set(self, slot: Slot):
+        self._curslot = slot
+
+    def select(self, logits: jnp.ndarray) -> int:
+        return self._curslot.select(logits)
+
 class TpuGeneratorJetStream(Generator):
     """A Generator for models running on TPU, single threaded."""
 
@@ -273,6 +283,7 @@ class TpuGeneratorJetStream(Generator):
         self.batch_id = 0
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
+        self.prefill_slot = PrefillSlot()
 
     @property
     def info(self) -> InfoResponse:
@@ -443,6 +454,7 @@ class TpuGeneratorJetStream(Generator):
         for request in batch.requests:
             # Dynamically create a new slot for each request
             slot = Slot(self._get_slot_id(), self.tokenizer)
+            self.prefill_slot.set(slot)
             self.slot_index += 1
             slot.assign(self.batch_id, request, self.model.generation_config)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
@@ -459,7 +471,7 @@ class TpuGeneratorJetStream(Generator):
             )
             slot.reset(truncated_input_ids, selector)
             # To allow jit'ing the select function, we need to wrap it in a partial
-            slot_select = jax.tree_util.Partial(slot.select)
+            slot_select = jax.tree_util.Partial(self.prefill_slot.select)
             # Ask for prefill and insert
             prefill_results, _result_tokens = self.engine.prefill(
                 params=self.params,
