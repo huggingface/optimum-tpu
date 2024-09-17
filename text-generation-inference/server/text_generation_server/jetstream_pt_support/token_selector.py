@@ -55,6 +55,8 @@ class TokenSelector:
         self.eos_token_ids = eos_token_ids
         self.pad_token_id = pad_token_id
         self.logits_warper = logits_warper
+        # Seed needs to fit a 64-bit integer, so we modulo it in case is bigger (that can happen!)
+        seed = seed % jnp.iinfo(jnp.int64).max
         self.key = jax.random.PRNGKey(seed)
 
     @classmethod

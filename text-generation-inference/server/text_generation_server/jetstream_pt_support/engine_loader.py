@@ -144,6 +144,10 @@ def create_engine(
 
     env = JetEngineEnvironment(env_data)
     model = instantiate_model_from_repo_id(model_path, env)
+    # Update config with engine data
+    model.config.batch_size = batch_size
+    model.config.sequence_length = sequence_length
+
     weight_shardings = model.get_sharding_annotations()
     sharded_weights = shard_weights(env, model.state_dict(), weight_shardings)
 

@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import torch
 import torch_xla2
-from jetstream.engine.token_utils import pad_tokens, take_nearest_length
+from jetstream.engine.token_utils import pad_tokens, take_nearest_length, DEFAULT_PREFILL_BUCKETS
 from jetstream_pt.engine import PyTorchEngine
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
@@ -36,20 +36,6 @@ from .token_selector import TokenSelector
 optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
-# These will do some bucketing on prefill lengths to avoid too many different sizes
-PREFILL_LENGTHS = [
-    32,
-    64,
-    128,
-    256,
-    512,
-    1024,
-    2048,
-    4096,
-    8192,
-    16384,
-    32768,
-]
 
 class Slot:
     """Represents a slot in a static batch"""
@@ -78,6 +64,7 @@ class Slot:
         self._generated_text = ""
         self._next_text = ""
         self._truncate = 0
+        self._seed = 0
 
     @property
     def id(self) -> int:
@@ -134,7 +121,7 @@ class Slot:
         self._generation_config.do_sample = request.parameters.do_sample
         self._generation_config.repetition_penalty = request.parameters.repetition_penalty
         self._truncate = request.truncate
-        self.seed = request.parameters.seed
+        self._seed = request.parameters.seed
         # TODO: watermark
         self._generation_config.max_new_tokens = request.stopping_parameters.max_new_tokens
         self._max_new_tokens = self._generation_config.max_new_tokens
@@ -237,6 +224,20 @@ class Slot:
     def empty(self) -> bool:
         return len(self._tokens) == 0
 
+    @property
+    def seed(self) -> int:
+        return self._seed
+
+
+class PrefillSlot:
+    def __init__(self):
+        self._curslot = None
+
+    def set(self, slot: Slot):
+        self._curslot = slot
+
+    def select(self, logits: jnp.ndarray) -> int:
+        return self._curslot.select(logits)
 
 class TpuGeneratorJetStream(Generator):
     """A Generator for models running on TPU, single threaded."""
@@ -267,6 +268,7 @@ class TpuGeneratorJetStream(Generator):
         self.batch_id = 0
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
+        self.prefill_slot = PrefillSlot()
 
     @property
     def info(self) -> InfoResponse:
@@ -328,31 +330,30 @@ class TpuGeneratorJetStream(Generator):
         # Counter-intuitively, now we ignore the input batch. Instead, we create dummy batches to cover all possible
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
-        bucket_seq_len = take_nearest_length(PREFILL_LENGTHS, seq_len)
-        dummy_request = self._create_dummy_request(seq_len)
+        bucket_seq_len = take_nearest_length(DEFAULT_PREFILL_BUCKETS, seq_len)
         decode_done = False
-        for l in reversed(PREFILL_LENGTHS):
+        for l in reversed(DEFAULT_PREFILL_BUCKETS):
             # Skip all the unsupported lengths
             if l > bucket_seq_len:
                 continue
-            # Set all truncate values for all requests
-            dummy_request.truncate = l
-            dummy_request.stopping_parameters.max_new_tokens = 10
+            # create a dummy request with the current sequence length
+            dummy_request = self._create_dummy_request(l)
+            # We define few max_new_tokens to request at least one (by prefill) and another by decode.
+            MAX_NEW_TOKENS = 10
+            dummy_request.stopping_parameters.max_new_tokens = MAX_NEW_TOKENS
             warmup_batch = Batch(id=0,
                                     requests=[dummy_request],
                                     size=1,
                                     max_tokens=batch.max_tokens)
             logger.debug(f"Warmup for requests, len {l} seq_len {seq_len}")
             _generations, next_batch = self.prefill(warmup_batch)
-            if not decode_done and next_batch is not None:
+            if next_batch is not None:
                 self.decode([next_batch])
                 decode_done = True
             self.clear()
         if not decode_done:
             logger.debug("No decode done during warmup")
 
-        self.prefill(batch)
-        self.clear()
         elapsed = time.time() - start
         logger.debug(f"Warmup done, took {elapsed:.2f}s")
         seq_len = self.engine.env.seq_len
@@ -390,11 +391,13 @@ class TpuGeneratorJetStream(Generator):
             max_length=max_length,
             add_special_tokens=False,
         )
+        # max_prefill_length must be a power of 2
+        max_prefill_length = take_nearest_length(DEFAULT_PREFILL_BUCKETS, self.model.config.sequence_length)
         tokens, true_length = pad_tokens(input_ids[0],
                                          self.tokenizer.bos_token_id,
                                          self.tokenizer.pad_token_id,
                                          is_bos=True,
-                                         max_prefill_length=self.model.config.sequence_length,
+                                         max_prefill_length=max_prefill_length,
                                          jax_padding=True,
                                          )
         return tokens, true_length
@@ -436,6 +439,7 @@ class TpuGeneratorJetStream(Generator):
         for request in batch.requests:
             # Dynamically create a new slot for each request
             slot = Slot(self._get_slot_id(), self.tokenizer)
+            self.prefill_slot.set(slot)
             self.slot_index += 1
             slot.assign(self.batch_id, request, self.model.generation_config)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
@@ -452,7 +456,7 @@ class TpuGeneratorJetStream(Generator):
             )
             slot.reset(truncated_input_ids, selector)
             # To allow jit'ing the select function, we need to wrap it in a partial
-            slot_select = jax.tree_util.Partial(slot.select)
+            slot_select = jax.tree_util.Partial(self.prefill_slot.select)
             # Ask for prefill and insert
             prefill_results, _result_tokens = self.engine.prefill(
                 params=self.params,
@@ -469,6 +473,7 @@ class TpuGeneratorJetStream(Generator):
                 self.slots.append(slot)
                 len_active_slots += 1
 
+        batch = None
         if len_active_slots > 0:
             # Whatever initial batch these requests came from, we always return all pending requests in a single batch
             request_ids = [slot.request_id for slot in self.slots if slot.state == Slot.State.READY]
@@ -499,6 +504,13 @@ class TpuGeneratorJetStream(Generator):
         Return:
             A list of `Generation` for each request and a `CachedBatch` containing all pending requests.
         """
+
+        # In python we should use type duck, but if elements passed on the list are not of the right type, this will
+        # prevent raising an error and wasting time. Return an empty generation instead.
+        if any(not isinstance(item, CachedBatch) for item in batches):
+            logger.error("Unexpected type in decode, expected CachedBatch")
+            return [], None
+
         # batches contains a list composed of ongoing requests:
         # - the batch id returned by the last decode,
         # - the batch id(s) returned by the last prefill(s)
@@ -532,7 +544,7 @@ class TpuGeneratorJetStream(Generator):
             # Get the next token.
             # Note that for now we ignore is_valid and length as we don't use them, we will re-parse these in post
             # generation.
-            next_token, _is_valid, _length = result_tokens.data[slot.id]
+            next_token = self.decode_state.tokens[slot.id].item()
 
             if slot.state != Slot.State.READY:
                 logger.error(f"Unexpected Slot {slot.id} is not ready for decoding, skipping.")
