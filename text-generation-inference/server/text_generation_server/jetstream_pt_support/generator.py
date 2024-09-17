@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import torch
 import torch_xla2
-from jetstream.engine.token_utils import pad_tokens, take_nearest_length
+from jetstream.engine.token_utils import pad_tokens, take_nearest_length, DEFAULT_PREFILL_BUCKETS
 from jetstream_pt.engine import PyTorchEngine
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
@@ -36,21 +36,6 @@ from .token_selector import TokenSelector
 optimum_logger = logging.getLogger("optimum.tpu")
 optimum_logger.setLevel("CRITICAL")
 
-# These will do some bucketing on prefill lengths to avoid too many different sizes
-PREFILL_LENGTHS = [
-    16,
-    32,
-    64,
-    128,
-    256,
-    512,
-    1024,
-    2048,
-    4096,
-    8192,
-    16384,
-    32768,
-]
 
 class Slot:
     """Represents a slot in a static batch"""
@@ -345,9 +330,9 @@ class TpuGeneratorJetStream(Generator):
         # Counter-intuitively, now we ignore the input batch. Instead, we create dummy batches to cover all possible
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
-        bucket_seq_len = take_nearest_length(PREFILL_LENGTHS, seq_len)
+        bucket_seq_len = take_nearest_length(DEFAULT_PREFILL_BUCKETS, seq_len)
         decode_done = False
-        for l in reversed(PREFILL_LENGTHS):
+        for l in reversed(DEFAULT_PREFILL_BUCKETS):
             # Skip all the unsupported lengths
             if l > bucket_seq_len:
                 continue
@@ -407,7 +392,7 @@ class TpuGeneratorJetStream(Generator):
             add_special_tokens=False,
         )
         # max_prefill_length must be a power of 2
-        max_prefill_length = take_nearest_length(PREFILL_LENGTHS, self.model.config.sequence_length)
+        max_prefill_length = take_nearest_length(DEFAULT_PREFILL_BUCKETS, self.model.config.sequence_length)
         tokens, true_length = pad_tokens(input_ids[0],
                                          self.tokenizer.bos_token_id,
                                          self.tokenizer.pad_token_id,
