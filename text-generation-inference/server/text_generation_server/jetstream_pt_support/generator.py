@@ -2,6 +2,7 @@ import copy
 import logging
 import time
 from enum import Enum
+import os
 from typing import List, Optional, Tuple
 
 import jax
@@ -330,6 +331,9 @@ class TpuGeneratorJetStream(Generator):
         # Counter-intuitively, now we ignore the input batch. Instead, we create dummy batches to cover all possible
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
+        if os.environ.get("SKIP_WARMUP", "0") == "1":
+            logger.debug("Skipping warmup")
+            return batch_size * seq_len
         bucket_seq_len = take_nearest_length(DEFAULT_PREFILL_BUCKETS, seq_len)
         decode_done = False
         for l in reversed(DEFAULT_PREFILL_BUCKETS):
