@@ -1,4 +1,4 @@
-name: Optimum TPU / Test TGI on TPU
+name: Optimum TPU / Test TGI on TPU / Jetstream Pytorch
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   do-the-job:
-    name: Run TGI tests
+    name: Run TGI tests - Jetstream Pytorch
     runs-on: optimum-tpu
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
@@ -29,4 +29,4 @@ jobs:
 
       - name: Build and test TGI server
         run: |
-          HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tgi_test
+          HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tgi_test_jetstream
