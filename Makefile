@@ -88,6 +88,7 @@ tgi_server:
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
 
 jetstream_requirements:
+	bash install-jetstream-pt.sh
 	python -m pip install .[jetstream-pt] \
             -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
             -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \

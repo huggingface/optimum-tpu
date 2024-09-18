@@ -58,10 +58,10 @@ build-backend = "setuptools.build_meta"
 [project.optional-dependencies]
 tests = ["pytest", "safetensors"]
 quality = ["black", "ruff", "isort"]
-# Jetstream/Pytorch support is experimental for now, requires installation from fixed commit.
+# Jetstream/Pytorch support is experimental for now, it needs to be installed manually.
 # Pallas is pulled because it will install a compatible version of jax[tpu].
 jetstream-pt = [
-    "jetstream-pt @ git+https://github.com/google/jetstream-pytorch.git@ec4ac8f6b180ade059a2284b8b7d843b3cab0921",
+    "jetstream-pt",
     "torch-xla[pallas] == 2.4.0"
 ]
 
