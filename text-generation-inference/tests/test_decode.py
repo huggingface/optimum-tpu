@@ -16,6 +16,7 @@ class DecodeTestParams:
     sequence_length: int
     expected_text: str
     do_sample: bool = False
+    max_new_tokens: int = 20
 
 
 @pytest.mark.parametrize("params",
@@ -64,7 +65,7 @@ def test_decode_single_slow(params):
 def _test_decode_single(params):
     model_path = prepare_model(params.model_id, params.sequence_length)
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
-    max_new_tokens = 20
+    max_new_tokens = params.max_new_tokens
 
     generator = AutoGenerator.from_pretrained(
         model_path, revision="", max_batch_size=1, max_sequence_length=params.sequence_length
@@ -100,12 +101,12 @@ def _test_decode_single(params):
         DecodeTestParams(
             model_id="meta-llama/Llama-2-7b-hf",
             sequence_length=256,
-            expected_text="\nThe clocks were striking thirteen\nThe clocks were striking thirteen\nThe",
+            expected_text="\nWinston Smith, his chin nuzzled into his breast in an effort to escape",
         ),
         DecodeTestParams(
             model_id="meta-llama/Meta-Llama-3-8B",
             sequence_length=256,
-            expected_text=" Winston Smith, his chin on his hands, and the clock in the Ministry of Truth, Minit",
+            expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,",
         ),
     ],
     ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
@@ -123,7 +124,8 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
         DecodeTestParams(
             model_id="Maykeye/TinyLLama-v0",
             sequence_length=256,
-            expected_text=" She had a big and it had a big, blue, and a big, red and a big",
+            expected_text=" The sun was shining and the sky was shining.\nSuddenly, a big wind came and blew the wind away.",
+            max_new_tokens=25,
         ),
     ],
     ids=["TinyLLama-v0"],

@@ -1,3 +1,4 @@
+import copy
 from typing import Any, List, Optional
 
 import jax
@@ -295,3 +296,26 @@ class TransformerHf(ModuleBase, GenerationMixin):
 
         Assumes the weights_dict is a list of XLATensor2
         """
+
+    def convert_hf_weights(self, hf_weights):
+
+        def transform(val, n_heads):
+            dim1, dim2 = val.shape
+            return (
+                val.reshape(n_heads, 2, dim1 // n_heads // 2, dim2)
+                .transpose(1, 2)
+                .reshape(dim1, dim2)
+            )
+
+        updated = copy.copy(hf_weights)
+
+        for key, value in hf_weights.items():
+            if "q_proj" in key:
+                updated[key] = transform(value, self.config.num_attention_heads)
+            if "k_proj" in key:
+                updated[key] = transform(
+                    value, self.config.num_key_value_heads or self.config.num_attention_heads
+                )
+        res = super().convert_hf_weights(updated)
+        res["freqs_cis"] = self.freqs_cis
+        return res
