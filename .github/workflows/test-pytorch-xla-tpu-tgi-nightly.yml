@@ -41,9 +41,6 @@ jobs:
       # Use a different step to test the Jetstream Pytorch version, to avoid conflicts with torch-xla[tpu]
       - name: Install and test TGI server slow tests (Jetstream Pytorch)
         run: |
-          pip install -U .[jetstream-pt] \
-            -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-            -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
-            -f https://storage.googleapis.com/libtpu-releases/index.html
+          make jetstream_requirements
           JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
             pytest -sv text-generation-inference/tests --runslow -k jetstream
