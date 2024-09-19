@@ -1,8 +1,8 @@
 import copy
 import logging
+import os
 import time
 from enum import Enum
-import os
 from typing import List, Optional, Tuple
 
 import jax
@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 import torch
 import torch_xla2
-from jetstream.engine.token_utils import pad_tokens, take_nearest_length, DEFAULT_PREFILL_BUCKETS
+from jetstream.engine.token_utils import DEFAULT_PREFILL_BUCKETS, pad_tokens, take_nearest_length
 from jetstream_pt.engine import PyTorchEngine
 from loguru import logger
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
