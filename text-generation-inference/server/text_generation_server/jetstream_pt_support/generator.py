@@ -671,6 +671,7 @@ class TpuGeneratorJetStream(Generator):
             logger.warning("Revision is not supported for JetStream/Pytorch engine, ignoring.")
         logger.info("Loading model engine (this can take a few minutes).")
         start = time.time()
+        torch.set_default_dtype(torch.bfloat16)
         engine = create_engine(
             model_path,
             max_batch_size,
