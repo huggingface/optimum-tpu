@@ -97,3 +97,10 @@ known-first-party = ["optimum.tpu"]
 markers = [
     "is_staging_test",
 ]
+filterwarnings = [
+    "ignore:Some donated",
+    "ignore:The given NumPy array is not writable",
+    "ignore:`do_sample` is set",
+    "ignore:Device capability of jax",
+    "ignore:`tensorflow` can conflict",
+]
