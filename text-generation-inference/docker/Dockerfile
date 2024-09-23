@@ -109,6 +109,7 @@ COPY . /opt/optimum-tpu
 
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
 RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
+    bash /opt/optimum-tpu/install-jetstream-pt.sh && \
     python3 -m pip install -e /opt/optimum-tpu[jetstream-pt] \
         -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
         -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
