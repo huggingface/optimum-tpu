@@ -39,7 +39,7 @@ $(PACKAGE_DIST) $(PACKAGE_WHEEL): $(PACKAGE_FILES)
 	python -m build
 
 clean:
-	rm -rf dist
+	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
 tpu-tgi:
@@ -86,6 +86,18 @@ tgi_server:
 	python -m pip install -r text-generation-inference/server/build-requirements.txt
 	make -C text-generation-inference/server clean
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
+
+jetstream_requirements:
+	bash install-jetstream-pt.sh
+	python -m pip install .[jetstream-pt] \
+            -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+            -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
+            -f https://storage.googleapis.com/libtpu-releases/index.html
+
+tgi_test_jetstream: test_installs jetstream_requirements tgi_server
+	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \
+	                               -exec python -m pip install --force-reinstall {} \;
+	JETSTREAM_PT=1 python -m pytest -sv text-generation-inference/tests -k jetstream
 
 tgi_test: test_installs tgi_server
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \

@@ -104,11 +104,7 @@ def instantiate_model_from_repo_id(
     env.device = "meta"
     model = create_model(model_dir, env)
     weights = fetch_models._load_weights(model_dir)
-    updated_keys = model.get_hf_names_to_real_name()
-    for name, updated in updated_keys.items():
-        if name in weights:
-            val = weights.pop(name)
-            weights[updated] = val
+    weights = model.convert_hf_weights(weights)
 
     model.load_state_dict(weights, assign=True, strict=False)
 
