@@ -8,7 +8,7 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.77-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.79-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
@@ -95,7 +95,7 @@ RUN apt-get update -y \
 RUN pip install --upgrade pip
 
 # Install HuggingFace packages
-ARG TRANSFORMERS_VERSION='4.41.1'
+ARG TRANSFORMERS_VERSION='4.43.3'
 ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
