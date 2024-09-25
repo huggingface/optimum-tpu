@@ -19,7 +19,8 @@ REAL_CLONE_URL = $(if $(CLONE_URL),$(CLONE_URL),$(DEFAULT_CLONE_URL))
 
 .PHONY:	build_dist style style_check clean
 
-TGI_VERSION ?= v2.0.3
+# Ths is essentially v2.3.0 plus a fix to support v2 proto interface
+TGI_VERSION ?= 0ff6ff60ada291840beed63d8bf458d6f9606f7f
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 
@@ -51,7 +52,7 @@ tpu-tgi:
 
 tpu-tgi-ie:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
-				 --target inference-endpoints \
+				 --target inference-endpoint \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
