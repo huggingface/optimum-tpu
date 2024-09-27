@@ -340,8 +340,8 @@ class TpuGeneratorJetStream(Generator):
             # Skip all the unsupported lengths
             if l > bucket_seq_len:
                 continue
-            # create a dummy request with the current sequence length
-            dummy_request = self._create_dummy_request(l)
+            # create a dummy request with the current sequence length -1 (so it gets padded up to l)
+            dummy_request = self._create_dummy_request(l - 1)
             # We define few max_new_tokens to request at least one (by prefill) and another by decode.
             MAX_NEW_TOKENS = 10
             dummy_request.stopping_parameters.max_new_tokens = MAX_NEW_TOKENS
@@ -671,6 +671,7 @@ class TpuGeneratorJetStream(Generator):
             logger.warning("Revision is not supported for JetStream/Pytorch engine, ignoring.")
         logger.info("Loading model engine (this can take a few minutes).")
         start = time.time()
+        torch.set_default_dtype(torch.bfloat16)
         engine = create_engine(
             model_path,
             max_batch_size,

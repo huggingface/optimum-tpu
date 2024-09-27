@@ -814,14 +814,16 @@ def _mp_fn(
     mailbox = AgentMailbox(root_mailbox)
 
     # re-init logger for each child process
+    logger_level = os.environ.get("LOGGER_LEVEL_GENERATOR", "DEBUG")
+    logger.logger.remove()
     logger.logger.add(
         sys.stdout,
-        format="{message}",
         filter="text_generation_server",
-        level="DEBUG",
+        level=logger_level,
         backtrace=True,
         diagnose=False,
     )
+    logger.info(f'😈 here! {logger_level}')
 
     logger.debug(
         f"Rank {rank} on {device} real device {xm.xla_real_devices([device])} ordinal {xm.get_ordinal()} "

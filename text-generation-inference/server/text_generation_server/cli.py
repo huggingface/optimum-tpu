@@ -18,6 +18,8 @@ def serve(
     uds_path: str = "/tmp/text-generation-server",
     logger_level: str = "INFO",
     json_output: bool = False,
+    otlp_service_name: str = "text-generation-inference.server",
+    max_input_tokens: Optional[int] = None,
 ):
     """This is the main entry-point for the server CLI.
 
@@ -37,6 +39,10 @@ def serve(
             The server logger level. Defaults to *INFO*.
         json_output (`bool`):
             Use JSON format for log serialization.
+        otlp_service_name (`str`):
+            The name of the OTLP service. For now it is ignored.
+        max_input_tokens (`Optional[int]`):
+            The maximum number of tokens allowed in the input. For now it is ignored.
     """
     if sharded:
         raise ValueError("Sharding is not supported.")
@@ -54,6 +60,15 @@ def serve(
 
     if trust_remote_code is not None:
         logger.warning("'trust_remote_code' argument is not supported and will be ignored.")
+
+    # TODO: these two parameters are used when the server is started, but they are not used yet, so just inform the
+    # user about that.
+    logger.info("'otlp_service_name' argument is not supported and will be ignored.")
+    logger.info("'max_input_tokens' argument is not supported and will be ignored.")
+
+    # This is a workaround to pass the logger level to other threads, it's only used in 
+    # Pytorch/XLA generator.
+    os.environ["LOGGER_LEVEL_GENERATOR"] = logger_level
 
     # Import here after the logger is added to log potential import exceptions
     from optimum.tpu.model import fetch_model

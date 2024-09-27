@@ -8,7 +8,7 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.77-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.79-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
@@ -20,11 +20,14 @@ COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
 COPY --from=tgi /tgi/proto proto
 COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
+COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python3.11-dev
 RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
     curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP && \
     unzip -o $PROTOC_ZIP -d /usr/local bin/protoc && \
@@ -32,7 +35,7 @@ RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
     rm -f $PROTOC_ZIP
 
 COPY --from=planner /usr/src/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --profile release-opt --recipe-path recipe.json
 
 COPY --from=tgi /tgi/Cargo.toml Cargo.toml
 COPY --from=tgi /tgi/Cargo.lock Cargo.lock
@@ -40,8 +43,9 @@ COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
 COPY --from=tgi /tgi/proto proto
 COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
+COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
-RUN cargo build --release --workspace --exclude benchmark
+RUN cargo build --profile release-opt
 
 # Python base image
 FROM ubuntu:22.04 AS base
@@ -85,6 +89,8 @@ ARG VERSION=${VERSION}
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
     libpython3.10 \
+    libpython3.11 \
+    python3.11 \
     git \
     gnupg2 \
     wget \
@@ -107,17 +113,23 @@ ENV HUGGINGFACE_HUB_CACHE=/data \
 
 COPY . /opt/optimum-tpu
 
+# Install requirements for TGI, that uses python3.11
+RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
+
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
-RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} && \
-    python3 -m pip install -e /opt/optimum-tpu[jetstream-pt] \
+RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION}
+RUN bash /opt/optimum-tpu/install-jetstream-pt.sh
+RUN python3 -m pip install -e /opt/optimum-tpu[jetstream-pt] \
         -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
         -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
         -f https://storage.googleapis.com/libtpu-releases/index.html
 
+# Install benchmarker
+COPY --from=builder /usr/src/target/release-opt/text-generation-benchmark /usr/local/bin/text-generation-benchmark
 # Install router
-COPY --from=builder /usr/src/target/release/text-generation-router /usr/local/bin/text-generation-router
+COPY --from=builder /usr/src/target/release-opt/text-generation-router-v2 /usr/local/bin/text-generation-router
 # Install launcher
-COPY --from=builder /usr/src/target/release/text-generation-launcher /usr/local/bin/text-generation-launcher
+COPY --from=builder /usr/src/target/release-opt/text-generation-launcher /usr/local/bin/text-generation-launcher
 # Install python server
 COPY --from=pyserver /pyserver/build/dist dist
 RUN pip install dist/text_generation_server*.tar.gz

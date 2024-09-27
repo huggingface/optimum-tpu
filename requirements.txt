@@ -1,0 +1,3 @@
+# This is not a complete list of dependencies, but it allows to install torch without CUDA support
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.4.0

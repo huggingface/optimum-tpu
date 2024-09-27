@@ -2,7 +2,7 @@
 pkg_name := text_generation_server
 BUILDDIR ?= $(CURDIR)/build
 VERSION ?= 0.0.1
-TGI_VERSION ?= v2.0.3
+TGI_VERSION ?= 0ff6ff60ada291840beed63d8bf458d6f9606f7f
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir := $(dir $(mkfile_path))
 pkg_dir := $(BUILDDIR)/$(pkg_name)
