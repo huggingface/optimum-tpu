@@ -65,6 +65,7 @@ def serve(
     revision: str,
     max_batch_size: int,
     max_sequence_length: int,
+    max_input_tokens: int,
     uds_path: Path,
 ):
     async def serve_inner(model_path: str):
@@ -77,7 +78,8 @@ def serve(
                 model_path,
                 revision=revision,
                 max_batch_size=max_batch_size,
-                max_sequence_length=max_sequence_length
+                max_sequence_length=max_sequence_length,
+                max_input_tokens=max_input_tokens,
             )
         except Exception:
             logger.exception("Error when initializing model")

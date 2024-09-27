@@ -61,6 +61,7 @@ def create_engine_env_data(
     shard_on_batch = False
     max_cache_length = max_input_tokens + max_output_tokens
 
+    logger.info(f"Creating engine with max_cache_length={max_cache_length} = {max_input_tokens} + {max_output_tokens}")
     env_data = JetEngineEnvironmentData(
         tokenizer_path="", # Tokenizer is not user, HF tokenizer is used instead
         checkpoint_path=model_path,
