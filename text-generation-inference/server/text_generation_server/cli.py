@@ -65,7 +65,7 @@ def serve(
     # user about that.
     logger.info("'otlp_service_name' argument is not supported and will be ignored.")
 
-    # This is a workaround to pass the logger level to other threads, it's only used in 
+    # This is a workaround to pass the logger level to other threads, it's only used in
     # Pytorch/XLA generator.
     os.environ["LOGGER_LEVEL_GENERATOR"] = logger_level
 
