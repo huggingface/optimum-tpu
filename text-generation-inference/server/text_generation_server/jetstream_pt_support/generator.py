@@ -334,7 +334,7 @@ class TpuGeneratorJetStream(Generator):
         if os.environ.get("SKIP_WARMUP", "0") == "1":
             logger.debug("Skipping warmup")
             return batch_size * seq_len
-        bucket_seq_len = take_nearest_length(DEFAULT_PREFILL_BUCKETS, seq_len)
+        bucket_seq_len = take_nearest_length(DEFAULT_PREFILL_BUCKETS, self.engine.max_prefill_length)
         decode_done = False
         for l in reversed(DEFAULT_PREFILL_BUCKETS):
             # Skip all the unsupported lengths
