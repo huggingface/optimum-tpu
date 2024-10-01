@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - test-ie-jspt
   release:
     types: [published]
 
