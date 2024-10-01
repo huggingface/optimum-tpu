@@ -64,9 +64,8 @@ def serve(
     # TODO: these two parameters are used when the server is started, but they are not used yet, so just inform the
     # user about that.
     logger.info("'otlp_service_name' argument is not supported and will be ignored.")
-    logger.info("'max_input_tokens' argument is not supported and will be ignored.")
 
-    # This is a workaround to pass the logger level to other threads, it's only used in 
+    # This is a workaround to pass the logger level to other threads, it's only used in
     # Pytorch/XLA generator.
     os.environ["LOGGER_LEVEL_GENERATOR"] = logger_level
 
@@ -86,6 +85,7 @@ def serve(
         revision=revision,
         max_batch_size=max_batch_size,
         max_sequence_length=max_total_tokens,
+        max_input_tokens=max_input_tokens,
         uds_path=uds_path
     )
 

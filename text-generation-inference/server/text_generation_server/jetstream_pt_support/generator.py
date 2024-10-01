@@ -651,7 +651,9 @@ class TpuGeneratorJetStream(Generator):
                 slot.clear()
 
     @classmethod
-    def from_pretrained(cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int):
+    def from_pretrained(
+        cls, model_path: str, revision: str, max_batch_size: int, max_sequence_length: int, max_input_tokens: int
+    ) -> "TpuGeneratorJetStream":
         """Instantiate a Generator that uses JetStream/Pytorch engine.
 
         Args:
@@ -663,6 +665,8 @@ class TpuGeneratorJetStream(Generator):
                 The maximum batch size.
             max_sequence_length (`int`):
                 The maximum sequence length.
+            max_input_tokens (`int`):
+                The maximum number of tokens allowed in the input.
 
         Returns:
             A TpuGenerator.
@@ -670,14 +674,18 @@ class TpuGeneratorJetStream(Generator):
         if revision != "":
             logger.warning("Revision is not supported for JetStream/Pytorch engine, ignoring.")
         logger.info("Loading model engine (this can take a few minutes).")
+        if max_input_tokens > max_sequence_length:
+            logger.error("max_input_tokens is greater than max_sequence_length, setting max_sequence_length.")
+            raise ValueError("max_input_tokens is greater than max_sequence_length")
         start = time.time()
         torch.set_default_dtype(torch.bfloat16)
+        max_output_tokens = max_sequence_length - max_input_tokens
         engine = create_engine(
             model_path,
             max_batch_size,
             sequence_length=max_sequence_length,
-            max_input_tokens=max_sequence_length,
-            max_output_tokens=max_sequence_length,
+            max_input_tokens=max_input_tokens,
+            max_output_tokens=max_output_tokens,
         )
         end = time.time()
         logger.info(f"Engine successfully loaded in {end - start:.2f} s.")

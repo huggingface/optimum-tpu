@@ -399,6 +399,9 @@ class TpuGeneratorSingleThread(Generator):
         # Counter-intuitively, now we ignore the input batch. Instead, we create dummy batches to cover all possible
         # batch sizes and sequence lengths.
         seq_len = self.model.config.sequence_length
+        if os.environ.get("SKIP_WARMUP", "0") == "1":
+            logger.debug("Skipping warmup")
+            return batch_size * seq_len
         bucket_seq_len = take_nearest_length(seq_len)
         requests = [self._create_dummy_request(seq_len) for _ in range(batch_size)]
         for _ in reversed(range(batch_size)):
