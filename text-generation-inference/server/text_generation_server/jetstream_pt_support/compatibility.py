@@ -24,8 +24,9 @@ def model_can_use_jetstream_pt(model_path: str) -> bool:
     the engine are installed.
     """
     config = AutoConfig.from_pretrained(model_path)
-    # For now only Llama is supported
-    if config.model_type != "llama":
+    # For now few models are supported
+    supported_models = ["llama", "gemma"]
+    if config.model_type not in supported_models:
         return False
     if jetstream_pt_available():
         return True

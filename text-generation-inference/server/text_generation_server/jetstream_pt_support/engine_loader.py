@@ -18,17 +18,29 @@ if TYPE_CHECKING:
     from transformers import PretrainedConfig
 from transformers import AutoConfig
 
-from .llama_model_exportable_hf import TransformerHf
+from .gemma_model_hf import GemmaModelHf as GemmaModel
+from .llama_model_exportable_hf import TransformerHf as LlamaModel
 
 
-def load_llama_model_info(config: "PretrainedConfig") -> Any:
+def _get_head_dim(config: "PretrainedConfig") -> int:
+    if hasattr(config, "head_dim"):
+        return config.head_dim
+    return config.hidden_size // config.num_attention_heads
+
+def load_llama_gemma_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
-    head_dim = config.hidden_size // num_heads
+    head_dim = _get_head_dim(config)
     num_kv_heads = config.num_key_value_heads
     n_reps = num_heads // num_kv_heads
+    if config.model_type == "llama":
+        model_class = LlamaModel
+    elif config.model_type == "gemma":
+        model_class = GemmaModel
+    else:
+        raise ValueError(f"Unsupported model type {config.model_type}")
     model_info = fetch_models.ModelInfo(
-        TransformerHf,
+        model_class=model_class,
         num_layers=num_layers,
         num_kv_heads=num_kv_heads,
         head_dim=head_dim,
@@ -38,9 +50,9 @@ def load_llama_model_info(config: "PretrainedConfig") -> Any:
 
 
 def load_model_info(config: "PretrainedConfig") -> Any:
-    # For now only Llama is supported
-    if config.model_type == "llama":
-        return load_llama_model_info(config)
+    # For now only few models are supported
+    if config.model_type in ["llama", "gemma"]:
+        return load_llama_gemma_model_info(config)
     # Other models supports can be added here later
     return None
 
@@ -89,7 +101,9 @@ def create_engine_env_data(
 def create_model(model_path: str, env: Any) -> Any:
     config = AutoConfig.from_pretrained(model_path)
     if config.model_type == "llama":
-        return TransformerHf.from_config(config, env)
+        return LlamaModel.from_config(config, env)
+    elif config.model_type == "gemma":
+        return GemmaModel.from_config(config, env)
 
 
 def instantiate_model_from_repo_id(

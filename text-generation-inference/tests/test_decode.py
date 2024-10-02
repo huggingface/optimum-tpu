@@ -136,8 +136,13 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             expected_text=" The sun was shining and the sky was shining.\nSuddenly, a big wind came and blew the wind away.",
             max_new_tokens=25,
         ),
+        DecodeTestParams(
+            model_id="google/gemma-2b",
+            sequence_length=1024,
+            expected_text="\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never",
+        ),
     ],
-    ids=["TinyLLama-v0"],
+    ids=["TinyLLama-v0", "gemma-2b"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     if not jetstream_pt_available():
