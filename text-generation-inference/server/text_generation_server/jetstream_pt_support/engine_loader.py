@@ -98,14 +98,6 @@ def create_engine_env_data(
     return env_data
 
 
-def create_model(model_path: str, env: Any) -> Any:
-    config = AutoConfig.from_pretrained(model_path)
-    if config.model_type == "llama":
-        return LlamaModel.from_config(config, env)
-    elif config.model_type == "gemma":
-        return GemmaModel.from_config(config, env)
-
-
 def instantiate_model_from_repo_id(
     model_dir: str,
     env: Any,
@@ -117,7 +109,7 @@ def instantiate_model_from_repo_id(
     assert model_info is not None
 
     env.device = "meta"
-    model = create_model(model_dir, env)
+    model = model_info.model_class.from_config(config, env)
     weights = fetch_models._load_weights(model_dir)
     weights = model.convert_hf_weights(weights)
 
