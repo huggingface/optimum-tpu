@@ -117,8 +117,13 @@ def _test_decode_single(params):
             expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,",
             top_k=100,
         ),
+        DecodeTestParams(
+            model_id="google/gemma-7b",
+            sequence_length=128,
+            expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
+        ),
     ],
-    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
+    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B", "gemma-7b"],
 )
 def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     if not jetstream_pt_available():
