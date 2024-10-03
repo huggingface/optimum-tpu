@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from transformers import PretrainedConfig
 from transformers import AutoConfig
 
+from .compatibility import model_can_use_jetstream_pt
 from .gemma_model_hf import GemmaModelHf as GemmaModel
 from .llama_model_exportable_hf import TransformerHf as LlamaModel
 
@@ -27,7 +28,7 @@ def _get_head_dim(config: "PretrainedConfig") -> int:
         return config.head_dim
     return config.hidden_size // config.num_attention_heads
 
-def load_llama_gemma_model_info(config: "PretrainedConfig") -> Any:
+def load_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
     num_heads = config.num_attention_heads
     head_dim = _get_head_dim(config)
@@ -49,14 +50,6 @@ def load_llama_gemma_model_info(config: "PretrainedConfig") -> Any:
     return model_info
 
 
-def load_model_info(config: "PretrainedConfig") -> Any:
-    # For now only few models are supported
-    if config.model_type in ["llama", "gemma"]:
-        return load_llama_gemma_model_info(config)
-    # Other models supports can be added here later
-    return None
-
-
 def create_engine_env_data(
     model_path: str,
     batch_size: int,
@@ -64,6 +57,8 @@ def create_engine_env_data(
     max_input_tokens: int,
     max_output_tokens: int,
 ) -> Any:
+    if not model_can_use_jetstream_pt(model_path):
+        return None
     # First get config
     config = AutoConfig.from_pretrained(model_path)
     model_info = load_model_info(config)
