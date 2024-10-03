@@ -24,8 +24,8 @@ def test_warmup_jetstream_pytorch():
         model_path, revision="", max_batch_size=2, max_sequence_length=sequence_length
     )
     request = create_request(id=0, inputs=input_text, max_new_tokens=max_new_tokens, do_sample=False)
-    # The maximum sequence length of the model is set to 1000, but warmup will round that up to the next power of two
-    # in prefill (256).
+    # The maximum tokens length of the model is intentionally not a power of two, to verify that prefill bucketization
+    # works as expected (250 -> 256).
     max_tokens = 250
     batch = Batch(id=0, requests=[request], size=1, max_tokens=max_tokens)
     generator.warmup(batch)
