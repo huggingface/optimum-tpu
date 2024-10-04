@@ -17,10 +17,10 @@ concurrency:
 jobs:
   do-the-job:
     name: Run TGI tests
-    runs-on: optimum-tpu
+    runs-on: gcp-ct5lp-hightpu-1t-usc1-public-211
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.SINGLE_TPU_ENV }}
     env:
       PJRT_DEVICE: TPU
     steps:
