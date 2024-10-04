@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 from transformers import AutoConfig
 
 from .compatibility import model_can_use_jetstream_pt
-from .gemma_model_hf import GemmaModelHf as GemmaModel
-from .llama_model_exportable_hf import TransformerHf as LlamaModel
+from .models import GemmaModel, LlamaModel
 
 
 def _get_head_dim(config: "PretrainedConfig") -> int:
