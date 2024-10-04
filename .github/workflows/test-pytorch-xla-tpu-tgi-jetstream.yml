@@ -1,14 +1,12 @@
 name: Optimum TPU / Test TGI on TPU / Jetstream Pytorch
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - "text-generation-inference/**"
   pull_request:
     branches: [ main ]
     paths:
       - "text-generation-inference/**"
+  # This can be used to trigger workflow from the web interface
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
