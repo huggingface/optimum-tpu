@@ -17,10 +17,11 @@ concurrency:
 jobs:
   do-the-job:
     name: Run TGI tests - Jetstream Pytorch
-    runs-on: optimum-tpu
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}}
     env:
       PJRT_DEVICE: TPU
     steps:
