@@ -117,8 +117,13 @@ def _test_decode_single(params):
             expected_text=" Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,",
             top_k=100,
         ),
+        DecodeTestParams(
+            model_id="google/gemma-7b",
+            sequence_length=128,
+            expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
+        ),
     ],
-    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B"],
+    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B", "gemma-7b"],
 )
 def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     if not jetstream_pt_available():
@@ -136,8 +141,13 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             expected_text=" The sun was shining and the sky was shining.\nSuddenly, a big wind came and blew the wind away.",
             max_new_tokens=25,
         ),
+        DecodeTestParams(
+            model_id="google/gemma-2b",
+            sequence_length=1024,
+            expected_text="\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never",
+        ),
     ],
-    ids=["TinyLLama-v0"],
+    ids=["TinyLLama-v0", "gemma-2b"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     if not jetstream_pt_available():
