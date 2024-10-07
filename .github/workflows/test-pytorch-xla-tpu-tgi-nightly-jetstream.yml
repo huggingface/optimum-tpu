@@ -1,9 +1,9 @@
-name: Optimum TPU / Test TGI on TPU (slow tests)
+name: Optimum TPU / Test TGI on TPU (slow tests) / Jetstream Pytorch
 
 on:
   # This can be used to automatically publish nightlies at UTC nighttime
   schedule:
-  - cron: '0 2 * * *' # run at 2 AM UTC
+  - cron: '0 3 * * *' # run at 3 AM UTC
   # This can be used to allow manually triggering nightlies from the web interface
   workflow_dispatch:
 
@@ -26,14 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build and test Optimum TPU (also slow tests)
+      - name: Run TGI tests - Jetstream Pytorch (also slow tests)
         run: |
-          python -m pip install build
-          make build_dist test_installs
-          python -m pytest --runslow -sv tests
-
-      - name: Build and test TGI (also slow tests)
-        run: |
-          make tgi_server test_installs
+          make jetstream_requirements tgi_server test_installs
           find text-generation-inference/ -name "text_generation_server-*whl" -exec python -m pip install {} \;
-          python -m pytest --runslow -sv text-generation-inference/tests
+          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
+            pytest -sv text-generation-inference/tests --runslow -k jetstream
