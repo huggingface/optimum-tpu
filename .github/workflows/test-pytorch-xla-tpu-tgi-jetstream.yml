@@ -32,4 +32,6 @@ jobs:
           make test_installs jetstream_requirements tgi_server
           find text-generation-inference/ -name "text_generation_server-*whl" -exec python -m pip install {} \;
           JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} \
-            python -m pytest -sv text-generation-inference/tests -k "jetstream and greedy" --runslow
+            python -m pytest -sv text-generation-inference/tests -k "jetstream and greedy and Meta-Llama" --runslow
+          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} \
+            python -m pytest -sv text-generation-inference/tests -k "jetstream and greedy and gemma" --runslow
