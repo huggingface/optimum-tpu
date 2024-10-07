@@ -1,6 +1,8 @@
 name: Optimum TPU / Test TGI on TPU / Jetstream Pytorch
 
 on:
+  push:
+    branches: [ main, ci-ephemeral-tpu ]
   pull_request:
     branches: [ main ]
     paths:
