@@ -826,7 +826,6 @@ def _mp_fn(
         backtrace=True,
         diagnose=False,
     )
-    logger.info(f'😈 here! {logger_level}')
 
     logger.debug(
         f"Rank {rank} on {device} real device {xm.xla_real_devices([device])} ordinal {xm.get_ordinal()} "
