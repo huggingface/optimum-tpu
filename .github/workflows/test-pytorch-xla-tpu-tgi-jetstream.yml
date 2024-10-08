@@ -1,14 +1,12 @@
 name: Optimum TPU / Test TGI on TPU / Jetstream Pytorch
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - "text-generation-inference/**"
   pull_request:
     branches: [ main ]
     paths:
       - "text-generation-inference/**"
+  # This can be used to trigger workflow from the web interface
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -17,10 +15,11 @@ concurrency:
 jobs:
   do-the-job:
     name: Run TGI tests - Jetstream Pytorch
-    runs-on: optimum-tpu
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}}
     env:
       PJRT_DEVICE: TPU
     steps:

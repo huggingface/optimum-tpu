@@ -14,11 +14,11 @@ concurrency:
 jobs:
   do-the-job:
     name: Build and Run slow tests
-    runs-on: optimum-tpu
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
     container:
-      # Use a nightly image that works with TPU (release was not working)
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}}
     env:
       PJRT_DEVICE: TPU
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
