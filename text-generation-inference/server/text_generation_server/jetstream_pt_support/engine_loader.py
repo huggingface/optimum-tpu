@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 from transformers import AutoConfig
 
 from .compatibility import model_can_use_jetstream_pt
-from .models import GemmaModel, LlamaModel
+from .models import GemmaModel, LlamaModel, MixtralModel
 
 
 def _get_head_dim(config: "PretrainedConfig") -> int:
@@ -37,6 +37,8 @@ def load_model_info(config: "PretrainedConfig") -> Any:
         model_class = LlamaModel
     elif config.model_type == "gemma":
         model_class = GemmaModel
+    elif config.model_type == "mixtral":
+        model_class = MixtralModel
     else:
         raise ValueError(f"Unsupported model type {config.model_type}")
     model_info = fetch_models.ModelInfo(

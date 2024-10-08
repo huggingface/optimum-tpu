@@ -122,8 +122,13 @@ def _test_decode_single(params):
             sequence_length=128,
             expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
         ),
+        DecodeTestParams(
+            model_id="mistralai/Mixtral-8x7B-v0.1",
+            sequence_length=1024,
+            expected_text="\n\nGeorge Orwell, 1984\n\nThe clocks are striking thirteen",
+        ),
     ],
-    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B", "gemma-7b"],
+    ids=["Llama-2-7b-hf", "Meta-Llama-3-8B", "gemma-7b", "Mixtral-8x7B"],
 )
 def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     if not jetstream_pt_available():
@@ -146,8 +151,13 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             sequence_length=1024,
             expected_text="\n\nThe first thing I noticed was the smell of the rain. It was a smell I had never",
         ),
+        DecodeTestParams(
+            model_id="dacorvo/Mixtral-tiny", # This is a random tiny model, just to test model can be loaded.
+            sequence_length=512,
+            expected_text="манaminationVariableßer Rog malesazine longふ Toy Champions enero Facereverse▲verbose prosecut literally disappearedअ",
+        ),
     ],
-    ids=["TinyLLama-v0", "gemma-2b"],
+    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     if not jetstream_pt_available():
