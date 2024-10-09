@@ -28,11 +28,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run TGI tests - Jetstream Pytorch (also slow tests)
+      - name: Build and install Jetstream Pytorch TGI
         run: |
           make jetstream_requirements tgi_server test_installs
           find text-generation-inference/ -name "text_generation_server-*whl" -exec python -m pip install {} \;
+      - name: Run TGI Jetstream Pytorch - Llama
+        run: |
           JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
             pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and Llama"
+      - name: Run TGI Jetstream Pytorch - Gemma
+        run: |
           JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
-            pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and not LLama"
+            pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and gemma"
+      - name: Run TGI Jetstream Pytorch - Mixtral greedy
+        run: |
+          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
+            pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and Mixtral and greedy"
