@@ -45,6 +45,7 @@ dependencies = [
     "transformers == 4.41.1",
     "torch == 2.4.0",
     "torch-xla[tpu] == 2.4.0",
+    'typer == 0.6.1',
     "loguru == 0.6.0",
     "sentencepiece == 0.2.0",
 ]
@@ -104,3 +105,6 @@ filterwarnings = [
     "ignore:Device capability of jax",
     "ignore:`tensorflow` can conflict",
 ]
+
+[project.scripts]
+optimum-tpu = "optimum.tpu.cli:app"
