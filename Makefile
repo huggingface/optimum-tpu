@@ -90,11 +90,7 @@ tgi_server:
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
 
 jetstream_requirements:
-	bash install-jetstream-pt.sh
-	python -m pip install .[jetstream-pt] \
-            -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-            -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
-            -f https://storage.googleapis.com/libtpu-releases/index.html
+	python optimum/tpu/cli.py install-jetstream-pt --force
 
 tgi_test_jetstream: test_installs jetstream_requirements tgi_server
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \

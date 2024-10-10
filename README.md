@@ -49,10 +49,10 @@ Please see the [TGI specific documentation](text-generation-inference) on how to
 
 ### JetStream Pytorch Engine
 
-`optimum-tpu` provides an optional support of JetStream Pytorch engine inside of TGI. This support can be installed using the dedicated command:
+`optimum-tpu` provides an optional support of JetStream Pytorch engine inside of TGI. This support can be installed using the dedicated CLI command:
 
 ```shell
-make jetstream_requirements
+optimum-tpu install-jetstream-pytorch
 ```
 
 To enable the support, export the environment variable `JETSTREAM_PT=1`.
