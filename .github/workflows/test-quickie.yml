@@ -1,0 +1,29 @@
+name: Quick test
+
+on:
+  push:
+    branches: [ test-mount ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  do-the-job:
+    name: quick test
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
+    container:
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
+    env:
+      HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
+    steps:
+      - name: quick test
+        run: |
+          ls -l /mnt/hf_cache/cache_huggingface/models--Maykeye--TinyLLama-v0/snapshots/ || echo
+          pip install huggingface_hub
+          huggingface-cli download Maykeye/TinyLLama-v0
+          ls -l /mnt/hf_cache/cache_huggingface/models--Maykeye--TinyLLama-v0/snapshots/
+
