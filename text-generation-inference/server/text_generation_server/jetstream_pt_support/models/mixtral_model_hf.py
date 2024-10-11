@@ -1,9 +1,7 @@
 
 from jetstream_pt.third_party.mixtral import config as mixtral_config
 from jetstream_pt.third_party.mixtral.model import Transformer
-
-#.model_exportable import Transformer, model_args
-from transformers import MixtralConfig, GenerationConfig, GenerationMixin
+from transformers import GenerationConfig, GenerationMixin, MixtralConfig
 
 
 class MixtralModelHf(Transformer, GenerationMixin):
