@@ -22,7 +22,12 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["text_generation_server", "text_generation_server.pb", "text_generation_server.jetstream_pt_support"]
+packages = [
+    "text_generation_server",
+    "text_generation_server.pb",
+    "text_generation_server.jetstream_pt_support",
+    "text_generation_server.jetstream_pt_support.models",
+]
 
 [tool.setuptools.dynamic]
 version = {attr = "text_generation_server.version.__version__"}

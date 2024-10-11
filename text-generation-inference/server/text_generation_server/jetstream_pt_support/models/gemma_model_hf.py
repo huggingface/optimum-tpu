@@ -1,8 +1,6 @@
 
 from jetstream_pt.third_party.gemma import config as gemma_config
 from jetstream_pt.third_party.gemma.model import GemmaModel
-
-#.model_exportable import Transformer, model_args
 from transformers import GemmaConfig, GenerationConfig, GenerationMixin
 
 
