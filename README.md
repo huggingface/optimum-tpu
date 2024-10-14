@@ -6,7 +6,7 @@ Optimum-TPU
 
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat)](https://huggingface.co/docs/optimum/index)
 [![license](https://img.shields.io/badge/license-Apache%202-blue)](./LICENSE)
-
+[![Optimum TPU / Test TGI on TPU](https://github.com/huggingface/optimum-tpu/actions/workflows/test-pytorch-xla-tpu-tgi.yml/badge.svg)](https://github.com/huggingface/optimum-tpu/actions/workflows/test-pytorch-xla-tpu-tgi.yml)
 </div>
 
 [Tensor Processing Units (TPU)](https://cloud.google.com/tpu) are AI accelerator made by Google to optimize
@@ -49,10 +49,10 @@ Please see the [TGI specific documentation](text-generation-inference) on how to
 
 ### JetStream Pytorch Engine
 
-`optimum-tpu` provides an optional support of JetStream Pytorch engine inside of TGI. This support can be installed using the dedicated command:
+`optimum-tpu` provides an optional support of JetStream Pytorch engine inside of TGI. This support can be installed using the dedicated CLI command:
 
 ```shell
-make jetstream_requirements
+optimum-tpu install-jetstream-pytorch
 ```
 
 To enable the support, export the environment variable `JETSTREAM_PT=1`.
