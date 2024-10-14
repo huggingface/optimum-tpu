@@ -89,8 +89,8 @@ tgi_server:
 	make -C text-generation-inference/server clean
 	VERSION=${VERSION} TGI_VERSION=${TGI_VERSION} make -C text-generation-inference/server gen-server
 
-jetstream_requirements:
-	python optimum/tpu/cli.py install-jetstream-pt --force
+jetstream_requirements: test_installs
+	python optimum/tpu/cli.py install-jetstream-pytorch --yes
 
 tgi_test_jetstream: test_installs jetstream_requirements tgi_server
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \

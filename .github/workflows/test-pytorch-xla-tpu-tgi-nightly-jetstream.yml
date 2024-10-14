@@ -1,9 +1,6 @@
 name: Optimum TPU / Test TGI on TPU (slow tests) / Jetstream Pytorch
 
 on:
-  push:
-    branches: [ main ]
-  # This can be used to automatically publish nightlies at UTC nighttime
   schedule:
   - cron: '0 3 * * *' # run at 3 AM UTC
   # This can be used to allow manually triggering nightlies from the web interface
@@ -20,10 +17,11 @@ jobs:
       group: gcp-ct5lp-hightpu-8t
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}}
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
     env:
       PJRT_DEVICE: TPU
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,13 +32,13 @@ jobs:
           find text-generation-inference/ -name "text_generation_server-*whl" -exec python -m pip install {} \;
       - name: Run TGI Jetstream Pytorch - Llama
         run: |
-          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
+          JETSTREAM_PT=1 python -m \
             pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and Llama"
       - name: Run TGI Jetstream Pytorch - Gemma
         run: |
-          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
+          JETSTREAM_PT=1 python -m \
             pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and gemma"
       - name: Run TGI Jetstream Pytorch - Mixtral greedy
         run: |
-          JETSTREAM_PT=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} python -m \
+          JETSTREAM_PT=1 python -m \
             pytest -sv text-generation-inference/tests --runslow -k "jetstream and slow and Mixtral and greedy"
