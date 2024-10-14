@@ -1,9 +1,6 @@
 name: Optimum TPU / Test TGI on TPU (slow tests) / Jetstream Pytorch
 
 on:
-  push:
-    branches: [ main ]
-  # This can be used to automatically publish nightlies at UTC nighttime
   schedule:
   - cron: '0 3 * * *' # run at 3 AM UTC
   # This can be used to allow manually triggering nightlies from the web interface
