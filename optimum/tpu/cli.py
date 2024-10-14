@@ -10,7 +10,7 @@ import typer
 
 
 TORCH_VER = "2.4.0"
-JETSTREAM_PT_VER = "ec4ac8f6b180ade059a2284b8b7d843b3cab0921"
+JETSTREAM_PT_VER = "3afdc435a7cd035e34abbd0f55ed853874f7d8b1"
 DEFAULT_DEPS_PATH = os.path.join(Path.home(), ".jetstream-deps")
 
 app = typer.Typer()
