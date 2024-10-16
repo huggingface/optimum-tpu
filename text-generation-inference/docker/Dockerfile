@@ -117,11 +117,9 @@ COPY . /opt/optimum-tpu
 RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
 
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
-RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION}
-RUN bash /opt/optimum-tpu/install-jetstream-pt.sh
-RUN python3 -m pip install -e /opt/optimum-tpu[jetstream-pt] \
-        -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-        -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html \
+RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} typer
+RUN python3 /opt/optimum-tpu/optimum/tpu/cli.py install-jetstream-pytorch --yes
+RUN python3 -m pip install -e /opt/optimum-tpu \
         -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Install benchmarker
