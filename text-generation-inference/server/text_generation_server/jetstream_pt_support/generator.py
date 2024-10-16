@@ -450,6 +450,7 @@ class TpuGeneratorJetStream(Generator):
 
             # Tokenize the inputs
             input_ids, true_lengths = self._token_encode(request.inputs, slot.truncate)
+            logger.debug(f"Tokenized input_ids for request {slot.request_id} with length {true_lengths} shape: {input_ids.shape}")
             truncated_input_ids = input_ids[:true_lengths]
             selector = TokenSelector.create(
                 truncated_input_ids,
@@ -462,6 +463,7 @@ class TpuGeneratorJetStream(Generator):
             # To allow jit'ing the select function, we need to wrap it in a partial
             slot_select = jax.tree_util.Partial(self.prefill_slot.select)
             # Ask for prefill and insert
+            start = time.time()
             prefill_results, _result_tokens = self.engine.prefill(
                 params=self.params,
                 padded_tokens=input_ids,
@@ -476,6 +478,8 @@ class TpuGeneratorJetStream(Generator):
                 # append current to list of active slots
                 self.slots.append(slot)
                 len_active_slots += 1
+            end = time.time()
+            logger.debug(f"Prefill for request {slot.request_id} took {end - start:.2f}s")
 
         batch = None
         if len_active_slots > 0:
