@@ -3,6 +3,9 @@ name: Release
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - ie-debug
 
 jobs:
   docker:
