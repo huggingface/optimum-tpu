@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 
@@ -20,3 +22,14 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "slow" in item.keywords:
             item.add_marker(skip_slow)
+
+
+@pytest.fixture(scope="function")
+def quantization_jetstream_int8():
+    # Setup
+    old_environ = dict(os.environ)
+    os.environ["QUANTIZATION"] = "jetstream_int8"
+    yield
+    # Clean up
+    os.environ.clear()
+    os.environ.update(old_environ)
