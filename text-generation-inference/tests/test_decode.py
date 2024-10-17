@@ -164,3 +164,47 @@ def test_decode_single_jetstream_pytorch(params, do_sample):
         pytest.skip("Jetstream PyTorch is not available")
     params.do_sample = do_sample
     _test_decode_single(params)
+
+
+@pytest.mark.parametrize("params",
+    [
+        DecodeTestParams(
+            model_id="google/gemma-2b",
+            sequence_length=1024,
+            expected_text="\n\nThe first day of summer vacation.\n\nThe sun was shining and the birds were singing.\n\n",
+        ),
+        DecodeTestParams(
+            model_id="Maykeye/TinyLLama-v0",
+            sequence_length=256,
+            expected_text=" It was a very special day, and it was a very special day. \nThe mommy said to her, \"",
+            max_new_tokens=25,
+        ),
+    ],
+    ids=["gemma-2b", "TinyLLama-v0"],
+)
+def test_decode_jetstream_quantization(quantization_jetstream_int8, params):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    _test_decode_single(params)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("params",
+    [
+        DecodeTestParams(
+            model_id="mistralai/Mixtral-8x7B-v0.1",
+            sequence_length=1024,
+            expected_text="\n\nGeorge Orwell, 1984\n\nThe clocks are striking thirteen",
+        ),
+        DecodeTestParams(
+            model_id="meta-llama/Meta-Llama-3-70B",
+            sequence_length=1024,
+            expected_text=" Winston Smith,s,s,s,s,s,s,s,s,s,s",
+        ),
+    ],
+    ids=["Mixtral-8x7B", "Meta-Llama-3-70B"],
+)
+def test_decode_jetstream_quantization_slow(quantization_jetstream_int8, params):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    _test_decode_single(params)
