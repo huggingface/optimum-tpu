@@ -1,10 +1,13 @@
 # Import torch_xla2 first
 import torch_xla2  # isort:skip
 
+import os
+import time
 from typing import TYPE_CHECKING, Any
 
 import jax
-from jetstream_pt import fetch_models, torchjax
+import torch
+from jetstream_pt import fetch_models, quantize_model, torchjax
 from jetstream_pt.engine import PyTorchEngine
 from jetstream_pt.environment import (
     JetEngineEnvironment,
@@ -136,20 +139,41 @@ def create_engine(
     max_input_tokens: int,
     max_output_tokens: int,
 ) -> PyTorchEngine:
-    # NOTE: for now no quantization is done
+    quantization_enabled = os.environ.get("QUANTIZATION", None) == "jetstream_int8"
+    quant_config = QuantizationConfig(enable_weight_quantization=quantization_enabled)
     env_data = create_engine_env_data(model_path, batch_size, sequence_length, max_input_tokens, max_output_tokens)
     if env_data is None:
         return None
 
     env = JetEngineEnvironment(env_data)
     model = instantiate_model_from_repo_id(model_path, env)
+    # NOTE: this is assigned later because, the model should be constructed
+    # as a float model first then quantized
+    env.quant_config = quant_config
     # Update config with engine data
     model.config.batch_size = batch_size
     model.config.sequence_length = sequence_length
 
     weight_shardings = model.get_sharding_annotations()
-    sharded_weights = shard_weights(env, model.state_dict(), weight_shardings)
-
+    if quantization_enabled:
+        # Some layers are excluded from quantization, to get better accuracy.
+        # Get last layer in the model, to exclude it from quantization, guessing the last in the named_modules is the
+        # last layer.
+        last_layer = list(model.named_modules())[-1][0]
+        # Exclude Embedding layers from quantization (in case they are different layers)
+        exclude_list = {name for name, module in model.named_modules() if isinstance(module, torch.nn.Embedding)}
+        exclude_list.add(last_layer)
+        logger.info("Quantizing model to int8")
+        start = time.time()
+        quant_config = QuantizationConfig(
+            enable_weight_quantization=True,
+            exclude_layers=exclude_list,
+        )
+        quantize_model.quantize_model(model, quant_config)
+        end = time.time()
+        logger.info(f"Quantization took {end - start:.2f} seconds")
+    model_weights = model.state_dict()
+    sharded_weights = shard_weights(env, model_weights, weight_shardings)
     return PyTorchEngine(
         pt_model=model,
         env=env,
