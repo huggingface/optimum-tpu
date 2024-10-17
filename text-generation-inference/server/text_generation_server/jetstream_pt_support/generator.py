@@ -388,6 +388,8 @@ class TpuGeneratorJetStream(Generator):
         """
         if max_length == 0:
             max_length = self.model.config.sequence_length
+        # Remove one to max_length because BOS is going to be added when padding
+        max_length -= 1
         input_ids = self.tokenizer.encode(
             text,
             return_tensors="np",
