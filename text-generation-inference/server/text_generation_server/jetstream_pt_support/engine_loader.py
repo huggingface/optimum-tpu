@@ -155,17 +155,24 @@ def create_engine(
 
     weight_shardings = model.get_sharding_annotations()
     model_weights = model.state_dict()
+    breakpoint()
     if quantization_enabled:
+        # Get last layer in the model, to exclude it from quantization
+        last_layer = [layer for layer in model.named_modules()][-1][0]
         logger.info("Quantizing model to int8")
         start = time.time()
-        quant_config = QuantizationConfig(enable_weight_quantization=True)
+        quant_config = QuantizationConfig(
+            enable_weight_quantization=True,
+            exclude_embeddings=True,
+            exclude_layers=[last_layer],
+        )
         model.load_state_dict(model_weights, assign=True, strict=False)
         quantize_model.quantize_model(model, quant_config)
         model_weights = model.state_dict()
         end = time.time()
         logger.info(f"Quantization took {end - start:.2f} seconds")
     sharded_weights = shard_weights(env, model_weights, weight_shardings)
-
+    breakpoint()
     return PyTorchEngine(
         pt_model=model,
         env=env,
