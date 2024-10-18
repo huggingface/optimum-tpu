@@ -464,6 +464,7 @@ class TpuGeneratorJetStream(Generator):
                 seed=slot.seed,
             )
             slot.reset(truncated_input_ids, selector)
+            slot.update_rng_key()
             # To allow jit'ing the select function, we need to wrap it in a partial
             slot_select = jax.tree_util.Partial(self.prefill_slot.select)
             # Ask for prefill and insert
