@@ -207,6 +207,9 @@ class Slot:
             logits = logits.reshape(1, -1)
         return self._selector.select(self._tokens, logits)[0]
 
+    def update_rng_key(self):
+        self._selector.update_rng_key()
+
     @property
     def stopped(self) -> bool:
         # unsqueeze tokens to avoid problems with stopping criteria
@@ -540,6 +543,9 @@ class TpuGeneratorJetStream(Generator):
         if len(active_slots) < len(request_ids):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
 
+        # Update RNG in all slots
+        for slot in active_slots:
+            slot.update_rng_key()
         # Use a custom function to select the next token for each slot
         select_fn = jax.tree_util.Partial(self._select_from_slots)
         self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state, select_fn)
