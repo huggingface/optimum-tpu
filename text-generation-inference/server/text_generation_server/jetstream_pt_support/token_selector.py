@@ -179,6 +179,9 @@ class TokenSelector:
         else:
             return jnp.argmax(scores, axis=-1)
 
+    def update_rng_key(self):
+        self.key, _ = jax.random.split(self.key)
+
     def _sample(self, scores: jnp.ndarray) -> jnp.ndarray:
         do_top_k = self.logits_warper.top_k > 0 and self.logits_warper.top_k < scores.shape[-1]
         do_top_p = self.logits_warper.top_p < 1.0 and self.logits_warper.top_p > 0.0
