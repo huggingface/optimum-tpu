@@ -22,3 +22,4 @@ pip install -e .
 
 huggingface-cli login
 gsutil cp -r gs://entropix/huggingface_hub ~/.cache/huggingface/hub
+pip install transformers=4.45.2
