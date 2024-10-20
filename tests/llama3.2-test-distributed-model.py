@@ -52,7 +52,7 @@ def _test_distributed_model_generation(model_id, max_new_tokens=20):
 if __name__ == "__main__":
     print("Script started")
     try:
-        _test_distributed_model_generation("meta-llama/Meta-Llama-3.1-8B", max_new_tokens=200)
+        _test_distributed_model_generation("meta-llama/Meta-Llama-3.2-1B-Instruct", max_new_tokens=5)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         import traceback
