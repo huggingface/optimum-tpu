@@ -2,6 +2,7 @@ sudo apt remove unattended-upgrades
 sudo apt update
 export PJRT_DEVICE=TPU
 export PATH="/home/artuskg/.local/bin:$PATH"
+export DBG_COMPILE=True
 pip install build
 pip install --upgrade setuptools
 sudo apt install python3.10-venv

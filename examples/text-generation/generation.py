@@ -72,7 +72,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
     device = model.device
     model = model.eval()
-    print(f"✅ Model loaded in {time.time() - prg_start} seconds.")
+    print(f"✅ Model loaded in {time.time() - prg_start} seconds on {device=}.")
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     # Set pad token for cases where it is None, e.g. for Mistral
