@@ -3,6 +3,11 @@ import os
 from enum import Enum
 import time
 from loguru import logger
+import sys
+
+# Set the logger to show DEBUG messages
+logger.remove()  # Remove default logger
+logger.add(sys.stdout, level="DEBUG")  # Re-add with DEBUG level
 
 
 os.environ["PJRT_DEVICE"] = "TPU"
