@@ -483,16 +483,21 @@ class TpuGeneratorJetStream(Generator):
                 self.slots.append(slot)
                 len_active_slots += 1
 
-        batch = None
+        cached_batch = None
         if len_active_slots > 0:
-            # Whatever initial batch these requests came from, we always return all pending requests in a single batch
-            request_ids = [slot.request_id for slot in self.slots if slot.state == Slot.State.READY]
-            batch = self._cached_batch(self.batch_id, request_ids)
+            # Whatever initial batch these requests came from, we always return all pending requests forin a single batch
+            input_request_ids = [req.id for req in batch.requests]
+            active_request_ids = [
+                slot.request_id
+                for slot in self.slots
+                if slot.state == Slot.State.READY and slot.request_id in input_request_ids
+            ]
+            cached_batch = self._cached_batch(self.batch_id, active_request_ids)
         else:
             logger.debug("No more pending requests")
         self.batch_id += 1
         logger.debug("Model ready for decoding")
-        return generations, batch
+        return generations, cached_batch
 
     def _select_from_slots(self, logits: jnp.ndarray, batch_size: int=0) -> jnp.ndarray:
         pad_token_id = self.tokenizer.pad_token_id
