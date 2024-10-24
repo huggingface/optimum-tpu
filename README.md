@@ -71,7 +71,3 @@ You can check the examples:
 
 - [Fine-Tune Gemma on Google TPU](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/gemma_tuning.ipynb)
 - The [Llama fine-tuning script](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.md)
-
-### Optimum-TPU with JAX
-
-JAX is coming very soon - stay tuned!
