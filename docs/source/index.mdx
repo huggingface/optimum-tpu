@@ -18,10 +18,7 @@ limitations under the License.
 
 Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads running on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs).
 
-The API provides the overall same user-experience as Hugging Face transformers with the minimum amount of changes required to target performance for inference.
-
-Training support is underway, stay tuned! 🚀
-
+The API provides the overall same user-experience as Hugging Face transformers with the minimum amount of changes required to target performance for inference and training.
 
 ## Installation
 
@@ -30,7 +27,7 @@ As such, we provide a pip installable package to make sure everyone can get easi
 
 ### Run Cloud TPU with pip
 ```bash
-pip install optimum-tpu
+pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
 ### Run Cloud TPU within Docker container
@@ -43,7 +40,7 @@ docker pull
 docker run -ti --rm --privileged --network=host ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} bash
 ```
 
-From there you can install optimum-tpu through the pip instructions above.
+From there you can install optimum-tpu through the pip instructions mentioned above.
 
 
 <div class="mt-10">

@@ -1,19 +1,38 @@
-<!---
-Copyright 2023 The HuggingFace Team. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Overview
 
-Welcome to the 🤗 Optimum-TPU tutorials!
+Welcome to the 🤗 Optimum-TPU tutorials! Here you'll find comprehensive examples and guides to help you leverage Google Cloud TPUs effectively with Hugging Face models.
+
+## Available Examples
+
+### Text Generation
+Learn how to perform efficient inference for text generation tasks:
+
+- **Basic Generation Script** ([examples/text-generation/generation.py](https://github.com/huggingface/optimum-tpu/blob/main/examples/text-generation/generation.py))
+  - Demonstrates text generation using models like Gemma and Mistral
+  - Features greedy sampling implementation
+  - Shows how to use static caching for improved performance
+  - Includes performance measurement and timing analysis
+  - Supports custom model loading and configuration
+
+### Language Model Fine-tuning
+Explore how to fine-tune language models on TPU infrastructure:
+
+1. **Interactive Gemma Tutorial** ([examples/language-modeling/gemma_tuning.ipynb](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/gemma_tuning.ipynb))
+   - Complete notebook showing Gemma fine-tuning process
+   - Covers environment setup and TPU configuration
+   - Demonstrates FSDPv2 integration for efficient model sharding
+   - Includes dataset preparation and PEFT/LoRA implementation
+   - Provides step-by-step training workflow
+
+2. **LLaMA Fine-tuning Guide** ([examples/language-modeling/llama_tuning.md](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.md))
+   - Detailed guide for fine-tuning LLaMA-2 and LLaMA-3 models
+   - Explains SPMD and FSDP concepts
+   - Shows how to implement efficient data parallel training
+   - Includes practical code examples and prerequisites
+
+## Additional Resources
+
+- Visit the [Optimum-TPU GitHub repository](https://github.com/huggingface/optimum-tpu) for more details
+- Explore the [Google Cloud TPU documentation](https://cloud.google.com/tpu/docs) for deeper understanding of TPU architecture
+
+For the latest updates and to contribute to these examples, visit our [GitHub repository](https://github.com/huggingface/optimum-tpu).
