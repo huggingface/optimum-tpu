@@ -29,6 +29,9 @@ We currently support a few LLM models targeting text generation scenarios:
 
 ## Installation
 
+For installation on a TPU v4, use the `install-on-TPU-v4.sh` script. Make sure that you DO NOT install pallas or Jetstream as both are targeting TPU v5e!
+
+Via package:
 `optimum-tpu` comes with an handy PyPi released package compatible with your classical python dependency management tool.
 
 `pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html`

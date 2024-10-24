@@ -61,6 +61,9 @@ from optimum.tpu.xla_model_parallel import (
 if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
+#    print("FA2 available")
+#else:
+#    print("FA2 MISSING")
 
 
 logger = logging.get_logger(__name__)
@@ -101,24 +104,65 @@ ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
 
 
 class LlamaRotaryEmbedding(nn.Module):
-    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None, scaling_factor=1.0):
+    def __init__(
+        self,
+        dim,
+        max_position_embeddings=2048,
+        base=10000,
+        device=None,
+        scaling_factor=1.0,
+        rope_type="default",
+        config: Optional[LlamaConfig] = None,
+    ):
         super().__init__()
-        self.scaling_factor = scaling_factor
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
-        inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2, dtype=torch.int64).float().to(device) / self.dim))
-        self.register_buffer("inv_freq", inv_freq, persistent=False)
-        # For BC we register cos and sin cached
+        self.scaling_factor = scaling_factor
+        self.rope_type = rope_type
+        self.config = config
         self.max_seq_len_cached = max_position_embeddings
+        self.original_max_seq_len = max_position_embeddings
+
+        if rope_type == "llama3":
+            assert config is not None, "Config must be provided for llama3 rope type"
+            inv_freq = self._compute_llama3_inv_freq(device)
+        else:
+            inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32).to(device) / dim))
+
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        self.original_inv_freq = self.inv_freq
+        self.attention_scaling = 1.0  # Default scaling
+
+    def _compute_llama3_inv_freq(self, device):
+        factor = self.config.rope_scaling["factor"]
+        low_freq_factor = self.config.rope_scaling["low_freq_factor"]
+        high_freq_factor = self.config.rope_scaling["high_freq_factor"]
+        old_context_len = self.config.rope_scaling["original_max_position_embeddings"]
+
+        pos_freqs = self.base ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim)
+        inv_freq_extrapolation = 1.0 / pos_freqs
+        inv_freq_interpolation = 1.0 / (factor * pos_freqs)
+
+        low_freq_wavelen = old_context_len / low_freq_factor
+        high_freq_wavelen = old_context_len / high_freq_factor
+        wavelen = 2 * math.pi / inv_freq_extrapolation
+
+        inv_freq_llama = torch.where(wavelen > low_freq_wavelen, inv_freq_extrapolation / factor, inv_freq_extrapolation)
+        smooth_factor = torch.clip((old_context_len / wavelen - low_freq_factor) / (high_freq_factor - low_freq_factor), 0, 1)
+        smoothed_inv_freq = (1 - smooth_factor) * inv_freq_interpolation + smooth_factor * inv_freq_extrapolation
+        inv_freq_llama = torch.where((wavelen < high_freq_wavelen) & (wavelen > low_freq_wavelen), smoothed_inv_freq, inv_freq_llama)
+
+        return inv_freq_llama
 
     @torch.no_grad()
     def forward(self, x, position_ids):
-        # x: [bs, num_attention_heads, seq_len, head_size]
+        if self.rope_type == "llama3":
+            self._update_llama3_inv_freq(position_ids, x.device)
+
         inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
         position_ids_expanded = position_ids[:, None, :].float()
-        # Force float32 since bfloat16 loses precision on long contexts
-        # See https://github.com/huggingface/transformers/pull/29285
+        
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         with torch.autocast(device_type=device_type, enabled=False):
@@ -126,7 +170,19 @@ class LlamaRotaryEmbedding(nn.Module):
             emb = torch.cat((freqs, freqs), dim=-1)
             cos = emb.cos()
             sin = emb.sin()
+        
+        cos = cos * self.attention_scaling
+        sin = sin * self.attention_scaling
         return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)
+
+    def _update_llama3_inv_freq(self, position_ids, device):
+        seq_len = torch.max(position_ids) + 1
+        if seq_len > self.max_seq_len_cached:
+            self.inv_freq = self._compute_llama3_inv_freq(device)
+            self.max_seq_len_cached = seq_len
+        elif seq_len < self.original_max_seq_len and self.max_seq_len_cached > self.original_max_seq_len:
+            self.inv_freq = self.original_inv_freq
+            self.max_seq_len_cached = self.original_max_seq_len
 
 
 class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
@@ -338,26 +394,23 @@ class LlamaAttention(nn.Module):
                 self.head_dim,
                 max_position_embeddings=self.max_position_embeddings,
                 base=self.rope_theta,
+                config=self.config,
             )
         else:
-            scaling_type = self.config.rope_scaling["type"]
-            scaling_factor = self.config.rope_scaling["factor"]
-            if scaling_type == "linear":
-                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
+            scaling_type = self.config.rope_scaling.get("rope_type", self.config.rope_scaling.get("type", "default"))
+            scaling_factor = self.config.rope_scaling.get("factor", 1.0)
+            if scaling_type in ["linear", "dynamic", "llama3"]:
+                self.rotary_emb = LlamaRotaryEmbedding(
                     self.head_dim,
                     max_position_embeddings=self.max_position_embeddings,
-                    scaling_factor=scaling_factor,
                     base=self.rope_theta,
-                )
-            elif scaling_type == "dynamic":
-                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
-                    self.head_dim,
-                    max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
-                    base=self.rope_theta,
+                    rope_type=scaling_type,
+                    config=self.config,
                 )
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
+
 
     def forward(
         self,

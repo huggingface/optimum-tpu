@@ -58,7 +58,7 @@ def summary(values: List[float]):
 def main():
     parser = argparse.ArgumentParser(description="Text generation example")
     parser.add_argument("--model_id", type=str,
-                        default="google/gemma-2b",
+                        default="meta-llama/Llama-3.2-1B-Instruct",
                         help="Model ID (e.g.: google/gemma-2b, mistralai/Mistral-7B-v0.3)")
     parser.add_argument("--max_new_tokens", type=int, default=20, help="Number of tokens to generate")
     parser.add_argument("--max_cache_length", type=int, default=256, help="Maximum cache length for the model")
@@ -72,7 +72,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch_dtype)
     device = model.device
     model = model.eval()
-    print(f"✅ Model loaded in {time.time() - prg_start} seconds.")
+    print(f"✅ Model loaded in {time.time() - prg_start} seconds on {device=}.")
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     # Set pad token for cases where it is None, e.g. for Mistral
