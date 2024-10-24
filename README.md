@@ -39,7 +39,7 @@ We currently support a few LLM models targeting text generation scenarios:
 ## Inference
 
 `optimum-tpu` provides a set of dedicated tools and integrations in order to leverage Cloud TPUs for inference, especially
-on the latest TPU version `v5`. 
+on the latest TPU version `v5e`. 
 
 Other TPU versions will be supported along the way.
 
