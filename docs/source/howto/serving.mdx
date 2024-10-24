@@ -49,3 +49,11 @@ curl localhost/generate_stream \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
 ```
+
+### Using Jetstream Pytorch as backend
+
+[Jetstream Pytorch](https://github.com/AI-Hypercomputer/jetstream-pytorch) is a highly optimized Pytorch engine for serving LLMs on Cloud TPU. It is possible to use this engine by setting the `JETSTREAM_PT=1` environment variable.
+
+When using Jetstream Pytorch engine, it is possible to enable quantization to reduce the memory footprint and increase the throughput. To enable quantization, set the `QUANTIZATION=1` environment variable.
+
+***Note: Quantization is still experimental and may produce lower quality results compared to the non-quantized version.***

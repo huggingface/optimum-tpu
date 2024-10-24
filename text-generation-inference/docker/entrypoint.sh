@@ -23,6 +23,15 @@ if [[ -z "${MODEL_ID}" ]]; then
 fi
 export MODEL_ID="${MODEL_ID}"
 
+if [[ -z "${QUANTIZATION}" ]]; then
+  QUANTIZATION=""
+else
+  QUANTIZATION="jetstream_int8"
+fi
+export QUANTIZATION="${QUANTIZATION}"
+
+
+
 text-generation-launcher --port 8080 \
   --max-batch-size ${BATCH_SIZE} \
   ${JSON_OUTPUT_DISABLE} \
