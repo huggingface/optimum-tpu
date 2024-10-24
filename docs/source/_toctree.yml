@@ -12,6 +12,8 @@
       title: Deploying a Google Cloud TPU instance
     - local: howto/serving
       title: Deploying a TGI server on a Google Cloud TPU instance
+    - local: howto/training
+      title: Training on a Google Cloud TPU instance
     title: How-To Guides
   title: Optimum-TPU
   isExpanded: true

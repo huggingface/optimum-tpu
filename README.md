@@ -33,10 +33,13 @@ We currently support a few LLM models targeting text generation scenarios:
 
 `pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html`
 
+`export PJRT_DEVICE=TPU`
+
+
 ## Inference
 
 `optimum-tpu` provides a set of dedicated tools and integrations in order to leverage Cloud TPUs for inference, especially
-on the latest TPU version `v5e`. 
+on the latest TPU version `v5`. 
 
 Other TPU versions will be supported along the way.
 
@@ -69,3 +72,6 @@ You can check the examples:
 - [Fine-Tune Gemma on Google TPU](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/gemma_tuning.ipynb)
 - The [Llama fine-tuning script](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.md)
 
+### Optimum-TPU with JAX
+
+JAX is coming very soon - stay tuned!
