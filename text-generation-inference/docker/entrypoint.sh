@@ -32,8 +32,7 @@ export QUANTIZATION="${QUANTIZATION}"
 
 
 
-text-generation-launcher --port 8080 \
+exec text-generation-launcher --port 8080 \
   --max-batch-size ${BATCH_SIZE} \
   ${JSON_OUTPUT_DISABLE} \
   --model-id ${MODEL_ID}
-
