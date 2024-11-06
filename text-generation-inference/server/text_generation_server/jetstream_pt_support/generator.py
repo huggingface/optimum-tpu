@@ -55,7 +55,6 @@ class Slot:
         self._state = Slot.State.EMPTY
         self._batch_id = None
         self._request_id = None
-        self._inputs = ""
         self._generation_config = None
         self._tokens = []
         self._selector = None
