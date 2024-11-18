@@ -262,9 +262,8 @@ class TpuGeneratorJetStream(Generator):
         tokenizer.truncation_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
-
-        # Slots are empty to begin with, they will be populated as new batches arrive
-        self.slots = []
+        # Slots number is static, it cannot grow over the size of the batch
+        self.slots = [Slot(i, tokenizer) for i in range(self.model.config.batch_size)]
         self.batch_id = 0
         # Note: this index will _never_ be decremented, and that's fine.
         self.slot_index = 0
@@ -362,13 +361,11 @@ class TpuGeneratorJetStream(Generator):
         seq_len = self.engine.env.seq_len
         return batch_size * seq_len
 
-    def _get_slot_id(self):
-        """Get the next available slot id."""
-        batch_size = self.engine.env.batch_size
-        used_ids = [slot.id for slot in self.slots if slot.state != Slot.State.EMPTY]
-        for i in range(batch_size):
-            if i not in used_ids:
-                return i
+    def _get_slot(self):
+        """Get the next available slot."""
+        for slot in self.slots:
+            if slot.state == Slot.State.EMPTY:
+                return slot
         # if we reach this point, all slots were used - this should not happen
         raise ValueError("All slots are used, but we should have stopped earlier")
 
@@ -418,14 +415,9 @@ class TpuGeneratorJetStream(Generator):
             A list of `Generation` for each request and a `CachedBatch` containing all pending requests.
         """
 
-        slots = {state: [] for state in Slot.State}
-        for slot in self.slots:
-            slots[slot.state].append(slot)
-        len_active_slots = len(slots[Slot.State.READY])
-        # Delete all empty slots, no need to have them anymore
-        empty_slots = slots[Slot.State.EMPTY]
-        for slot in empty_slots:
-            self.slots.remove(slot)
+        active_slots = [slot for slot in self.slots if slot.state == Slot.State.READY]
+        len_active_slots = len(active_slots)
+
         len_requests = len(batch.requests)
         model_batch_size = self.model.config.batch_size
         if model_batch_size is not None and model_batch_size < len_active_slots + len_requests:
@@ -440,10 +432,10 @@ class TpuGeneratorJetStream(Generator):
         # Assign each request to an empty slot
         logger.debug(f"Prefilling {len_requests} new request(s) adding to {len_active_slots} active slot(s)")
         generations = []
-
+        prefilled_active_slots = []
         for request in batch.requests:
             # Dynamically create a new slot for each request
-            slot = Slot(self._get_slot_id(), self.tokenizer)
+            slot = self._get_slot()
             self.prefill_slot.set(slot)
             self.slot_index += 1
             slot.assign(self.batch_id, request, self.model.generation_config)
@@ -474,20 +466,12 @@ class TpuGeneratorJetStream(Generator):
 
             self._post_generate(slot, next_token, generations)
             if not slot.empty:
-                # append current to list of active slots
-                self.slots.append(slot)
-                len_active_slots += 1
+                prefilled_active_slots.append(slot)
 
-        batch = None
-        if len_active_slots > 0:
-            # Whatever initial batch these requests came from, we always return all pending requests in a single batch
-            request_ids = [slot.request_id for slot in self.slots if slot.state == Slot.State.READY]
-            batch = self._cached_batch(self.batch_id, request_ids)
-        else:
-            logger.debug("No more pending requests")
+        cached_batch = self._cached_batch(self.batch_id, prefilled_active_slots)
         self.batch_id += 1
         logger.debug("Model ready for decoding")
-        return generations, batch
+        return generations, cached_batch
 
     def _select_from_slots(self, logits: jnp.ndarray, batch_size: int=0) -> jnp.ndarray:
         pad_token_id = self.tokenizer.pad_token_id
@@ -495,7 +479,7 @@ class TpuGeneratorJetStream(Generator):
         tokens = jnp.full((batch_size, 1), pad_token_id)
         for slot in filter(lambda slot: slot.state == slot.State.READY, self.slots):
             # Every slot might have a different selection criteria, so we are obliged to call select in a loop
-            next_token = slot.select(logits)
+            next_token = slot.select(logits[slot.id : slot.id + 1, :])
             tokens = tokens.at[slot.id].set(next_token)
         return tokens
 
@@ -543,7 +527,6 @@ class TpuGeneratorJetStream(Generator):
         select_fn = jax.tree_util.Partial(self._select_from_slots)
         self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state, select_fn)
 
-        newly_empty = []
         generations = []
         for slot in active_slots:
             # Get the next token.
@@ -556,20 +539,9 @@ class TpuGeneratorJetStream(Generator):
                 raise ValueError("Unexpected Slot is not ready for decoding")
 
             self._post_generate(slot, next_token, generations)
-            if slot.empty:
-                newly_empty.append(slot)
 
-        # Remove empty slots
-        for slot in newly_empty:
-            self.slots.remove(slot)
-        batch = None
-        if len(self.slots) > 0:
-            # Whatever initial batch these requests came from, we always return all pending requests in a single batch
-            request_ids = [slot.request_id for slot in self.slots if slot.state == Slot.State.READY]
-            batch = self._cached_batch(next_batch_id, request_ids)
-        else:
-            logger.debug("No more pending requests")
-        return generations, batch
+        cached_batch = self._cached_batch(next_batch_id, active_slots)
+        return generations, cached_batch
 
     def _post_generate(self, slot: Slot, next_token: int, generations: List[Generation]) -> None:
         """Post-generate a slot after the generation has been completed.
@@ -617,7 +589,13 @@ class TpuGeneratorJetStream(Generator):
             )
         )
 
-    def _cached_batch(self, batch_id: int, request_ids: List):
+    def _cached_batch(self, batch_id: int, active_slots: List):
+        """Create a CachedBatch from the active slots.
+        """
+        request_ids = [slot.request_id for slot in active_slots if slot.state == Slot.State.READY]
+        if len(request_ids) == 0:
+            logger.debug("No more pending requests")
+            return None
         size = len(request_ids)
         max_tokens = size * self.model.config.sequence_length
         return CachedBatch(id=batch_id, request_ids=request_ids, size=size, max_tokens=max_tokens)
