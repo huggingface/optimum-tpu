@@ -1,6 +1,10 @@
 name: Optimum TPU / Test TGI on TPU / Jetstream Pytorch
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - "text-generation-inference/**"
   pull_request:
     branches: [ main ]
     paths:
