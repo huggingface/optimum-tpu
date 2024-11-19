@@ -455,7 +455,7 @@ class TpuGeneratorJetStream(Generator):
             # To allow jit'ing the select function, we need to wrap it in a partial
             slot_select = jax.tree_util.Partial(self.prefill_slot.select)
             # Ask for prefill and insert
-            prefill_results, _result_tokens = self.engine.prefill(
+            prefill_results, _result_tokens = self.engine.prefill_ex(
                 params=self.params,
                 padded_tokens=input_ids,
                 true_length=true_lengths,
@@ -524,8 +524,8 @@ class TpuGeneratorJetStream(Generator):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
 
         # Use a custom function to select the next token for each slot
-        select_fn = jax.tree_util.Partial(self._select_from_slots)
-        self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state, select_fn)
+        # select_fn = jax.tree_util.Partial(self._select_from_slots)
+        self.decode_state, result_tokens = self.engine.generate_impl(self.params, self.decode_state, self._select_from_slots)
 
         generations = []
         for slot in active_slots:

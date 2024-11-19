@@ -19,11 +19,34 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from transformers import PretrainedConfig
+
 from transformers import AutoConfig
 
 from .compatibility import model_can_use_jetstream_pt
 from .models import GemmaModel, LlamaModel, MixtralModel
 
+
+class OptimumJetstreamEngine(PyTorchEngine):
+    """This is essentially the same as the PytorchEngine, but it also supports a callback for sampling in prefill and
+    generation that can change on each request while not needing to be JIT'ed.
+    """
+    prefill_ex = PyTorchEngine.prefill
+
+    def __init__(
+        self,
+        pt_model: torch.nn.Module,
+        env: JetEngineEnvironment,
+        weights=None,
+    ):
+        super().__init__(pt_model, env, weights)
+        # Call model prefill and generate needs to be JIT'ed, because it is called with sharded notations, and it would
+        # otherwise not work for some models.
+        self._call_model_prefill = jax.jit(
+            self._call_model_prefill,
+        )
+        self._call_model_generate = jax.jit(
+            self._call_model_generate,
+        )
 
 def _get_head_dim(config: "PretrainedConfig") -> int:
     if hasattr(config, "head_dim"):
@@ -174,8 +197,9 @@ def create_engine(
         logger.info(f"Quantization took {end - start:.2f} seconds")
     model_weights = model.state_dict()
     sharded_weights = shard_weights(env, model_weights, weight_shardings)
-    return PyTorchEngine(
+    engine = OptimumJetstreamEngine(
         pt_model=model,
         env=env,
         weights=torchjax.from_torch_with_copy(sharded_weights),
     )
+    return engine

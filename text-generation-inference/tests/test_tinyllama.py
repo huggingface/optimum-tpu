@@ -70,7 +70,6 @@ def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_si
         assert tokens.texts == [token_text]
 
 
-@pytest.xfail(reason="A bug prevents changing the sampling strategy after the first request")
 def test_jetstream_prefill_change_sampling(model_path):
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
