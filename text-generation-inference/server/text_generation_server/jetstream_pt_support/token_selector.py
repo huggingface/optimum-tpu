@@ -175,11 +175,13 @@ class TokenSelector:
         """
         scores = self.logits_processor(input_ids, logits)
         if self.mode == GenerationMode.SAMPLE:
-            return self._sample(scores)
+            # split the key to avoid reusing the same key for multiple samples
+            subkey, self.key = jax.random.split(self.key)
+            return self._sample(scores, subkey)
         else:
             return jnp.argmax(scores, axis=-1)
 
-    def _sample(self, scores: jnp.ndarray) -> jnp.ndarray:
+    def _sample(self, scores: jnp.ndarray, key) -> jnp.ndarray:
         do_top_k = self.logits_warper.top_k > 0 and self.logits_warper.top_k < scores.shape[-1]
         do_top_p = self.logits_warper.top_p < 1.0 and self.logits_warper.top_p > 0.0
 
@@ -188,14 +190,14 @@ class TokenSelector:
                 scores,
                 self.logits_warper.top_k,
                 self.logits_warper.temperature,
-                self.key,
+                key,
             )
         elif do_top_p:
             return sampling_utils.sample_nucleus_topp_logits(
                 scores,
                 self.logits_warper.top_p,
                 self.logits_warper.temperature,
-                self.key,
+                key,
             )
 
-        return jax.random.categorical(self.key, scores / self.logits_warper.temperature)
+        return jax.random.categorical(key, scores / self.logits_warper.temperature)
