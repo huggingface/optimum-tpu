@@ -70,6 +70,38 @@ def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_si
         assert tokens.texts == [token_text]
 
 
+@pytest.xfail(reason="A bug prevents changing the sampling strategy after the first request")
+def test_jetstream_prefill_change_sampling(model_path):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+    input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
+    batch_size = 1
+    greedy_expected_token_id = 347
+    greedy_expected_text = " The"
+    sampling_expected_token_id = 13
+    sampling_expected_text = "\n"
+
+    generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
+    max_new_tokens = 20
+
+    def check_request(do_sample, expected_token_id, expected_text):
+        requests = [create_request(id=0, inputs=input_text, do_sample=do_sample, max_new_tokens=max_new_tokens)]
+        batch = Batch(id=0, requests=requests, size=batch_size, max_tokens=batch_size * SEQUENCE_LENGTH)
+        generations, _ = generator.prefill(batch)
+        tokens = generations[0].tokens
+        print(tokens)
+        assert tokens.ids == [expected_token_id]
+        assert tokens.texts == [expected_text]
+        generator.clear()
+
+    # First request is greedy
+    check_request(False, greedy_expected_token_id, greedy_expected_text)
+    # Second request is sampling
+    check_request(True, sampling_expected_token_id, sampling_expected_text)
+    # Third request is greedy again
+    check_request(False, greedy_expected_token_id, greedy_expected_text)
+
+
 def test_jetstream_decode_multiple(model_path):
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
