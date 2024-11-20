@@ -30,6 +30,7 @@ def decode_single_test(params):
         max_new_tokens=max_new_tokens,
         do_sample=params.do_sample,
         top_k=params.top_k,
+        seed=1234,
     )
     batch = Batch(id=0, requests=[request], size=1, max_tokens=params.sequence_length)
     generations, next_batch = generator.prefill(batch)
