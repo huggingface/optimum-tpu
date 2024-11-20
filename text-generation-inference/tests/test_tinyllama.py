@@ -18,6 +18,7 @@ def model_path():
 
 
 def test_jetstream_info(model_path):
+    """Verify the model info is correctly loaded and check expected results."""
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
     generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=1)
@@ -48,6 +49,8 @@ def test_jetstream_info(model_path):
 )
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
 def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
+    """Verify that prefilling a batch with a single request with different sampling techniques.
+    """
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
     generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
@@ -71,6 +74,8 @@ def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_si
 
 
 def test_jetstream_prefill_change_sampling(model_path):
+    """Verify changing the sampling strategy between requests in the same batch works as expected.
+    """
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
@@ -102,6 +107,9 @@ def test_jetstream_prefill_change_sampling(model_path):
 
 
 def test_jetstream_decode_multiple(model_path):
+    """Verify that two requests added to the batch at different generation steps
+    generate the same outputs (continuous batching).
+    """
     if not jetstream_pt_available():
         pytest.skip("Jetstream PyTorch is not available")
     generator = AutoGenerator.from_pretrained(model_path,
