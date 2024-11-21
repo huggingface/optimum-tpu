@@ -13,7 +13,7 @@ WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
-FROM chef as planner
+FROM chef AS planner
 COPY --from=tgi /tgi/Cargo.toml Cargo.toml
 COPY --from=tgi /tgi/Cargo.lock Cargo.lock
 COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
@@ -134,7 +134,7 @@ RUN pip install dist/text_generation_server*.tar.gz
 
 
 # TPU compatible image for Inference Endpoints
-FROM tpu_base as inference-endpoint
+FROM tpu_base AS inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh

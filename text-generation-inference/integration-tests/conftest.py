@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import sys
 import time
+import signal
 from tempfile import TemporaryDirectory
 from typing import List
 
@@ -16,9 +17,28 @@ from text_generation import AsyncClient
 from text_generation.types import Response
 
 
-DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "tpu-tgi:latest")
-HUGGING_FACE_HUB_TOKEN = os.getenv("HUGGING_FACE_HUB_TOKEN", None)
+DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
+HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
+
+
+def cleanup_handler(signum, frame):
+    print("\nCleaning up containers due to shutdown, please wait...")
+    try:
+        client = docker.from_env()
+        containers = client.containers.list(filters={"name": "tgi-tests-"})
+        for container in containers:
+            try:
+                container.stop()
+                container.remove()
+            except:
+                pass
+    except:
+        pass
+    sys.exit(1)
+
+signal.signal(signal.SIGINT, cleanup_handler)
+signal.signal(signal.SIGTERM, cleanup_handler)
 
 
 class LauncherHandle:
@@ -104,14 +124,21 @@ def launcher(event_loop, data_volume):
         except NotFound:
             pass
 
-        env = {"LOG_LEVEL": "info,text_generation_router=debug"}
+        env = {
+            "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
+            "MAX_BATCH_SIZE": "4",
+            "SKIP_WARMUP": "1",
+            "HF_HUB_ENABLE_HF_TRANSFER": "0",
+        }
 
-        if HUGGING_FACE_HUB_TOKEN is not None:
-            env["HUGGING_FACE_HUB_TOKEN"] = HUGGING_FACE_HUB_TOKEN
+        if HF_TOKEN is not None:
+            env["HUGGING_FACE_HUB_TOKEN"] = HF_TOKEN
 
         for var in ["HF_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
             if var in os.environ:
                 env[var] = os.environ[var]
+
+        env["HF_BATCH_SIZE"] = "4"
 
         volumes = [f"{data_volume}:/data"]
 
@@ -127,6 +154,10 @@ def launcher(event_loop, data_volume):
             privileged=True,
             network_mode="host",
         )
+
+        # Stream logs in real-time
+        # for log in container.logs(stream=True, follow=True):
+        #     print("[TGI Server Logs] " + log.decode("utf-8"), end="", file=sys.stderr, flush=True)
 
         yield ContainerLauncherHandle(client, container.name, port)
 

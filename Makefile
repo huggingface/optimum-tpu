@@ -43,11 +43,15 @@ clean:
 	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
+# ulimit nofile=100000:100000 is required for TPUs
+# https://cloud.google.com/kubernetes-engine/docs/how-to/tpus#privileged-mode
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
-				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
+				 --ulimit nofile=100000:100000 \ 
+				 -t huggingface/optimum-tpu:$(VERSION)-tgi . \
+				 --progress=plain
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
 tpu-tgi-ie:
@@ -55,6 +59,7 @@ tpu-tgi-ie:
 				 --target inference-endpoint \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
+				 --ulimit nofile=100000:100000 \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest-ie
 
@@ -105,3 +110,26 @@ tgi_test: test_installs tgi_server
 tgi_docker_test: tpu-tgi
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
 	python -m pytest -sv text-generation-inference/integration-tests
+
+tgi_test_integration:
+# python -m pip install -r text-generation-inference/integration-tests/requirements.txt
+	which python
+	python -m pytest -sv text-generation-inference/integration-tests
+
+tgi_stop_containers:
+	docker stop tgi-tests-gpt2
+	docker rm tgi-tests-gpt2
+
+tgi_start_containers:
+	docker run -e HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} \
+	          -e LOG_LEVEL="info,text_generation_router,text_generation_launcher=debug" \
+	          -e MAX_BATCH_SIZE="4" \
+	          -e SKIP_WARMUP="1" \
+	          -e HF_HUB_ENABLE_HF_TRANSFER="0" \
+	          -v /data:/data \
+	          --shm-size="1G" \
+	          --privileged=true \
+	          --network=host \
+	          huggingface/optimum-tpu:latest \
+	          --model-id openai-community/gpt2 \
+	          --env

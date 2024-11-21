@@ -1,3 +1,4 @@
 build
 grpcio-tools==1.62.1
 mypy-protobuf==3.2.0
+# hf_transfer>=0.1.8

@@ -19,6 +19,7 @@ dependencies = [
     'loguru == 0.6.0',
     "sentencepiece == 0.2.0",
     "numpy<2.0",
+    # "hf_transfer",
 ]
 
 [tool.setuptools]
