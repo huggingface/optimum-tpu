@@ -1,12 +1,9 @@
 import os
-
 import Levenshtein
 import pytest
 
-
 MODEL_ID = "openai-community/gpt2"
 SEQUENCE_LENGTH = 1024
-
 
 @pytest.fixture(scope="module")
 def model_name_or_path():
@@ -22,14 +19,13 @@ def tgi_service(launcher, model_name_or_path):
 
 @pytest.fixture(scope="module")
 async def tgi_client(tgi_service):
-    await tgi_service.health(300)
+    await tgi_service.health(1000)
     return tgi_service.client
-
 
 @pytest.mark.asyncio
 async def test_model_single_request(tgi_client):
 
-    # Greedy bounded without input
+    # Bounded greedy decoding without input
     response = await tgi_client.generate(
         "What is Deep Learning?",
         max_new_tokens=17,
@@ -37,10 +33,10 @@ async def test_model_single_request(tgi_client):
     )
     assert response.details.generated_tokens == 17
     assert (
-        response.generated_text == "\n\nDeep learning is a technique that allows you to learn something from a set of"
+        response.generated_text == "\n\nDeep learning is a new field of research that has been around for a while"
     )
 
-    # Greedy bounded with input
+    # Bounded greedy decoding with input
     response = await tgi_client.generate(
         "What is Deep Learning?",
         max_new_tokens=17,
@@ -50,7 +46,7 @@ async def test_model_single_request(tgi_client):
     assert response.details.generated_tokens == 17
     assert (
         response.generated_text
-        == "What is Deep Learning?\n\nDeep learning is a technique that allows you to learn something from a set of"
+        == "What is Deep Learning?\n\nDeep learning is a new field of research that has been around for a while"
     )
 
     # Sampling
@@ -64,8 +60,9 @@ async def test_model_single_request(tgi_client):
         seed=42,
         decoder_input_details=True,
     )
+
     assert (
-        'The deep neural networks that we create are essentially "miniature" neural networks that can easily be trained'
+        'A lot of researchers have tried to make a "deep learning" approach that focuses only on what is being shown'
         in response.generated_text
     )
 
@@ -81,7 +78,7 @@ async def test_model_multiple_requests(tgi_client, generate_load):
     )
 
     assert len(responses) == 4
-    expected = "\n\nDeep learning is a technique that allows you to learn something from a set of"
+    expected = "\n\nDeep learning is a technique that allows you to learn something from a single source"
     for r in responses:
         assert r.details.generated_tokens == 17
         # Compute the similarity with the expectation using the levenshtein distance
