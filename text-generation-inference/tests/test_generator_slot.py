@@ -1,7 +1,10 @@
+import numpy as np
 import pytest
 import torch
 from text_generation_server.pb.generate_pb2 import Request
 from transformers import AutoTokenizer, GenerationConfig
+
+from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
 
 TOKENIZERS = ["NousResearch/Llama-2-7b-hf", "openai-community/gpt2"]
@@ -29,8 +32,57 @@ def tokenizer(request):
     ],
     ids=["spaces", "chinese-utf8", "emojis"],
 )
+def test_decode_streaming_jetstream(tokenizer, input_text, generated_text):
+    if not jetstream_pt_available():
+        pytest.skip("Jetstream PyTorch is not available")
+
+    from text_generation_server.jetstream_pt_support.generator import Slot
+
+    slot = Slot(0, tokenizer)
+    request = Request(id=0, inputs=input_text)
+    slot.assign(0, request, GenerationConfig())
+
+    inputs = tokenizer(input_text, padding="max_length", max_length=len(input_text) + 1, return_tensors="np")
+    input_ids = inputs["input_ids"][0]
+    generated_tokens = tokenizer(generated_text, add_special_tokens=False, return_tensors="np")["input_ids"][0]
+
+    # We need to regenerate the full text as the tokenizer might change it (extra spaces might be added)
+    all_input_ids = np.concatenate([input_ids, generated_tokens])
+    full_text = tokenizer.decode(all_input_ids, skip_special_tokens=True)
+    regenerated_text = full_text[len(input_text) :]
+
+    # Initialize the slot with the inputs
+    slot.reset(input_ids, selector=None)
+
+    assert slot.generated_tokens == 0
+
+    # Simulate an iterative generation (i.e. don't call select and use known tokens instead)
+    decoded_text = ""
+    for i in range(len(generated_tokens)):
+        text = slot.append(generated_tokens[i])
+        assert slot.generated_tokens == i + 1
+        decoded_text += text
+
+    assert decoded_text == regenerated_text
+
+
+@pytest.mark.parametrize(
+    "input_text, generated_text",
+    [
+        [
+            "It was a bright cold day in April, and the clocks were striking thirteen.",
+            " Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind,"
+            " slipped quickly through the glass doors of Victory Mansions, though not quickly enough"
+            " to prevent a swirl of gritty dust from entering along with him.",
+        ],
+        ["This sentence is written in chinese:", "我很感谢你的热情"],
+        ["Some text might contain a lot of emojis like 😃", "😍💪 👉 👀"],
+    ],
+    ids=["spaces", "chinese-utf8", "emojis"],
+)
 def test_decode_streaming(tokenizer, input_text, generated_text):
     from text_generation_server.generator import Slot
+
     # Note: device used is cpu to make it faster
     slot = Slot(0, tokenizer, "cpu")
     request = Request(id=0, inputs=input_text)
