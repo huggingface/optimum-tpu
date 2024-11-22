@@ -1,9 +1,6 @@
-import pytest
-from helpers import create_request, prepare_model
+from helpers import create_request, prepare_model, skip_if_jetstream_pytorch_enabled
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
-
-from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
 
 def _test_prefill_truncate():
@@ -38,10 +35,9 @@ def _test_prefill_truncate():
 
 
 def test_prefill_truncate_jetstream():
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
     _test_prefill_truncate()
 
 
+@skip_if_jetstream_pytorch_enabled
 def test_prefill_truncate():
     _test_prefill_truncate()

@@ -1,8 +1,10 @@
 
 import pytest
 from decode_tests_utils import DecodeTestParams, decode_single_test
+from helpers import skip_if_jetstream_pytorch_enabled
 
 
+@skip_if_jetstream_pytorch_enabled
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(
@@ -21,6 +23,7 @@ from decode_tests_utils import DecodeTestParams, decode_single_test
 def test_decode_single(params):
     decode_single_test(params)
 
+@skip_if_jetstream_pytorch_enabled
 @pytest.mark.slow
 @pytest.mark.parametrize("params",
     [

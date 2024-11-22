@@ -100,7 +100,7 @@ tgi_test_jetstream: test_installs jetstream_requirements tgi_server
 tgi_test: test_installs tgi_server
 	find text-generation-inference -name "text_generation_server-$(VERSION)-py3-none-any.whl" \
 	                               -exec python -m pip install --force-reinstall {} \;
-	python -m pytest -sv text-generation-inference/tests
+	python -m pytest -sv text-generation-inference/tests -k "not jetstream"
 
 tgi_docker_test: tpu-tgi
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt

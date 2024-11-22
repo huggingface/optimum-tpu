@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
 import torch
+from helpers import skip_if_jetstream_pytorch_enabled
 from text_generation_server.pb.generate_pb2 import Request
 from transformers import AutoTokenizer, GenerationConfig
-
-from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
 
 TOKENIZERS = ["NousResearch/Llama-2-7b-hf", "openai-community/gpt2"]
@@ -33,9 +32,6 @@ def tokenizer(request):
     ids=["spaces", "chinese-utf8", "emojis"],
 )
 def test_decode_streaming_jetstream(tokenizer, input_text, generated_text):
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
-
     from text_generation_server.jetstream_pt_support.generator import Slot
 
     slot = Slot(0, tokenizer)
@@ -66,6 +62,7 @@ def test_decode_streaming_jetstream(tokenizer, input_text, generated_text):
     assert decoded_text == regenerated_text
 
 
+@skip_if_jetstream_pytorch_enabled
 @pytest.mark.parametrize(
     "input_text, generated_text",
     [
