@@ -47,6 +47,7 @@ tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
+				 --ulimit nofile=100000:100000 \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
@@ -55,6 +56,7 @@ tpu-tgi-ie:
 				 --target inference-endpoint \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
+				 --ulimit nofile=100000:100000 \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest-ie
 
