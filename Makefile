@@ -116,9 +116,9 @@ tgi_test_integration:
 	which python
 	python -m pytest -sv text-generation-inference/integration-tests
 
-tgi_stop_containers:
-	docker stop tgi-tests-gpt2
-	docker rm tgi-tests-gpt2
+# tgi_stop_containers:
+# 	docker stop tgi-tests-gpt2
+# 	docker rm tgi-tests-gpt2
 
 tgi_start_containers:
 	docker run -e HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} \
@@ -126,10 +126,9 @@ tgi_start_containers:
 	          -e MAX_BATCH_SIZE="4" \
 	          -e SKIP_WARMUP="1" \
 	          -e HF_HUB_ENABLE_HF_TRANSFER="0" \
+			  -e MODEL_ID="google/gemma-2b-it" \
 	          -v /data:/data \
 	          --shm-size="1G" \
 	          --privileged=true \
 	          --network=host \
-	          huggingface/optimum-tpu:latest \
-	          --model-id openai-community/gpt2 \
-	          --env
+	          huggingface/optimum-tpu:latest
