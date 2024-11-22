@@ -19,8 +19,7 @@ REAL_CLONE_URL = $(if $(CLONE_URL),$(CLONE_URL),$(DEFAULT_CLONE_URL))
 
 .PHONY:	build_dist style style_check clean
 
-# Ths is essentially v2.3.0 plus a fix to support v2 proto interface
-TGI_VERSION ?= 0ff6ff60ada291840beed63d8bf458d6f9606f7f
+TGI_VERSION ?= 690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 

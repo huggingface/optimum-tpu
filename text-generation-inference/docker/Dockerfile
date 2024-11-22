@@ -8,7 +8,7 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.79-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.80.1-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
@@ -106,7 +106,7 @@ ARG ACCELERATE_VERSION='0.27.2'
 ARG SAFETENSORS_VERSION='0.4.2'
 
 # TGI base env
-ENV HUGGINGFACE_HUB_CACHE=/data \
+ENV HF_HOME=/data \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
     PORT=80 \
     VERSION=${VERSION}
@@ -145,4 +145,5 @@ ENTRYPOINT ["./entrypoint.sh"]
 FROM tpu_base
 
 ENTRYPOINT ["text-generation-launcher"]
-CMD ["--json-output"]
+# This is commented out in the original TGI Dockerfile
+# CMD ["--json-output"]
