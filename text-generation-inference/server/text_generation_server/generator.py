@@ -171,7 +171,7 @@ class Slot:
         self._max_new_tokens = self._generation_config.max_new_tokens
         # TODO: stop_sequences, ignore_eos_token
 
-    def reset(self, input_ids: torch.LongTensor, attention_mask: torch.LongTensor, selector: TokenSelector):
+    def reset(self, input_ids: torch.LongTensor, attention_mask: torch.LongTensor = None, selector: TokenSelector = None):
         """Reset the slot for the next generation.
 
         Args:
