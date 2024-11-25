@@ -1,0 +1,51 @@
+name: TGI Integration Tests
+
+on:
+  push:
+    # branches: [ main ]
+    # paths:
+    #   - "text-generation-inference/**"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "text-generation-inference/**"
+  # Allow manual triggering
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Run TGI Integration Tests
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
+    container:
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
+    
+    env:
+      PJRT_DEVICE: TPU
+      HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
+      HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install .[tests] -f https://storage.googleapis.com/libtpu-releases/index.html
+          python -m pip install -r text-generation-inference/integration-tests/requirements.txt
+
+      - name: Build TGI server
+        run: |
+          make tgi_server
+          find text-generation-inference -name "text_generation_server-*-py3-none-any.whl" \
+            -exec python -m pip install --force-reinstall {} \;
+
+      - name: Run integration tests
+        run: |
+          python -m pytest -sv text-generation-inference/integration-tests
