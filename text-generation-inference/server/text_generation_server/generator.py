@@ -314,6 +314,9 @@ class TpuGeneratorSingleThread(Generator):
         tokenizer.truncation_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
+        # The token selector will use the model's generation mixin internal variables to select the next token, and it
+        # expects special tokens to be initialized in the model.
+        model._prepare_special_tokens(generation_config=model.generation_config, device=model.device)
         # Slots are empty to begin with, they will be populated as new batches arrive
         self.slots = []
         self.batch_id = 0

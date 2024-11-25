@@ -262,6 +262,10 @@ class TpuGeneratorJetStream(Generator):
         tokenizer.truncation_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
+        # The token selector will use the model's generation mixin internal variables to select the next token, and it
+        # expects special tokens to be initialized in the model.
+        model = self.engine.pt_model
+        model._prepare_special_tokens(generation_config=model.generation_config, device='cpu')
         # Slots number is static, it cannot grow over the size of the batch
         self.slots = [Slot(i, tokenizer) for i in range(self.model.config.batch_size)]
         self.batch_id = 0
