@@ -25,11 +25,10 @@ jobs:
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
-      JETSTREAM_PT_DISABLE: 1 # Disable Jetstream Pytorch tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build and test optimum tpu
         run: |
-          HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tests
+          JETSTREAM_PT_DISABLE=1 HF_TOKEN=${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }} make tests
