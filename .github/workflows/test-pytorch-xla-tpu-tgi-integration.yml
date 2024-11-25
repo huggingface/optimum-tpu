@@ -1,4 +1,4 @@
-name: TGI Integration Tests
+name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
   push:
@@ -43,8 +43,6 @@ jobs:
       - name: Build TGI server
         run: |
           make tgi_server
-          find text-generation-inference -name "text_generation_server-*-py3-none-any.whl" \
-            -exec python -m pip install --force-reinstall {} \;
 
       - name: Run integration tests
         run: |

@@ -113,7 +113,7 @@ tgi_docker_test: tpu-tgi
 
 tgi_test_integration:
 # python -m pip install -r text-generation-inference/integration-tests/requirements.txt
-	which python
+	# which python
 	python -m pytest -sv text-generation-inference/integration-tests
 
 # tgi_stop_containers:
