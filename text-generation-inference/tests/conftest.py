@@ -43,6 +43,6 @@ def pytest_runtest_setup(item):
     # Skip tests that require torch xla but not jetstream
     if "torch_xla" in marker_names and "jetstream" not in marker_names:
         if jetstream_pt_enabled:
-            pytest.skip("Jetstream PyTorch must be disabled")
+            pytest.skip("Jetstream is enabled: xla test will be skipped")
     elif "jetstream" in marker_names and not jetstream_pt_enabled:
-        pytest.skip("Jetstream PyTorch must be enabled")
+        pytest.skip("Test requires Jetstream PyTorch to be enabled")
