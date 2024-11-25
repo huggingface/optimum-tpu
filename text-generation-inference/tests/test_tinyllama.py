@@ -1,5 +1,5 @@
 import pytest
-from helpers import create_request, prepare_model, skip_if_jetstream_pytorch_enabled
+from helpers import create_request, prepare_model
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 from tqdm import tqdm
@@ -24,11 +24,12 @@ def _test_info(model_path, expected_device_type):
     assert info.speculate == 0
 
 
+@pytest.mark.jetstream
 def test_jetstream_info(model_path):
     _test_info(model_path, "meta")
 
 
-@skip_if_jetstream_pytorch_enabled
+@pytest.mark.torch_xla
 def test_info(model_path):
     _test_info(model_path, "xla")
 
@@ -57,6 +58,7 @@ def _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model
         assert tokens.texts == [token_text]
 
 
+@pytest.mark.jetstream
 @pytest.mark.parametrize(
     "input_text, token_id, token_text, do_sample",
     [
@@ -80,7 +82,7 @@ def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_si
     _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path)
 
 
-@skip_if_jetstream_pytorch_enabled
+@pytest.mark.torch_xla
 @pytest.mark.parametrize(
     "input_text, token_id, token_text, do_sample",
     [
@@ -134,11 +136,12 @@ def _test_prefill_change_sampling(
     check_request(False, greedy_expected_token_id)
 
 
+@pytest.mark.jetstream
 def test_jetstream_prefill_change_sampling(model_path):
     _test_prefill_change_sampling(model_path, 347, 13)
 
 
-@skip_if_jetstream_pytorch_enabled
+@pytest.mark.torch_xla
 def test_prefill_change_sampling(model_path):
     _test_prefill_change_sampling(model_path, 571, 13)
 
@@ -216,6 +219,7 @@ def _test_continuous_batching_two_requests(model_path):
     assert output.text == generated_text
 
 
+@pytest.mark.jetstream
 def test_jetstream_decode_multiple(model_path):
     _test_continuous_batching_two_requests(model_path)
 
@@ -225,6 +229,6 @@ calculations are done in torch/xla and the effect of KV cache (they produce
 similar outputs, but not identical).
 """
 @pytest.mark.skip(reason="Test is not supported on PyTorch/XLA")
-@skip_if_jetstream_pytorch_enabled
+@pytest.mark.torch_xla
 def test_decode_multiple(model_path):
     _test_continuous_batching_two_requests(model_path)

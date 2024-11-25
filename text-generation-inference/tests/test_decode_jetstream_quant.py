@@ -3,6 +3,9 @@ import pytest
 from decode_tests_utils import DecodeTestParams, decode_single_test
 
 
+# All tests in this file are for jetstream
+pytestmark = pytest.mark.jetstream
+
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(

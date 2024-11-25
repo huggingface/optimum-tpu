@@ -1,12 +1,12 @@
-
-
 from time import time
 
+import pytest
 from helpers import create_request, prepare_model
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 
 
+@pytest.mark.jetstream
 def test_warmup_jetstream_pytorch():
     model_id = "Maykeye/TinyLLama-v0"
     sequence_length = 256

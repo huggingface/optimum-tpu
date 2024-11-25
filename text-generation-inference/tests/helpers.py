@@ -1,6 +1,5 @@
 import os
 
-import pytest
 from text_generation_server.pb.generate_pb2 import (
     NextTokenChooserParameters,
     Request,
@@ -8,12 +7,6 @@ from text_generation_server.pb.generate_pb2 import (
 )
 
 from optimum.tpu.model import fetch_model
-
-
-def skip_if_jetstream_pytorch_enabled(func):
-    reason = "Skipping because Jetstream PyTorch is enabled"
-    jetstream_disabled = os.getenv("JETSTREAM_PT_DISABLE") != 1
-    return pytest.mark.skipif(jetstream_disabled, reason=reason)(func)
 
 
 def prepare_model(model_id, sequence_length):

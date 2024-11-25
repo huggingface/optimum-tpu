@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+from optimum.tpu import jetstream_pt_available
+
 
 # See https://stackoverflow.com/a/61193490/217945 for run_slow
 def pytest_addoption(parser):
@@ -33,3 +35,14 @@ def quantization_jetstream_int8():
     # Clean up
     os.environ.clear()
     os.environ.update(old_environ)
+
+
+def pytest_runtest_setup(item):
+    marker_names = [marker.name for marker in item.own_markers]
+    jetstream_pt_enabled = jetstream_pt_available()
+    # Skip tests that require torch xla but not jetstream
+    if "torch_xla" in marker_names and "jetstream" not in marker_names:
+        if jetstream_pt_enabled:
+            pytest.skip("Jetstream PyTorch must be disabled")
+    elif "jetstream" in marker_names and not jetstream_pt_enabled:
+        pytest.skip("Jetstream PyTorch must be enabled")

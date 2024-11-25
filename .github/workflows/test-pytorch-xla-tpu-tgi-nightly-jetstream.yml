@@ -34,28 +34,28 @@ jobs:
       - name: Run TGI Jetstream Pytorch - Llama
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -k "slow and Llama"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -m jetstream -k "slow and Llama"
       - name: Run TGI Jetstream Pytorch - Gemma
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -k "slow and gemma"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -m jetstream -k "slow and gemma"
       - name: Run TGI Jetstream Pytorch - Mixtral greedy
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -k "slow and Mixtral and greedy"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream.py --runslow -m jetstream -k "slow and Mixtral and greedy"
       - name: Run TGI Jetstream Pytorch - Quantization Mixtral
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -k "slow and Mixtral"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -m jetstream -k "slow and Mixtral"
       - name: Run TGI Jetstream Pytorch - Quantization Llama-3 8B
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -k "slow and Llama-3-8B"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -m jetstream -k "slow and Llama-3-8B"
       - name: Run TGI Jetstream Pytorch - Quantization Llama 3 70B
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -k "slow and Llama-3-70B"
+            pytest -sv text-generation-inference/tests/test_decode_jetstream_quant.py --runslow -m jetstream -k "slow and Llama-3-70B"
       - name: Run TGI Jetstream Pytorch - Other tests
         run: |
           python -m \
-            pytest -sv text-generation-inference/tests --runslow -k "jetstream and not decode and not quant"
+            pytest -sv text-generation-inference/tests --runslow -m jetstream -k "not decode"

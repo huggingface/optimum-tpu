@@ -1,9 +1,12 @@
-from helpers import create_request, prepare_model, skip_if_jetstream_pytorch_enabled
+import pytest
+from helpers import create_request, prepare_model
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 
 
-def _test_prefill_truncate():
+@pytest.mark.jetstream
+@pytest.mark.torch_xla
+def test_prefill_truncate():
     model_id = "Maykeye/TinyLLama-v0"
     sequence_length = 1024
 
@@ -32,12 +35,3 @@ def _test_prefill_truncate():
     assert len(generations) == 1
     assert generations[0].tokens.ids == [266]
     assert generations[0].tokens.texts == [" the"]
-
-
-def test_prefill_truncate_jetstream():
-    _test_prefill_truncate()
-
-
-@skip_if_jetstream_pytorch_enabled
-def test_prefill_truncate():
-    _test_prefill_truncate()

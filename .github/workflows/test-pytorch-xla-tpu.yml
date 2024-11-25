@@ -25,6 +25,7 @@ jobs:
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
+      JETSTREAM_PT_DISABLE: 1 # Disable Jetstream Pytorch tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
