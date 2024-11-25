@@ -139,7 +139,10 @@ def data_volume():
     yield tmpdir.name
     try:
         # Cleanup the temporary directory using sudo as it contains root files created by the container
-        subprocess.run(shlex.split(f"sudo rm -rf {tmpdir.name}"), check=True)
+        try:
+            subprocess.run(shlex.split(f"sudo rm -rf {tmpdir.name}"), check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            subprocess.run(shlex.split(f"rm -rf {tmpdir.name}"), check=True)
     except subprocess.CalledProcessError as e:
         logger.error(f"Error cleaning up temporary directory: {str(e)}")
 
