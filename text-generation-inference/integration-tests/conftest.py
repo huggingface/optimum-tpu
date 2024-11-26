@@ -180,11 +180,11 @@ def launcher(event_loop, data_volume):
             logger.error(f"Error handling existing container: {str(e)}")
 
         env = {
-            "LOG_LEVEL": "debug,text_generation_router,text_generation_launcher=debug",
+            "LOG_LEVEL": "debug",
             "MAX_BATCH_SIZE": "4",
             "SKIP_WARMUP": "1", # TODO: remove this
             "HF_HUB_ENABLE_HF_TRANSFER": "0",
-            "JETSTREAM_PT": "1",
+            "JETSTREAM_PT": "0",
             "MODEL_ID": model_id,
         }
 
