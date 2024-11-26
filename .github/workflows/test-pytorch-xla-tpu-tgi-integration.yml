@@ -18,27 +18,26 @@ jobs:
     runs-on:
       group: gcp-ct5lp-hightpu-8t
     
-    # Set up DinD service
     services:
       docker:
         image: docker:dind
         options: --privileged
 
-    # Main container configuration
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
       options: >-
         --shm-size "16gb"
         --ipc host
         --privileged
-        --network host
         ${{ vars.V5_LITEPOD_8_ENV}}
         -v /mnt/hf_cache:/mnt/hf_cache
+        -e DOCKER_HOST=tcp://docker:2375
 
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      DOCKER_HOST: tcp://docker:2375  # Connect to DinD via TCP
 
     steps:
       - name: Checkout code
