@@ -157,7 +157,7 @@ def launcher(event_loop, data_volume):
         logger.info(f"Starting docker launcher for model {model_id}")
         # TODO: consider finding out how to forward a port in the container instead of leaving it to 80.
         # For now this is necessary because TPU dockers require to run with net=host and privileged mode.
-        port = 8080
+        port = 80
 
         args = ["--env"]
 

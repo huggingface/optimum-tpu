@@ -34,16 +34,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies + Build TGI server
         run: |
-          python -m pip install -r requirements.txt
-          python -m pip install .[tests] -f https://storage.googleapis.com/libtpu-releases/index.html
-          python -m pip install -r text-generation-inference/integration-tests/requirements.txt
-
-      - name: Build TGI server
-        run: |
-          make tgi_server
+          make tgi_docker_integration_test_installs
 
       - name: Run integration tests
         run: |
-          python -m pytest -sv text-generation-inference/integration-tests
+          make tgi_docker_integration_test

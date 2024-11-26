@@ -47,11 +47,10 @@ clean:
 # https://cloud.google.com/kubernetes-engine/docs/how-to/tpus#privileged-mode
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
-	             --build-arg VERSION=$(VERSION) \
-	             --build-arg TGI_VERSION=$(TGI_VERSION) \
-				 --ulimit nofile=100000:100000 \ 
-				 -t huggingface/optimum-tpu:$(VERSION)-tgi . \
-				 --progress=plain
+		--build-arg VERSION=$(VERSION) \
+		--build-arg TGI_VERSION=$(TGI_VERSION) \
+		--ulimit nofile=100000:100000 \
+		-t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
 tpu-tgi-ie:
@@ -107,13 +106,10 @@ tgi_test: test_installs tgi_server
 	                               -exec python -m pip install --force-reinstall {} \;
 	python -m pytest -sv text-generation-inference/tests
 
-tgi_docker_test: tpu-tgi
+tgi_docker_integration_test_installs: test_installs tpu-tgi
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
-	python -m pytest -sv text-generation-inference/integration-tests
 
-tgi_test_integration:
-# python -m pip install -r text-generation-inference/integration-tests/requirements.txt
-	# which python
+tgi_docker_integration_test: 
 	python -m pytest -sv text-generation-inference/integration-tests
 
 # tgi_stop_containers:
