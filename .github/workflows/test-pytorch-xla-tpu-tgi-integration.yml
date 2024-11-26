@@ -17,29 +17,34 @@ jobs:
     name: Run TGI Integration Tests
     runs-on:
       group: gcp-ct5lp-hightpu-8t
-    
+
+    # We don't use DinD service since we need host network for TPU
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
       options: >-
         --shm-size "16gb"
         --ipc host
         --privileged
+        --network host
         ${{ vars.V5_LITEPOD_8_ENV}}
         -v /var/run/docker.sock:/var/run/docker.sock
         -v /mnt/hf_cache:/mnt/hf_cache
-        --add-host=host.docker.internal:host-gateway
-    
+
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
-    
+      DOCKER_VOLUME: /mnt/hf_cache
+      PYTHONUNBUFFERED: 1
+      PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Docker
         run: |
+          # Install Docker using the official method
           apt-get update
           apt-get install -y apt-transport-https ca-certificates curl software-properties-common
           install -m 0755 -d /etc/apt/keyrings
@@ -51,19 +56,23 @@ jobs:
             tee /etc/apt/sources.list.d/docker.list > /dev/null
           apt-get update
           apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+          
+          # Ensure Docker is running and wait for it
           service docker start || true
-          # Wait for Docker to be ready
           timeout 30s bash -c 'until docker info; do sleep 1; done'
-          # Add current user to docker group
-          usermod -aG docker $USER || true
-          # Verify docker is working
-          docker --version
+          
+          # Verify Docker can access the host network (needed for TPU)
+          docker run --rm --network host --privileged hello-world
+          
+          # Show Docker info for debugging
+          docker version
           docker info
-      
+
       - name: Install dependencies + Build TGI server
         run: |
           make tgi_docker_integration_test_installs
 
       - name: Run integration tests
         run: |
-          make tgi_docker_integration_test
+          # Run pytest with increased verbosity and logging
+          python -m pytest -sv text-generation-inference/integration-tests
