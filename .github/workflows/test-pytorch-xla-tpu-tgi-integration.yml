@@ -17,6 +17,8 @@ jobs:
     name: Run TGI Integration Tests
     runs-on:
       group: gcp-ct5lp-hightpu-8t
+    container:
+      image: ubuntu:24.04
 
     env:
       PJRT_DEVICE: TPU
