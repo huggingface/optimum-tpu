@@ -58,4 +58,4 @@ jobs:
 
       - name: Run integration tests
         run: |
-          DOCKER_RUN_ARGS="--network host" make tgi_docker_integration_test
+          make tgi_docker_integration_test
