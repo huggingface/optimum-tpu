@@ -29,8 +29,10 @@ FROM chef AS builder
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
 RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
-    echo "Downloading protoc from: https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP" && \
-    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP && \
+    GDRIVE_FILE_ID="1cUQpKPLhxorKCCd-VrorAorOcmt8a1RL" && \
+    echo "Downloading protoc..." && \
+    (curl -L "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/${PROTOC_ZIP}" -o ${PROTOC_ZIP} || \
+     curl -L "https://drive.google.com/uc?export=download&id=${GDRIVE_FILE_ID}" -o ${PROTOC_ZIP}) && \
     unzip -o $PROTOC_ZIP -d /usr/local bin/protoc && \
     unzip -o $PROTOC_ZIP -d /usr/local 'include/*' && \
     rm -f $PROTOC_ZIP
