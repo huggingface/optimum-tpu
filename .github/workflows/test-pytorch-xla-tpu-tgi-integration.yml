@@ -18,7 +18,6 @@ jobs:
     runs-on:
       group: gcp-ct5lp-hightpu-8t
     
-    # Using socket mount for Docker
     services:
       docker:
         image: docker:dind
@@ -42,15 +41,16 @@ jobs:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      SKIP_PROTOC: 1  # Skip custom protoc installation
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Docker
+      - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y docker.io
+          apt-get install -y docker.io protobuf-compiler libprotobuf-dev
 
       - name: Install dependencies + Build TGI server
         run: |
