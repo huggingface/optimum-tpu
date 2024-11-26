@@ -17,6 +17,7 @@ jobs:
     name: Run TGI Integration Tests
     runs-on:
       group: gcp-ct5lp-hightpu-8t
+
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
