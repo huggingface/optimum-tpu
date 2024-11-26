@@ -36,6 +36,7 @@ jobs:
       PYTHONUNBUFFERED: 1
       PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
       DEBIAN_FRONTEND: noninteractive
+      SKIP_PROTOC: 1
 
     steps:
       - name: Checkout code
@@ -43,76 +44,42 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          # Update package lists
-          apt-get update
-          
-          # Install Docker and other dependencies with retry
+          # Update and install required packages with retry
           for i in {1..3}; do
+            apt-get update && \
             apt-get install -y \
               apt-transport-https \
               ca-certificates \
               curl \
               gnupg \
               lsb-release \
-              unzip \
-              wget \
               protobuf-compiler \
+              libprotobuf-dev \
               docker.io && break || sleep 15
           done
-
-      - name: Configure Docker
-        run: |
-          # Configure Docker daemon for host network mode
+          
+          # Verify protoc installation
+          protoc --version
+          
+          # Configure Docker daemon
           mkdir -p /etc/docker
           echo '{
             "default-network-mode": "host",
             "registry-mirrors": ["https://mirror.gcr.io"]
           }' > /etc/docker/daemon.json
           
-          # Start Docker and wait for it
+          # Start Docker
           service docker start || true
           timeout 30s bash -c 'until docker info; do sleep 1; done'
 
-      - name: Install protoc with retry
+      - name: Install Python dependencies
         run: |
-          PROTOC_VERSION="21.12"
-          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          PROTOC_URL="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
-          
-          # Function to download with retry and timeout
-          download_with_retry() {
-            for i in {1..5}; do
-              echo "Attempt $i to download protoc..."
-              if curl --connect-timeout 10 --max-time 300 -L -O "$1"; then
-                return 0
-              fi
-              sleep 15
-            done
-            return 1
-          }
-          
-          if ! download_with_retry "${PROTOC_URL}"; then
-            echo "Failed to download protoc after multiple attempts"
-            exit 1
-          fi
-          
-          unzip -o "${PROTOC_ZIP}" -d /usr/local bin/protoc
-          unzip -o "${PROTOC_ZIP}" -d /usr/local 'include/*'
-          rm -f "${PROTOC_ZIP}"
-          
-          # Verify installation
-          protoc --version
+          python -m pip install --no-cache-dir \
+            protobuf \
+            grpcio-tools \
+            mypy-protobuf
 
-      - name: Install dependencies + Build TGI server
+      - name: Build and test
         run: |
-          # Add retry mechanism for pip installations
-          for i in {1..3}; do
-            make tgi_docker_integration_test_installs && break || {
-              echo "Attempt $i failed. Waiting before retry..."
-              sleep 15
-            }
-          done
-
-      - name: Run integration tests
-        run: |
+          make tgi_docker_integration_test_installs
           DOCKER_RUN_ARGS="--network host" python -m pytest -sv text-generation-inference/integration-tests
