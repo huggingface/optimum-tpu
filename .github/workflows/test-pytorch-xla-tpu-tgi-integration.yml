@@ -44,19 +44,16 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          # Update and install required packages with retry
-          for i in {1..3}; do
-            apt-get update && \
-            apt-get install -y \
-              apt-transport-https \
-              ca-certificates \
-              curl \
-              gnupg \
-              lsb-release \
-              protobuf-compiler \
-              libprotobuf-dev \
-              docker.io && break || sleep 15
-          done
+          apt-get update
+          apt-get install -y \
+            apt-transport-https \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release \
+            protobuf-compiler \
+            libprotobuf-dev \
+            docker.io
           
           # Verify protoc installation
           protoc --version
