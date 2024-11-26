@@ -27,32 +27,30 @@ jobs:
           --privileged
           -v /var/run/docker.sock:/var/run/docker.sock
 
-    container:
-      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: >-
-        --shm-size "16gb"
-        --ipc host
-        --privileged
-        ${{ vars.V5_LITEPOD_8_ENV}}
-        -v /var/run/docker.sock:/var/run/docker.sock
-        -v /mnt/hf_cache:/mnt/hf_cache
+    # container:
+    #   image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+    #   options: >-
+    #     --shm-size "16gb"
+    #     --ipc host
+    #     --privileged
+    #     ${{ vars.V5_LITEPOD_8_ENV}}
+    #     -v /var/run/docker.sock:/var/run/docker.sock
+    #     -v /mnt/hf_cache:/mnt/hf_cache
 
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
-      SKIP_PROTOC: 1  # Skip custom protoc installation
+      # SKIP_PROTOC: 1  # Skip custom protoc installation
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: | # protobuf-compiler libprotobuf-dev
-          apt-get update
-          apt-get install -y docker.io 
-          
-
+      # - name: Install dependencies
+      #   run: | # protobuf-compiler libprotobuf-dev
+      #     apt-get update
+      #     apt-get install -y docker.io 
       - name: Install dependencies + Build TGI server
         run: |
           make tgi_docker_integration_test_installs
