@@ -32,8 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3 python3-pip python3-venv python-is-python3 protobuf-compiler libprotobuf-dev
-          python -m venv .venv
+          sudo apt-get install -y python3 python3-pip python-is-python3
 
       - name: Install dependencies + Build TGI server
         run: |
