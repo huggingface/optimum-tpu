@@ -35,6 +35,7 @@ jobs:
       DOCKER_VOLUME: /mnt/hf_cache
       PYTHONUNBUFFERED: 1
       PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
       - name: Checkout code
@@ -42,16 +43,21 @@ jobs:
 
       - name: Set up Docker
         run: |
-          # Install Docker using the official method
+          # Install Docker using the Debian repository
           apt-get update
-          apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+          apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+          
+          # Add Docker's official GPG key
           install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-          chmod a+r /etc/apt/keyrings/docker.asc
+          curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg
+          
+          # Set up the Docker repository for Debian
           echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-            tee /etc/apt/sources.list.d/docker.list > /dev/null
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+          
+          # Install Docker
           apt-get update
           apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
 
@@ -61,7 +67,7 @@ jobs:
             "default-network-mode": "host"
           }' > /etc/docker/daemon.json
           
-          # Ensure Docker is running and wait for it
+          # Start Docker and wait for it
           service docker start || true
           timeout 30s bash -c 'until docker info; do sleep 1; done'
           
@@ -75,5 +81,4 @@ jobs:
 
       - name: Run integration tests
         run: |
-          # Add test container to host network explicitly
           DOCKER_RUN_ARGS="--network host" python -m pytest -sv text-generation-inference/integration-tests
