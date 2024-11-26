@@ -2,9 +2,9 @@ name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - "text-generation-inference/**"
+    # branches: [ main ]
+    # paths:
+    #   - "text-generation-inference/**"
   pull_request:
     branches: [ main ]
     paths:
