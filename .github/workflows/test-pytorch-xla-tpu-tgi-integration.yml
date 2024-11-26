@@ -33,6 +33,7 @@ jobs:
         --shm-size "16gb"
         --ipc host
         --privileged
+        --network host
         ${{ vars.V5_LITEPOD_8_ENV}}
         -v /var/run/docker.sock:/var/run/docker.sock
         -v /mnt/hf_cache:/mnt/hf_cache
@@ -41,7 +42,10 @@ jobs:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
-      SKIP_PROTOC: 1  # Skip custom protoc installation
+      DOCKER_VOLUME: /mnt/hf_cache
+      SKIP_PROTOC: 1
+      PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+      PYTHONUNBUFFERED: 1
 
     steps:
       - name: Checkout code
@@ -58,4 +62,4 @@ jobs:
 
       - name: Run integration tests
         run: |
-          make tgi_docker_integration_test
+          DOCKER_RUN_ARGS="--network host" make tgi_docker_integration_test
