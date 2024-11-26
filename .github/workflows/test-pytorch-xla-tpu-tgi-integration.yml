@@ -18,14 +18,12 @@ jobs:
     runs-on:
       group: gcp-ct5lp-hightpu-8t
 
-    # We don't use DinD service since we need host network for TPU
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
       options: >-
         --shm-size "16gb"
         --ipc host
         --privileged
-        --network host
         ${{ vars.V5_LITEPOD_8_ENV}}
         -v /var/run/docker.sock:/var/run/docker.sock
         -v /mnt/hf_cache:/mnt/hf_cache
@@ -56,15 +54,18 @@ jobs:
             tee /etc/apt/sources.list.d/docker.list > /dev/null
           apt-get update
           apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+
+          # Configure Docker daemon for host network mode
+          mkdir -p /etc/docker
+          echo '{
+            "default-network-mode": "host"
+          }' > /etc/docker/daemon.json
           
           # Ensure Docker is running and wait for it
           service docker start || true
           timeout 30s bash -c 'until docker info; do sleep 1; done'
           
-          # Verify Docker can access the host network (needed for TPU)
-          docker run --rm --network host --privileged hello-world
-          
-          # Show Docker info for debugging
+          # Verify Docker installation
           docker version
           docker info
 
@@ -74,5 +75,5 @@ jobs:
 
       - name: Run integration tests
         run: |
-          # Run pytest with increased verbosity and logging
-          python -m pytest -sv text-generation-inference/integration-tests
+          # Add test container to host network explicitly
+          DOCKER_RUN_ARGS="--network host" python -m pytest -sv text-generation-inference/integration-tests
