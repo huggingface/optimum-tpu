@@ -40,5 +40,4 @@ jobs:
 
       - name: Run integration tests
         run: |
-          source .venv/bin/activate
           make tgi_docker_integration_test
