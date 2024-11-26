@@ -47,10 +47,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: Install dependencies
-      #   run: |
-      #     apt-get update
-      #     apt-get install -y docker.io protobuf-compiler libprotobuf-dev
+      - name: Install dependencies
+        run: | # protobuf-compiler libprotobuf-dev
+          apt-get update
+          apt-get install -y docker.io 
+          
 
       - name: Install dependencies + Build TGI server
         run: |
