@@ -41,43 +41,77 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker
+      - name: Install system dependencies
         run: |
-          # Install Docker using the Debian repository
+          # Update package lists
           apt-get update
-          apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
           
-          # Add Docker's official GPG key
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          chmod a+r /etc/apt/keyrings/docker.gpg
-          
-          # Set up the Docker repository for Debian
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          
-          # Install Docker
-          apt-get update
-          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+          # Install Docker and other dependencies with retry
+          for i in {1..3}; do
+            apt-get install -y \
+              apt-transport-https \
+              ca-certificates \
+              curl \
+              gnupg \
+              lsb-release \
+              unzip \
+              wget \
+              protobuf-compiler \
+              docker.io && break || sleep 15
+          done
 
+      - name: Configure Docker
+        run: |
           # Configure Docker daemon for host network mode
           mkdir -p /etc/docker
           echo '{
-            "default-network-mode": "host"
+            "default-network-mode": "host",
+            "registry-mirrors": ["https://mirror.gcr.io"]
           }' > /etc/docker/daemon.json
           
           # Start Docker and wait for it
           service docker start || true
           timeout 30s bash -c 'until docker info; do sleep 1; done'
+
+      - name: Install protoc with retry
+        run: |
+          PROTOC_VERSION="21.12"
+          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          PROTOC_URL="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
           
-          # Verify Docker installation
-          docker version
-          docker info
+          # Function to download with retry and timeout
+          download_with_retry() {
+            for i in {1..5}; do
+              echo "Attempt $i to download protoc..."
+              if curl --connect-timeout 10 --max-time 300 -L -O "$1"; then
+                return 0
+              fi
+              sleep 15
+            done
+            return 1
+          }
+          
+          if ! download_with_retry "${PROTOC_URL}"; then
+            echo "Failed to download protoc after multiple attempts"
+            exit 1
+          fi
+          
+          unzip -o "${PROTOC_ZIP}" -d /usr/local bin/protoc
+          unzip -o "${PROTOC_ZIP}" -d /usr/local 'include/*'
+          rm -f "${PROTOC_ZIP}"
+          
+          # Verify installation
+          protoc --version
 
       - name: Install dependencies + Build TGI server
         run: |
-          make tgi_docker_integration_test_installs
+          # Add retry mechanism for pip installations
+          for i in {1..3}; do
+            make tgi_docker_integration_test_installs && break || {
+              echo "Attempt $i failed. Waiting before retry..."
+              sleep 15
+            }
+          done
 
       - name: Run integration tests
         run: |
