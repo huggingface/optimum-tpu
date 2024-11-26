@@ -2,9 +2,9 @@ name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
   push:
-    # branches: [ main ]
-    # paths:
-    #   - "text-generation-inference/**"
+    branches: [ main ]
+    paths:
+      - "text-generation-inference/**"
   pull_request:
     branches: [ main ]
     paths:
@@ -21,11 +21,9 @@ jobs:
     runs-on:
       group: gcp-ct5lp-hightpu-8t
     
-    # Set up Docker-in-Docker service
     services:
       docker:
         image: docker:dind
-        privileged: true
         options: >-
           --privileged
           --gpus all
