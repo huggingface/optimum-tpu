@@ -25,7 +25,7 @@ jobs:
       docker:
         image: docker:dind
         options: >-
-          # --privileged
+          --privileged
           --gpus all
           -v /var/run/docker.sock:/var/run/docker.sock
           -v /mnt/hf_cache:/mnt/hf_cache
