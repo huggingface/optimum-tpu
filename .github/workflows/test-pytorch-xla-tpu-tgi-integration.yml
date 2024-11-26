@@ -9,7 +9,6 @@ on:
     branches: [ main ]
     paths:
       - "text-generation-inference/**"
-  # Allow manual triggering
   workflow_dispatch:
 
 concurrency:
@@ -21,19 +20,48 @@ jobs:
     name: Run TGI Integration Tests
     runs-on:
       group: gcp-ct5lp-hightpu-8t
+    
+    # Set up Docker-in-Docker service
+    services:
+      docker:
+        image: docker:dind
+        privileged: true
+        options: >-
+          --privileged
+          --gpus all
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v /mnt/hf_cache:/mnt/hf_cache
+        env:
+          DOCKER_TLS_CERTDIR: ""
+    
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
+      options: >-
+        --shm-size "16gb"
+        --ipc host
+        --privileged
+        ${{ vars.V5_LITEPOD_8_ENV}}
+        -v /var/run/docker.sock:/var/run/docker.sock
+        -v /mnt/hf_cache:/mnt/hf_cache
     
     env:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
-
+      DOCKER_HOST: tcp://docker:2375
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker
+        run: |
+          apt-get update
+          apt-get install -y docker.io
+          service docker start
+          # Wait for Docker to be ready
+          timeout 30s bash -c 'until docker info; do sleep 1; done'
+      
       - name: Install dependencies + Build TGI server
         run: |
           make tgi_docker_integration_test_installs
