@@ -22,6 +22,7 @@ from text_generation.types import Response
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 600))
 
 # Configure logging
 logging.basicConfig(
@@ -61,7 +62,7 @@ def stream_container_logs(container):
 
 class LauncherHandle:
     def __init__(self, port: int):
-        self.client = AsyncClient(f"http://localhost:{port}", timeout=600)
+        self.client = AsyncClient(f"http://localhost:{port}", timeout=REQUEST_TIMEOUT)
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def _inner_health(self):

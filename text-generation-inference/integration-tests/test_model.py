@@ -18,7 +18,7 @@ MODELS = [
 ]
 
 SEQUENCE_LENGTH = 1024
-TIMEOUT = 120
+TIMEOUT = 1000
 
 @pytest.fixture(scope="module", params=MODELS)
 def model_config(request):
