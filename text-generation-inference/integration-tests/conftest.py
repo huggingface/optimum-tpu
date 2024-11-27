@@ -213,7 +213,7 @@ def launcher(event_loop, data_volume):
                 auto_remove=False,
                 detach=True,
                 volumes=volumes,
-                shm_size="1G",
+                shm_size="16G",
                 privileged=True,
                 network_mode="host",
             )
