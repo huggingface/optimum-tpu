@@ -23,6 +23,9 @@ DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 600))
+V5_LITEPOD_8_ENV = os.getenv("V5_LITEPOD_8_ENV", None)
+
+print(f"V5_LITEPOD_8_ENV: {V5_LITEPOD_8_ENV}")
 
 # Configure logging
 logging.basicConfig(
@@ -204,12 +207,19 @@ def launcher(event_loop, data_volume):
             logger.debug(f"Creating container with image {DOCKER_IMAGE}")
             logger.debug(f"Container environment: {env}")
             logger.debug(f"Container volumes: {volumes}")
-            
+             
+            # Parse V5_LITEPOD_8_ENV string into environment variables
+            v5_env_litepod_8 = {}
+            if V5_LITEPOD_8_ENV:
+                env_pairs = [arg.replace("--env ", "") for arg in V5_LITEPOD_8_ENV.split() if arg.startswith("--env ")]
+                for env_var in env_pairs:
+                    v5_env_litepod_8[env_var] = V5_LITEPOD_8_ENV
+
             container = client.containers.run(
                 DOCKER_IMAGE,
                 command=args,
                 name=container_name,
-                environment=env,
+                environment={**env, **v5_env_litepod_8},
                 auto_remove=False,
                 detach=True,
                 volumes=volumes,

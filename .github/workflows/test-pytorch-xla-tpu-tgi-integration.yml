@@ -22,6 +22,7 @@ jobs:
       PJRT_DEVICE: TPU
       HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
       HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      V5_LITEPOD_8_ENV: ${{ vars.V5_LITEPOD_8_ENV}}
 
     steps:
       - name: Checkout code
