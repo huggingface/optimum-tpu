@@ -39,12 +39,13 @@ COPY text-generation-inference/docker/check-network.sh /usr/local/bin/check-netw
 RUN chmod +x /usr/local/bin/check-network
 RUN check-network
 
-ENV PROTOC_ZIP=protoc-21.12-linux-x86_64.zip
-RUN echo "Downloading protoc..."
-RUN curl -v -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP
-RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-RUN unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
-RUN rm -f $PROTOC_ZIP
+RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
+    curl --max-time 60 -sL \
+    https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP \
+    -o $PROTOC_ZIP && \
+    unzip -o $PROTOC_ZIP -d /usr/local bin/protoc && \
+    unzip -o $PROTOC_ZIP -d /usr/local 'include/*' && \
+    rm -f $PROTOC_ZIP
 
 COPY --from=planner /usr/src/recipe.json recipe.json
 RUN cargo chef cook --profile release-opt --recipe-path recipe.json
