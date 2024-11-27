@@ -35,7 +35,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     iputils-ping \
     curl \
     dnsutils
-COPY check-network.sh /usr/local/bin/check-network
+COPY text-generation-inference/docker/check-network.sh /usr/local/bin/check-network
 RUN chmod +x /usr/local/bin/check-network
 RUN check-network
 
