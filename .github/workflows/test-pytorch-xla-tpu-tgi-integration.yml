@@ -17,8 +17,9 @@ jobs:
     name: Run TGI Integration Tests
     runs-on:
       group: gcp-ct5lp-hightpu-8t
-    # container:
-    #   image: ubuntu:24.04
+    container:
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+      options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
 
     env:
       PJRT_DEVICE: TPU
@@ -32,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3 python3-pip python-is-python3
+          sudo apt-get install -y docker.io
 
       - name: Install dependencies + Build TGI server
         run: |
