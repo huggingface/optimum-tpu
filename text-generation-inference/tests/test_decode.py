@@ -3,6 +3,9 @@ import pytest
 from decode_tests_utils import DecodeTestParams, decode_single_test
 
 
+# All tests in this file are for torch xla
+pytestmark = pytest.mark.torch_xla
+
 @pytest.mark.parametrize("params",
     [
         DecodeTestParams(
@@ -20,6 +23,7 @@ from decode_tests_utils import DecodeTestParams, decode_single_test
 )
 def test_decode_single(params):
     decode_single_test(params)
+
 
 @pytest.mark.slow
 @pytest.mark.parametrize("params",

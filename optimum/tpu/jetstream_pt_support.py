@@ -8,9 +8,9 @@ def jetstream_pt_available() -> bool:
     """Check if the necessary imports to use jetstream_pt are available.
     """
     try:
-        # For now Jetstream Pytorch is opt-in, it can be enabled with an ENV variable.
-        jetstream_pt_enabled = os.environ.get("JETSTREAM_PT", False) == "1"
-        if not jetstream_pt_enabled:
+        # Jetstream Pytorch is enabled by default, it can be disabled with an ENV variable.
+        jetstream_pt_disabled = os.environ.get("JETSTREAM_PT_DISABLE", False) == "1"
+        if jetstream_pt_disabled:
             return False
         # Torch XLA should not be imported before torch_xla2 to avoid conflicts.
         if 'torch_xla2' not in sys.modules and 'torch_xla.core' in sys.modules:

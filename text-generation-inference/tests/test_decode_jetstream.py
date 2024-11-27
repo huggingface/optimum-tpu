@@ -2,8 +2,9 @@
 import pytest
 from decode_tests_utils import DecodeTestParams, decode_single_test
 
-from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
+# All tests in this file are for jetstream
+pytestmark = pytest.mark.jetstream
 
 @pytest.mark.slow
 @pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
@@ -35,8 +36,6 @@ from optimum.tpu.jetstream_pt_support import jetstream_pt_available
     ids=["Llama-2-7b-hf", "Meta-Llama-3-8B", "gemma-7b", "Mixtral-8x7B"],
 )
 def test_decode_single_jetstream_pytorch_slow(params, do_sample):
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
     params.do_sample = do_sample
     decode_single_test(params)
 
@@ -64,7 +63,5 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
     ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
     params.do_sample = do_sample
     decode_single_test(params)

@@ -1,11 +1,8 @@
-
 import pytest
 from helpers import create_request, prepare_model
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 from tqdm import tqdm
-
-from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
 
 MODEL_ID = "Maykeye/TinyLLama-v0"
@@ -17,43 +14,31 @@ def model_path():
     return prepare_model(MODEL_ID, SEQUENCE_LENGTH)
 
 
-def test_jetstream_info(model_path):
+def _test_info(model_path, expected_device_type):
     """Verify the model info is correctly loaded and check expected results."""
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
     generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=1, max_sequence_length=1)
     info = generator.info
     assert info.requires_padding is True
-    assert info.device_type == "meta"
+    assert info.device_type == expected_device_type
     assert info.window_size == 0
     assert info.speculate == 0
 
 
-@pytest.mark.parametrize(
-    "input_text, token_id, token_text, do_sample",
-    [
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            347,
-            " The",
-            False,
-        ],
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            13,
-            "\n",
-            True,
-        ],
-    ],
-    ids=["greedy", "sample"],
-)
-@pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
-def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
-    """Verify that prefilling a batch with a single request with different sampling techniques.
-    """
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
-    generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
+@pytest.mark.jetstream
+def test_jetstream_info(model_path):
+    _test_info(model_path, "meta")
+
+
+@pytest.mark.torch_xla
+def test_info(model_path):
+    _test_info(model_path, "xla")
+
+
+def _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
+    """Verify that prefilling a batch with a single request with different sampling techniques."""
+    generator = AutoGenerator.from_pretrained(
+        model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH
+    )
     requests = []
     max_new_tokens = 20
     for i in range(batch_size):
@@ -69,53 +54,86 @@ def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_si
     assert len(generations) == batch_size
     for g in generations:
         tokens = g.tokens
-        assert tokens.ids == [token_id]
-        assert tokens.texts == [token_text]
+        if do_sample:
+            assert tokens.ids != [token_id]
+            assert tokens.texts != [token_text]
+        else:
+            assert tokens.ids == [token_id]
+            assert tokens.texts == [token_text]
 
 
-def test_jetstream_prefill_change_sampling(model_path):
-    """Verify changing the sampling strategy between requests in the same batch works as expected.
-    """
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
+@pytest.mark.jetstream
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
+@pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
+def test_jetstream_prefill(do_sample, batch_size, model_path):
+    input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
+    token_id = 347
+    token_text = " The"
+    _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path)
+
+
+@pytest.mark.torch_xla
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
+@pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
+def test_prefill(do_sample, batch_size, model_path):
+    input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
+    token_id = 571
+    token_text = " It"
+    _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path)
+
+
+def _test_prefill_change_sampling(
+    model_path,
+    greedy_expected_token_id,
+):
+    """Verify changing the sampling strategy between requests in the same batch works as expected."""
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
     batch_size = 1
-    greedy_expected_token_id = 347
-    greedy_expected_text = " The"
-    sampling_expected_token_id = 13
-    sampling_expected_text = "\n"
 
-    generator = AutoGenerator.from_pretrained(model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH)
+    generator = AutoGenerator.from_pretrained(
+        model_path, revision="", max_batch_size=batch_size, max_sequence_length=SEQUENCE_LENGTH
+    )
     max_new_tokens = 20
 
-    def check_request(do_sample, expected_token_id, expected_text):
+    def check_request(do_sample, expected_token_id):
         requests = [create_request(id=0, inputs=input_text, do_sample=do_sample, max_new_tokens=max_new_tokens)]
         batch = Batch(id=0, requests=requests, size=batch_size, max_tokens=batch_size * SEQUENCE_LENGTH)
         generations, _ = generator.prefill(batch)
         tokens = generations[0].tokens
-        print(tokens)
-        assert tokens.ids == [expected_token_id]
-        assert tokens.texts == [expected_text]
+        if do_sample:
+            assert tokens.ids != [expected_token_id]
+        else:
+            assert tokens.ids == [expected_token_id]
         generator.clear()
 
     # First request is greedy
-    check_request(False, greedy_expected_token_id, greedy_expected_text)
+    check_request(False, greedy_expected_token_id)
     # Second request is sampling
-    check_request(True, sampling_expected_token_id, sampling_expected_text)
+    check_request(True, greedy_expected_token_id)
     # Third request is greedy again
-    check_request(False, greedy_expected_token_id, greedy_expected_text)
+    check_request(False, greedy_expected_token_id)
 
 
-def test_jetstream_decode_multiple(model_path):
+@pytest.mark.jetstream
+def test_jetstream_prefill_change_sampling(model_path):
+    _test_prefill_change_sampling(model_path, 347)
+
+
+@pytest.mark.torch_xla
+def test_prefill_change_sampling(model_path):
+    _test_prefill_change_sampling(model_path, 571)
+
+
+def _test_continuous_batching_two_requests(model_path):
     """Verify that two requests added to the batch at different generation steps
     generate the same outputs (continuous batching).
     """
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
-    generator = AutoGenerator.from_pretrained(model_path,
-                                             revision="",
-                                             max_batch_size=2,
-                                             max_sequence_length=SEQUENCE_LENGTH)
+    generator = AutoGenerator.from_pretrained(
+        model_path,
+        revision="",
+        max_batch_size=2,
+        max_sequence_length=SEQUENCE_LENGTH,
+    )
     input_text = "Once upon a time"
     max_new_tokens = 20
     # Prefill a single request, remembering the generated token
@@ -177,3 +195,18 @@ def test_jetstream_decode_multiple(model_path):
     assert output.generated_tokens == max_new_tokens
     assert tokens[0] == tokens[1]
     assert output.text == generated_text
+
+
+@pytest.mark.jetstream
+def test_jetstream_decode_multiple(model_path):
+    _test_continuous_batching_two_requests(model_path)
+
+
+"""NOTE: This test does not work on PyTorch/XLA, because of the way
+calculations are done in torch/xla and the effect of KV cache (they produce
+similar outputs, but not identical).
+"""
+@pytest.mark.skip(reason="Test is not supported on PyTorch/XLA")
+@pytest.mark.torch_xla
+def test_decode_multiple(model_path):
+    _test_continuous_batching_two_requests(model_path)

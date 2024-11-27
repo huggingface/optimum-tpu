@@ -1,5 +1,3 @@
-
-
 from time import time
 
 import pytest
@@ -7,12 +5,9 @@ from helpers import create_request, prepare_model
 from text_generation_server.auto_generator import AutoGenerator
 from text_generation_server.pb.generate_pb2 import Batch
 
-from optimum.tpu.jetstream_pt_support import jetstream_pt_available
 
-
+@pytest.mark.jetstream
 def test_warmup_jetstream_pytorch():
-    if not jetstream_pt_available():
-        pytest.skip("Jetstream PyTorch is not available")
     model_id = "Maykeye/TinyLLama-v0"
     sequence_length = 256
 
