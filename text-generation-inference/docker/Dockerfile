@@ -102,7 +102,7 @@ RUN pip install --upgrade pip
 
 # Install HuggingFace packages
 ARG TRANSFORMERS_VERSION='4.41.1'
-ARG ACCELERATE_VERSION='0.27.2'
+ARG ACCELERATE_VERSION='1.1.1'
 ARG SAFETENSORS_VERSION='0.4.2'
 
 # TGI base env
