@@ -32,8 +32,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y docker.io
+          apt-get update -y
+          apt-get install -y docker.io
 
       - name: Install dependencies + Build TGI server
         run: |
