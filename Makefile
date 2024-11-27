@@ -106,7 +106,7 @@ tgi_test: test_installs tgi_server
 	                               -exec python -m pip install --force-reinstall {} \;
 	python -m pytest -sv text-generation-inference/tests
 
-tgi_docker_integration_test_installs: test_installs tpu-tgi
+tgi_docker_integration_test_installs: tpu-tgi test_installs
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
 
 tgi_docker_integration_test: 
