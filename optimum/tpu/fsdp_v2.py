@@ -17,8 +17,6 @@ Utility functions to provide FSDPv2 configuration for TPU training.
 """
 from typing import Any, Dict, List, Union
 
-from transformers.utils import logging
-
 
 PreTrainedModel = Any
 # NOTE: instead of the above, modeling_utils.PreTrainedModel should be used, but since the usage is only for type
@@ -92,15 +90,6 @@ def get_fsdp_training_args(model: PreTrainedModel) -> Dict:
         from .modeling_gemma import GemmaForCausalLM
 
         if isinstance(model, GemmaForCausalLM) or isinstance(model, HFGemmaForCausalLLM):
-            logger = logging.get_logger(__name__)
-            from torch_xla import __version__ as xla_version
-
-            if xla_version == "2.3.0":
-                logger.warning_once(
-                    "Fine-tuning Gemma on Pytorch XLA 2.3.0 might raise some issues. In case of any "
-                    "issues consider using the nightly version, and report the issue on the optimum-tpu "
-                    "GitHub repository: https://github.com/huggingface/optimum-tpu/issues/new."
-                )
             cls_to_wrap = "GemmaDecoderLayer"
             matched_model = True
     elif model_type == "llama":
