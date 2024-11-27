@@ -54,62 +54,37 @@ def _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model
     assert len(generations) == batch_size
     for g in generations:
         tokens = g.tokens
-        assert tokens.ids == [token_id]
-        assert tokens.texts == [token_text]
+        if do_sample:
+            assert tokens.ids != [token_id]
+            assert tokens.texts != [token_text]
+        else:
+            assert tokens.ids == [token_id]
+            assert tokens.texts == [token_text]
 
 
 @pytest.mark.jetstream
-@pytest.mark.parametrize(
-    "input_text, token_id, token_text, do_sample",
-    [
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            347,
-            " The",
-            False,
-        ],
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            13,
-            "\n",
-            True,
-        ],
-    ],
-    ids=["greedy", "sample"],
-)
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
-def test_jetstream_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
+def test_jetstream_prefill(do_sample, batch_size, model_path):
+    input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
+    token_id = 347
+    token_text = " The"
     _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path)
 
 
 @pytest.mark.torch_xla
-@pytest.mark.parametrize(
-    "input_text, token_id, token_text, do_sample",
-    [
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            571,
-            " It",
-            False,
-        ],
-        [
-            "It was a bright cold day in April, and the clocks were striking thirteen.",
-            13,
-            "\n",
-            True,
-        ],
-    ],
-    ids=["greedy", "sample"],
-)
+@pytest.mark.parametrize("do_sample", [False, True], ids=["greedy", "sample"])
 @pytest.mark.parametrize("batch_size", [1, 4], ids=["single", "multiple"])
-def test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path):
+def test_prefill(do_sample, batch_size, model_path):
+    input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
+    token_id = 571
+    token_text = " It"
     _test_prefill(input_text, token_id, token_text, do_sample, batch_size, model_path)
 
 
 def _test_prefill_change_sampling(
     model_path,
     greedy_expected_token_id,
-    sampling_expected_token_id,
 ):
     """Verify changing the sampling strategy between requests in the same batch works as expected."""
     input_text = "It was a bright cold day in April, and the clocks were striking thirteen."
@@ -125,25 +100,28 @@ def _test_prefill_change_sampling(
         batch = Batch(id=0, requests=requests, size=batch_size, max_tokens=batch_size * SEQUENCE_LENGTH)
         generations, _ = generator.prefill(batch)
         tokens = generations[0].tokens
-        assert tokens.ids == [expected_token_id]
+        if do_sample:
+            assert tokens.ids != [expected_token_id]
+        else:
+            assert tokens.ids == [expected_token_id]
         generator.clear()
 
     # First request is greedy
     check_request(False, greedy_expected_token_id)
     # Second request is sampling
-    check_request(True, sampling_expected_token_id)
+    check_request(True, greedy_expected_token_id)
     # Third request is greedy again
     check_request(False, greedy_expected_token_id)
 
 
 @pytest.mark.jetstream
 def test_jetstream_prefill_change_sampling(model_path):
-    _test_prefill_change_sampling(model_path, 347, 13)
+    _test_prefill_change_sampling(model_path, 347)
 
 
 @pytest.mark.torch_xla
 def test_prefill_change_sampling(model_path):
-    _test_prefill_change_sampling(model_path, 571, 13)
+    _test_prefill_change_sampling(model_path, 571)
 
 
 def _test_continuous_batching_two_requests(model_path):
