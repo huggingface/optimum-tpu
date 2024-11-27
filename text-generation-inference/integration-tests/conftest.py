@@ -216,6 +216,7 @@ def launcher(event_loop, data_volume):
                 shm_size="16G",
                 privileged=True,
                 network_mode="host",
+                ipc_mode="host",
             )
             logger.info(f"Container {container_name} started successfully")
 
