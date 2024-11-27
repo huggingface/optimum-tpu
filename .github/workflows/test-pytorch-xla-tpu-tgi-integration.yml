@@ -33,10 +33,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      # - name: Install dependencies
+      #   run: |
+      #     apt-get update -y
+      #     apt-get install -y python3 python3-pip python-is-python3
+
+      - name: Install dependencies (container less)
         run: |
-          apt-get update -y
-          apt-get install -y python3 python3-pip python-is-python3
+          sudo apt-get update -y
+          sudo apt-get install -y python3 python3-pip python-is-python3
 
       # - name: Install dependencies + Build TGI server
       #   run: |
