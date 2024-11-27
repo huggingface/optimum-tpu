@@ -29,12 +29,12 @@ FROM chef AS builder
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
 
-# Debug network connectivity
-RUN apt-get update && apt-get install -y iputils-ping curl && \
-    echo "Testing internet connectivity..." && \
-    ping -c 4 8.8.8.8 && \
-    ping -c 4 github.com && \
-    curl -v https://github.com
+# Copy and prepare network check script
+COPY check-network.sh /usr/local/bin/check-network
+RUN chmod +x /usr/local/bin/check-network
+
+# Run network check before attempting downloads
+RUN check-network
 
 RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
     echo "Downloading protoc..." && \
