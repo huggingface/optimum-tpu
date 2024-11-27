@@ -33,10 +33,15 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y python3 python3-pip python-is-python3
 
-      - name: Install dependencies + Build TGI server
-        run: |
-          make tgi_docker_integration_test_installs
+      # - name: Install dependencies + Build TGI server
+      #   run: |
+      #     make tgi_docker_integration_test_installs
 
-      - name: Run integration tests
+      # - name: Run integration tests
+      #   run: |
+      #     make tgi_docker_integration_test
+
+      - name: Debug GCP metadata
         run: |
-          make tgi_docker_integration_test
+          python -m pip install requests
+          python debugging.py
