@@ -54,4 +54,5 @@ jobs:
 
       - name: Debug XLA
         run: |
+          make test_installs
           python xla_add.py
