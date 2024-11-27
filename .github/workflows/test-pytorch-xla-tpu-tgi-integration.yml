@@ -47,7 +47,11 @@ jobs:
       #     make tgi_docker_integration_test
 
       # this is just a debug step normally tpu should have access to http://metadata.google.internal/computeMetadata/v1
-      - name: Debug GCP metadata
+      # - name: Debug GCP metadata
+      #   run: |
+      #     python -m pip install requests
+      #     python debugging.py
+
+      - name: Debug XLA
         run: |
-          python -m pip install requests
-          python debugging.py
+          python xla_add.py
