@@ -29,11 +29,14 @@ FROM chef AS builder
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
 
-# Copy and prepare network check script
-COPY text-generation-inference/docker/check-network.sh /usr/local/bin/check-network
-RUN chmod +x /usr/local/bin/check-network
 
 # Run network check before attempting downloads
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    iputils-ping \
+    curl \
+    dnsutils
+COPY check-network.sh /usr/local/bin/check-network
+RUN chmod +x /usr/local/bin/check-network
 RUN check-network
 
 RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
