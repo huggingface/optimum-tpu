@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  dind:
+    image: docker:23.0.6-dind
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    volumes:
+      - dind-data:/var/lib/docker
+    ports:
+      - "2375:2375" # Exposes Docker API for the Python container to communicate
+
+  python-runner:
+    image: docker:23.0.6-cli
+    depends_on:
+      - dind
+    environment:
+      - DOCKER_HOST=tcp://dind:2375
+    volumes:
+      - ./python_script:/scripts:ro
+    entrypoint: >
+      sh -c "
+      for i in {1..100}; do
+        if docker info > /dev/null 2>&1; then
+          docker pull python:3.11 &&
+          docker run --rm -v /scripts:/scripts:ro python:3.11 python /scripts/script.py;
+          exit 0;
+        else
+          echo 'Waiting for Docker daemon...';
+          sleep 10;
+        fi;
+      done;
+      echo 'Docker daemon not available, exiting.';
+      exit 1
+      "
+volumes:
+  dind-data:
