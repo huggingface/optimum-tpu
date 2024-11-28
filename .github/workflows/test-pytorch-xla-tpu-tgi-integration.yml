@@ -71,6 +71,11 @@ jobs:
       #     python -m pip install torch~=2.5.0 torch_xla[tpu]~=2.5.0 -f https://storage.googleapis.com/libtpu-releases/index.html
       #     python xla_add.py
 
+      - name: Debug XLA (install dependencies)
+        run: |
+          apt-get update -y
+          apt-get install -y docker.io
+
       - name: Debug XLA (build container)
         run: |
           docker build -t debug-dind debug-dind/
