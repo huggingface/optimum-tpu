@@ -85,7 +85,12 @@ jobs:
 
       - name: Debug XLA (run container)
         run: |
-          docker run --rm debug-dind
+          docker run --rm \
+            --shm-size=16G \
+            --privileged \
+            --network host \
+            --ipc host \
+            debug-dind
 
 
 #     docker run -d --name tgi-tests-${MODEL_ID##*/} \
