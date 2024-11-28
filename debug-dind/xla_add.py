@@ -18,7 +18,7 @@ print(f"Metadata DNS check result: {metadata_exists}")
 # Check metadata server with requests
 try:
     headers = {'Metadata-Flavor': 'Google'}
-    response = requests.get('http://metadata.google.internal/computeMetadata/v1/instance/image', headers=headers)
+    response = requests.get('http://metadata.google.internal/computeMetadata/v1', headers=headers)
 
     print(f"Trying to manually access metadata server: Metadata server status code: {response.status_code}")
     print(f"Trying to manually access metadata server: Metadata server response: {response.text}")
