@@ -76,9 +76,6 @@ jobs:
           apt-get update -y
           apt-get install -y docker.io dnsutils
 
-      # - name: Debug XLA (build container)
-      #   run: |
-      #     docker build -t debug-dind debug-dind/
 
       - name: Check DNS
         run: |
@@ -90,28 +87,28 @@ jobs:
             exit 1
           fi
             
-      - name: Debug DNS
+
+
+      - name: Debug XLA (run container)
         run: |
-          docker run busybox nslookup metadata.google.internal
 
-      # - name: Debug XLA (run container)
-      #   run: |
-
-      #     METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
-      #     echo "Found metadata server IP: ${METADATA_IP}"
+          METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
+          echo "Found metadata server IP: ${METADATA_IP}"
           
-      #     if [ -z "${METADATA_IP}" ]; then
-      #       echo "Error: Could not resolve metadata.google.internal"
-      #       exit 1
-      #     fi
+          if [ -z "${METADATA_IP}" ]; then
+            echo "Error: Could not resolve metadata.google.internal"
+            exit 1
+          fi
 
-      #     docker run --rm \
-      #       --shm-size=16G \
-      #       --privileged \
-      #       --network host \
-      #       --ipc host \
-      #       --add-host "metadata.google.internal:${METADATA_IP}" \
-      #       debug-dind
+
+          docker build -t debug-dind debug-dind/
+          docker run --rm \
+            --shm-size=16G \
+            --privileged \
+            --network host \
+            --ipc host \
+            --add-host "metadata.google.internal:${METADATA_IP}" \
+            debug-dind
 
 
 #     docker run -d --name tgi-tests-${MODEL_ID##*/} \
