@@ -1,0 +1,11 @@
+FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+
+# Install required packages
+RUN apt-get update -y && apt-get install -y docker.io
+
+WORKDIR /workspace
+
+# Copy the inner Dockerfile and application files
+COPY Dockerfile Dockerfile
+COPY xla_add.py xla_add.py
+
