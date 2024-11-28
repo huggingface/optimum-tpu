@@ -93,7 +93,8 @@ jobs:
             --privileged \
             --network host \
             --ipc host \
-            --dns ${METADATA_IP} \
+            --dns-search="." \
+            -v /etc/resolv.conf:/etc/resolv.conf:ro \
             debug-dind
 
 
