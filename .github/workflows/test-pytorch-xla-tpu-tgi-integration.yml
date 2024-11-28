@@ -88,6 +88,9 @@ jobs:
           fi
             
 
+      - name: Debug XLA (build container)
+        run: |
+          docker build -t debug-dind debug-dind/
 
       - name: Debug XLA (run container)
         run: |
@@ -100,8 +103,6 @@ jobs:
             exit 1
           fi
 
-
-          docker build -t debug-dind debug-dind/
           docker run --rm \
             --shm-size=16G \
             --privileged \

@@ -1,7 +1,4 @@
 import socket
-import torch
-import torch_xla
-import torch_xla.core.xla_model as xm
 
 def check_metadata_dns():
     """Check if metadata.google.internal DNS record exists"""
@@ -12,6 +9,14 @@ def check_metadata_dns():
     except socket.gaierror:
         print("Could not resolve metadata.google.internal")
         return False
+
+# Check metadata DNS first
+metadata_exists = check_metadata_dns()
+print(f"Metadata DNS check result: {metadata_exists}")
+
+import torch
+# import torch_xla
+import torch_xla.core.xla_model as xm
 
 def simple_xla_calc():
     # Get XLA device
@@ -29,9 +34,7 @@ def simple_xla_calc():
     
     return result_cpu
 
-# Check metadata DNS first
-metadata_exists = check_metadata_dns()
-print(f"Metadata DNS check result: {metadata_exists}")
+
 
 # Run calculation
 result = simple_xla_calc()
