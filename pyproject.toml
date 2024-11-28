@@ -42,7 +42,7 @@ keywords = [
 ]
 
 dependencies = [
-    "transformers == 4.41.1",
+    "transformers == 4.45.2",
     "torch == 2.4.0",
     "torch-xla[tpu] == 2.4.0",
     'typer == 0.6.1',
@@ -61,10 +61,11 @@ tests = ["pytest", "safetensors"]
 quality = ["black", "ruff", "isort"]
 # Jetstream/Pytorch support is experimental for now, it needs to be installed manually.
 # Pallas is pulled because it will install a compatible version of jax[tpu].
-jetstream-pt = [
-    "jetstream-pt",
-    "torch-xla[pallas] == 2.4.0"
-]
+# pallas and jetstream are not supported before v5e. Therefore, comment out on v4 and earlier
+#jetstream-pt = [
+#    "jetstream-pt",
+#    "torch-xla[pallas] == 2.4.0"
+#]
 
 [project.urls]
 Homepage = "https://hf.co/hardware"
