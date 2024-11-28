@@ -75,7 +75,7 @@ def serve(
     from .server import serve
 
     # Read environment variables forwarded by the launcher
-    max_batch_size = int(os.environ.get("MAX_BATCH_SIZE", "1"))
+    max_batch_size = int(os.environ.get("MAX_BATCH_SIZE", "4"))
     max_total_tokens = int(os.environ.get("MAX_TOTAL_TOKENS", "64"))
 
     # Start the server

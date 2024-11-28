@@ -65,7 +65,7 @@ docker run -p 8080:80 \
        --net=host --privileged \
        -v $(pwd)/data:/data \
        -e HF_TOKEN=${HF_TOKEN} \
-       -e MAX_BATCH_SIZE=1 \
+       -e MAX_BATCH_SIZE=4 \
        -e HF_SEQUENCE_LENGTH=1024 \
        ghcr.io/huggingface/tpu-tgi:latest \
        --model-id mistralai/Mistral-7B-v0.1 \
