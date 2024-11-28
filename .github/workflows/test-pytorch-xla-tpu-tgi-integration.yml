@@ -86,7 +86,18 @@ jobs:
       #       echo "Error: Could not resolve metadata.google.internal"
       #       exit 1
       #     fi
-            
+           
+      - name: Check metadata server
+        run: |
+          response_code=$(curl -s -w "%{http_code}" "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google" -o response.txt)
+          response_text=$(cat response.txt)
+          echo "Metadata server response code: $response_code"
+          echo "Metadata server response text: $response_text"
+          if [ "$response_code" != "200" ]; then
+            echo "Error: Metadata server returned non-200 status code"
+            exit 1
+          fi
+          rm response.txt
 
       - name: Debug XLA (build container)
         run: |
