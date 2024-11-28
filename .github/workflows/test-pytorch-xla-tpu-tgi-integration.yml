@@ -80,6 +80,26 @@ jobs:
         run: |
           docker build -t debug-dind debug-dind/
 
+            
+
+
       - name: Debug XLA (run container)
         run: |
-          docker run --rm -it debug-dind
+          docker run --rm debug-dind
+
+
+#     docker run -d --name tgi-tests-${MODEL_ID##*/} \
+            # --env LOG_LEVEL=debug \
+            # --env MAX_BATCH_SIZE=4 \
+            # --env SKIP_WARMUP=1 \
+            # --env HF_HUB_ENABLE_HF_TRANSFER=0 \
+            # --env JETSTREAM_PT=0 \
+            # --env MODEL_ID=${MODEL_ID} \
+            # --env HF_BATCH_SIZE=4 \
+            # -v ${data_volume}:/data \
+            # --shm-size=16G \
+            # --privileged \
+            # --network host \
+            # --ipc host \
+            # huggingface/optimum-tpu:latest \
+            # --env
