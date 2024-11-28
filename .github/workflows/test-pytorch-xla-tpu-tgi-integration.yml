@@ -90,6 +90,7 @@ jobs:
             --privileged \
             --network host \
             --ipc host \
+            --dns 169.254.169.254 \
             debug-dind
 
 
