@@ -74,7 +74,7 @@ jobs:
       - name: Debug XLA (install dependencies)
         run: |
           apt-get update -y
-          apt-get install -y docker.io
+          apt-get install -y docker.io dnsutils
 
       - name: Debug XLA (build container)
         run: |
@@ -85,12 +85,15 @@ jobs:
 
       - name: Debug XLA (run container)
         run: |
+
+          METADATA_IP=$(nslookup metadata.google.internal | awk '/Address/ { print $2 }' | tail -n1)
+
           docker run --rm \
             --shm-size=16G \
             --privileged \
             --network host \
             --ipc host \
-            --dns 169.254.169.254 \
+            --dns ${METADATA_IP} \
             debug-dind
 
 
