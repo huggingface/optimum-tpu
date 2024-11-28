@@ -5,10 +5,10 @@
 ulimit -l 68719476736
 
 # Hugging Face Hub related
-if [[ -z "${BATCH_SIZE}" ]]; then
-  BATCH_SIZE=2
+if [[ -z "${MAX_BATCH_SIZE}" ]]; then
+  MAX_BATCH_SIZE=4
 fi
-export BATCH_SIZE="${BATCH_SIZE}"
+export MAX_BATCH_SIZE="${MAX_BATCH_SIZE}"
 
 if [[ -z "${JSON_OUTPUT_DISABLE}" ]]; then
   JSON_OUTPUT_DISABLE=--json-output
@@ -33,6 +33,6 @@ export QUANTIZATION="${QUANTIZATION}"
 
 
 exec text-generation-launcher --port 8080 \
-  --max-batch-size ${BATCH_SIZE} \
+  --max-batch-size ${MAX_BATCH_SIZE} \
   ${JSON_OUTPUT_DISABLE} \
   --model-id ${MODEL_ID}

@@ -10,7 +10,7 @@ from transformers.utils import SAFE_WEIGHTS_INDEX_NAME
 
 
 def get_export_kwargs_from_env():
-    batch_size = os.environ.get("HF_BATCH_SIZE", None)
+    batch_size = os.environ.get("MAX_BATCH_SIZE", None)
     if batch_size is not None:
         batch_size = int(batch_size)
     sequence_length = os.environ.get("HF_SEQUENCE_LENGTH", None)

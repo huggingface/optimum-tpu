@@ -109,7 +109,7 @@ def launcher(event_loop, data_volume):
         if HUGGING_FACE_HUB_TOKEN is not None:
             env["HUGGING_FACE_HUB_TOKEN"] = HUGGING_FACE_HUB_TOKEN
 
-        for var in ["HF_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
+        for var in ["MAX_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
             if var in os.environ:
                 env[var] = os.environ[var]
 
