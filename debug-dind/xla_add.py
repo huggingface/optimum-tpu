@@ -1,4 +1,5 @@
 import socket
+import requests
 
 def check_metadata_dns():
     """Check if metadata.google.internal DNS record exists"""
@@ -13,6 +14,20 @@ def check_metadata_dns():
 # Check metadata DNS first
 metadata_exists = check_metadata_dns()
 print(f"Metadata DNS check result: {metadata_exists}")
+
+# Check metadata server with requests
+try:
+    headers = {'Metadata-Flavor': 'Google'}
+    response = requests.get('http://metadata.google.internal/computeMetadata/v1/instance/image', headers=headers)
+
+    print(f"Metadata server status code: {response.status_code}")
+    print(f"Metadata server response: {response.text}")
+    
+    if response.status_code != 200:
+        raise Exception(f"Metadata server returned status code {response.status_code}")
+
+except Exception as e:
+    print(f"Error accessing metadata server: {e}")
 
 import torch
 # import torch_xla
@@ -33,8 +48,6 @@ def simple_xla_calc():
     result_cpu = result.cpu()
     
     return result_cpu
-
-
 
 # Run calculation
 result = simple_xla_calc()
