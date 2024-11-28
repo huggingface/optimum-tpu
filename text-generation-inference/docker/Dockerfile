@@ -103,7 +103,7 @@ RUN pip install --upgrade pip
 # Install HuggingFace packages
 ARG TRANSFORMERS_VERSION='4.46.3'
 ARG ACCELERATE_VERSION='1.1.1'
-ARG SAFETENSORS_VERSION='0.4.2'
+ARG SAFETENSORS_VERSION='0.4.5'
 
 # TGI base env
 ENV HF_HOME=/data \
