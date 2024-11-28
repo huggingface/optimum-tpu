@@ -16,23 +16,23 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
 
 import optimum.tpu.xla_logger as logger
-from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
+from optimum.tpu.modeling import AutoModelForCausalLM
 from optimum.tpu.static_cache_xla import StaticCacheXla
 from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
 
 from .generator_base import Generator
 from .pb.generate_pb2 import (
-    Batch,
-    CachedBatch,
-    FinishReason,
-    GeneratedText,
-    Generation,
-    InfoResponse,
-    NextTokenChooserParameters,
-    Request,
-    StoppingCriteriaParameters,
-    Tokens,
+  Batch,
+  CachedBatch,
+  FinishReason,
+  GeneratedText,
+  Generation,
+  InfoResponse,
+  NextTokenChooserParameters,
+  Request,
+  StoppingCriteriaParameters,
+  Tokens,
 )
 
 
