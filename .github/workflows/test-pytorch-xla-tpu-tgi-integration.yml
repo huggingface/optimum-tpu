@@ -86,15 +86,20 @@ jobs:
       - name: Debug XLA (run container)
         run: |
 
-          METADATA_IP=$(nslookup metadata.google.internal | awk '/Address/ { print $2 }' | tail -n1)
+          METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
+          echo "Found metadata server IP: ${METADATA_IP}"
+          
+          if [ -z "${METADATA_IP}" ]; then
+            echo "Error: Could not resolve metadata.google.internal"
+            exit 1
+          fi
 
           docker run --rm \
             --shm-size=16G \
             --privileged \
             --network host \
             --ipc host \
-            --dns-search="." \
-            -v /etc/resolv.conf:/etc/resolv.conf:ro \
+            --add-host "metadata.google.internal:${METADATA_IP}" \
             debug-dind
 
 
