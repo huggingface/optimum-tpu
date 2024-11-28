@@ -20,14 +20,14 @@ try:
     headers = {'Metadata-Flavor': 'Google'}
     response = requests.get('http://metadata.google.internal/computeMetadata/v1/instance/image', headers=headers)
 
-    print(f"Metadata server status code: {response.status_code}")
-    print(f"Metadata server response: {response.text}")
+    print(f"Trying to manually access metadata server: Metadata server status code: {response.status_code}")
+    print(f"Trying to manually access metadata server: Metadata server response: {response.text}")
     
     if response.status_code != 200:
-        raise Exception(f"Metadata server returned status code {response.status_code}")
+        raise Exception(f"Trying to manually access metadata server: Metadata server returned status code {response.status_code}")
 
 except Exception as e:
-    print(f"Error accessing metadata server: {e}")
+    print(f"Trying to manually access metadata server: Error accessing metadata server: {e}")
 
 import torch
 # import torch_xla
