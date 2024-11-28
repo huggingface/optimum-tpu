@@ -74,12 +74,21 @@ jobs:
       - name: Debug XLA (install dependencies)
         run: |
           apt-get update -y
-          apt-get install -y docker.io
+          apt-get install -y docker.io dnsutils
 
       # - name: Debug XLA (build container)
       #   run: |
       #     docker build -t debug-dind debug-dind/
 
+      - name: Check DNS
+        run: |
+          METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
+          echo "Found metadata server IP: ${METADATA_IP}"
+          
+          if [ -z "${METADATA_IP}" ]; then
+            echo "Error: Could not resolve metadata.google.internal"
+            exit 1
+          fi
             
       - name: Debug DNS
         run: |
