@@ -108,7 +108,7 @@ jobs:
             --privileged \
             --network host \
             --ipc host \
-            --add-host "metadata.google.internal:${METADATA_IP}" \
+            # --add-host "metadata.google.internal:${METADATA_IP}" \
             debug-dind
 
 
