@@ -3,6 +3,8 @@ name: Release
 on:
   release:
     types: [published]
+  # This can be used to allow manually triggering this workflow from the web interface
+  workflow_dispatch:
 
 jobs:
   docker:
@@ -74,7 +76,7 @@ jobs:
             labels: ${{ steps.meta.outputs.labels }}
             build-args: |
               VERSION=${{ steps.version.outputs.version }}
-              TGI_VERSION="v2.4.1"
+              TGI_VERSION=v2.4.1
 
 
         - name: Generate artifact attestation for TGI
@@ -95,7 +97,7 @@ jobs:
             labels: ${{ steps.meta-ie.outputs.labels }}
             build-args: |
               VERSION=${{ steps.version.outputs.version }}
-              TGI_VERSION="v2.4.1"
+              TGI_VERSION=v2.4.1
             target: inference-endpoint
 
 
