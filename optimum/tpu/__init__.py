@@ -14,5 +14,4 @@
 
 from .jetstream_pt_support import jetstream_pt_available # isort:skip
 from .fsdp_v2 import get_fsdp_config, use_fsdp_v2
-from .modeling import AutoModelForCausalLM
 from .version import VERSION, __version__

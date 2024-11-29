@@ -16,23 +16,23 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
 
 import optimum.tpu.xla_logger as logger
-from optimum.tpu import AutoModelForCausalLM
 from optimum.tpu.generation import TokenSelector
+from optimum.tpu.modeling import AutoModelForCausalLM
 from optimum.tpu.static_cache_xla import StaticCacheXla
 from optimum.tpu.xla_mp_comm import AgentMailbox, RootMailbox
 
 from .generator_base import Generator
 from .pb.generate_pb2 import (
-    Batch,
-    CachedBatch,
-    FinishReason,
-    GeneratedText,
-    Generation,
-    InfoResponse,
-    NextTokenChooserParameters,
-    Request,
-    StoppingCriteriaParameters,
-    Tokens,
+  Batch,
+  CachedBatch,
+  FinishReason,
+  GeneratedText,
+  Generation,
+  InfoResponse,
+  NextTokenChooserParameters,
+  Request,
+  StoppingCriteriaParameters,
+  Tokens,
 )
 
 
@@ -314,6 +314,9 @@ class TpuGeneratorSingleThread(Generator):
         tokenizer.truncation_side = "left"
         self.tokenizer = tokenizer
         self.special_tokens = self.tokenizer.all_special_ids
+        # The token selector will use the model's generation mixin internal variables to select the next token, and it
+        # expects special tokens to be initialized in the model.
+        model._prepare_special_tokens(generation_config=model.generation_config, device=model.device)
         # Slots are empty to begin with, they will be populated as new batches arrive
         self.slots = []
         self.batch_id = 0

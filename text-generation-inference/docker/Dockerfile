@@ -8,12 +8,12 @@ RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
 # Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.79-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.80.1-bookworm AS chef
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
-FROM chef as planner
+FROM chef AS planner
 COPY --from=tgi /tgi/Cargo.toml Cargo.toml
 COPY --from=tgi /tgi/Cargo.lock Cargo.lock
 COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
@@ -101,12 +101,12 @@ RUN apt-get update -y \
 RUN pip install --upgrade pip
 
 # Install HuggingFace packages
-ARG TRANSFORMERS_VERSION='4.41.1'
-ARG ACCELERATE_VERSION='0.27.2'
-ARG SAFETENSORS_VERSION='0.4.2'
+ARG TRANSFORMERS_VERSION='4.46.3'
+ARG ACCELERATE_VERSION='1.1.1'
+ARG SAFETENSORS_VERSION='0.4.5'
 
 # TGI base env
-ENV HUGGINGFACE_HUB_CACHE=/data \
+ENV HF_HOME=/data \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
     PORT=80 \
     VERSION=${VERSION}
@@ -134,7 +134,7 @@ RUN pip install dist/text_generation_server*.tar.gz
 
 
 # TPU compatible image for Inference Endpoints
-FROM tpu_base as inference-endpoint
+FROM tpu_base AS inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
@@ -145,4 +145,5 @@ ENTRYPOINT ["./entrypoint.sh"]
 FROM tpu_base
 
 ENTRYPOINT ["text-generation-launcher"]
-CMD ["--json-output"]
+# This is commented out in the original TGI Dockerfile
+# CMD ["--json-output"]
