@@ -37,6 +37,10 @@ jobs:
           METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
           echo "Metadata server IP address: ${METADATA_IP}"
           
+          echo "Fetching instance metadata directory:"
+          curl -s http://metadata.google.internal/computeMetadata/v1/instance/ -H "Metadata-Flavor: Google"
+          echo
+
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google")
           RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google")
           echo "Status code: $STATUS_CODE"
