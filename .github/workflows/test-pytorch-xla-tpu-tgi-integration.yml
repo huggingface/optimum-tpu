@@ -72,10 +72,10 @@ jobs:
 
       # dnsutils
       # sudo dockerd > /var/log/dockerd.log 2>&1
-      - name: Debug XLA (install dependencies)
-        run: |
-          apt-get update -y
-          apt-get install -y docker.io
+      # - name: Debug XLA (install dependencies)
+      #   run: |
+      #     apt-get update -y
+      #     apt-get install -y docker.io
 
       # - name: Debug XLA
       #   run: |
@@ -146,6 +146,13 @@ jobs:
             # --ipc host \
             # huggingface/optimum-tpu:latest \
             # --env
+
+      # SETUP #1
+
+      # - name: Install docker
+      #   run: |
+      #     apt-get update -y
+      #     apt-get install -y docker.io
 
       - name: Debug XLA (run container)
         run: |
