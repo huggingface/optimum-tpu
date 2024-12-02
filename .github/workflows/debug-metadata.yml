@@ -1,0 +1,19 @@
+name: Debug Metadata
+
+on:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Run TGI Integration Tests
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
+    
+    steps:
+      - name: Fetch metadata
+        run: |
+          curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
