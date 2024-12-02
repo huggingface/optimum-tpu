@@ -150,7 +150,5 @@ jobs:
       - name: Debug XLA (run container)
         run: |
           docker run --privileged --net host --shm-size=16G \
-            -it us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
+            us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
             PJRT_DEVICE=TPU python3 -c "import torch_xla.core.xla_model as xm; print('Supported devices:', xm.get_xla_supported_devices())"
-
-      
