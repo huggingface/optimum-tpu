@@ -25,7 +25,7 @@ pytestmark = pytest.mark.jetstream
         DecodeTestParams(
             model_id="google/gemma-7b",
             sequence_length=128,
-            expected_text="\n\nThe time is 1984. The place is Airstrip One, the British",
+            expected_text="\n\nThe year was 1984.\n\nThe place was Oceania.\n\nThe man was",
         ),
         DecodeTestParams(
             model_id="mistralai/Mixtral-8x7B-v0.1",
