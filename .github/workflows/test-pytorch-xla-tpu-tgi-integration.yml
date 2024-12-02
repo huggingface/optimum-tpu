@@ -1,7 +1,7 @@
 name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
-  push:
+  # push:
   pull_request:
     branches: [ main ]
     paths:
