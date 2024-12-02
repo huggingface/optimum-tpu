@@ -14,6 +14,11 @@ jobs:
       group: gcp-ct5lp-hightpu-8t
     
     steps:
-      - name: Fetch metadata
+      - name: Debug metadata
         run: |
+          # Get the IP address of metadata.google.internal using getent
+          METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
+          echo "Metadata server IP address: ${METADATA_IP}"
+          
+          # Try to access the metadata server
           curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
