@@ -152,6 +152,10 @@ jobs:
 
       # SETUP #1
 
+      - name: Fetch metadata
+        run: |
+          curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
+
       - name: Install docker
         run: |
           apt-get update -y
