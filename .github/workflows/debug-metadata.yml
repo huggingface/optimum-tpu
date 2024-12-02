@@ -16,8 +16,8 @@ jobs:
     steps:
       - name: Install DNS utilities
         run: |
-          apt-get update -y
-          apt-get install -y dnsutils iputils-ping curl
+          sudo apt-get update -y
+          sudo apt-get install -y dnsutils iputils-ping curl
 
       - name: Debug metadata
         run: |
