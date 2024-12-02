@@ -17,19 +17,40 @@ jobs:
       - name: Install DNS utilities
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y dnsutils iputils-ping curl
+          sudo apt-get install -y dnsutils iputils-ping curl bind9 bind9utils
+
+      - name: Configure DNS recursion
+        run: |
+          # Backup original configuration
+          sudo cp /etc/bind/named.conf.options /etc/bind/named.conf.options.backup || true
+          
+          # Create new configuration with recursion enabled
+          sudo tee /etc/bind/named.conf.options << EOF
+          options {
+              directory "/var/cache/bind";
+              recursion yes;
+              allow-recursion { any; };
+              dnssec-validation auto;
+              auth-nxdomain no;
+              listen-on { any; };
+              listen-on-v6 { any; };
+              forward only;
+              forwarders {
+                  8.8.8.8;
+                  8.8.4.4;
+              };
+          };
+          EOF
+          
+          # Restart bind9 service
+          sudo systemctl restart bind9 || sudo service bind9 restart
+          
+          # Wait for DNS to be ready
+          sleep 5
 
       - name: Debug metadata
         run: |
-          echo "Checking DNS configuration..."
           echo "nslookup metadata.google.internal"
-          # Configure DNS server with recursion
-          echo "options timeout:1" > /tmp/resolv.conf
-          echo "nameserver 10.211.128.10" >> /tmp/resolv.conf
-          echo "options edns0" >> /tmp/resolv.conf
-          sudo mv /tmp/resolv.conf /etc/resolv.conf
-
-          # Perform DNS lookup
           nslookup metadata.google.internal
 
           echo "ping -c 3 metadata.google.internal"
@@ -39,8 +60,10 @@ jobs:
           ping -c 3 169.254.169.254
 
           echo "Get the IP address of metadata.google.internal using getent"
+          # Get the IP address of metadata.google.internal using getent
           METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
           echo "Metadata server IP address: ${METADATA_IP}"
           
           echo "curl -s http://metadata.google.internal/computeMetadata/v1/instance/image -H Metadata-Flavor: Google"
+          # Try to access the metadata server
           curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
