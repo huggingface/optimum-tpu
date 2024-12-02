@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Debug metadata
         run: |
+          nslookup metadata.google.internal
+
           # Get the IP address of metadata.google.internal using getent
           METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
           echo "Metadata server IP address: ${METADATA_IP}"
