@@ -7,7 +7,6 @@ import sys
 import threading
 import time
 import signal
-import logging
 from tempfile import TemporaryDirectory
 from typing import List
 
@@ -17,18 +16,20 @@ from aiohttp import ClientConnectorError, ClientOSError, ServerDisconnectedError
 from docker.errors import NotFound
 from text_generation import AsyncClient
 from text_generation.types import Response
+from loguru import logger
 
 
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Configure loguru logger
+logger.remove()  # Remove default handler
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="INFO"
 )
-logger = logging.getLogger(__name__)
 
 
 def cleanup_handler(signum, frame):
@@ -62,7 +63,6 @@ def stream_container_logs(container):
 class LauncherHandle:
     def __init__(self, port: int):
         self.client = AsyncClient(f"http://localhost:{port}", timeout=600)
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def _inner_health(self):
         raise NotImplementedError
@@ -70,29 +70,29 @@ class LauncherHandle:
     async def health(self, timeout: int = 60):
         assert timeout > 0
         start_time = time.time()
-        self.logger.info(f"Starting health check with timeout of {timeout}s")
+        logger.info(f"Starting health check with timeout of {timeout}s")
         
         for attempt in range(timeout):
             if not self._inner_health():
-                self.logger.error("Launcher crashed during health check")
+                logger.error("Launcher crashed during health check")
                 raise RuntimeError("Launcher crashed")
 
             try:
                 await self.client.generate("test")
                 elapsed = time.time() - start_time
-                self.logger.info(f"Health check passed after {elapsed:.1f}s")
+                logger.info(f"Health check passed after {elapsed:.1f}s")
                 return
             except (ClientConnectorError, ClientOSError, ServerDisconnectedError) as e:
                 if attempt == timeout - 1:
-                    self.logger.error(f"Health check failed after {timeout}s: {str(e)}")
+                    logger.error(f"Health check failed after {timeout}s: {str(e)}")
                     raise RuntimeError(f"Health check failed: {str(e)}")
-                self.logger.debug(f"Connection attempt {attempt+1}/{timeout} failed: {str(e)}")
+                logger.debug(f"Connection attempt {attempt+1}/{timeout} failed: {str(e)}")
                 time.sleep(1)
             except Exception as e:
-                self.logger.error(f"Unexpected error during health check: {str(e)}")
+                logger.error(f"Unexpected error during health check: {str(e)}")
                 # Get full traceback for debugging
                 import traceback
-                self.logger.error(f"Full traceback:\n{traceback.format_exc()}")
+                logger.error(f"Full traceback:\n{traceback.format_exc()}")
                 raise
 
 
@@ -107,13 +107,13 @@ class ContainerLauncherHandle(LauncherHandle):
             container = self.docker_client.containers.get(self.container_name)
             status = container.status
             if status not in ["running", "created"]:
-                self.logger.warning(f"Container status is {status}")
+                logger.warning(f"Container status is {status}")
                 # Get container logs for debugging
                 logs = container.logs().decode("utf-8")
-                self.logger.debug(f"Container logs:\n{logs}")
+                logger.debug(f"Container logs:\n{logs}")
             return status in ["running", "created"]
         except Exception as e:
-            self.logger.error(f"Error checking container health: {str(e)}")
+            logger.error(f"Error checking container health: {str(e)}")
             return False
 
 
