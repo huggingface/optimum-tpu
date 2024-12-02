@@ -17,36 +17,19 @@ jobs:
       - name: Install DNS utilities
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y dnsutils iputils-ping curl bind9 bind9utils
+          sudo apt-get install -y dnsutils iputils-ping curl resolvconf
 
-      - name: Configure DNS recursion
+      - name: Configure DNS resolution
         run: |
-          # Backup original configuration
-          sudo cp /etc/bind/named.conf.options /etc/bind/named.conf.options.backup || true
-          
-          # Create new configuration with recursion enabled
-          sudo tee /etc/bind/named.conf.options << EOF
-          options {
-              directory "/var/cache/bind";
-              recursion yes;
-              allow-recursion { any; };
-              dnssec-validation auto;
-              auth-nxdomain no;
-              listen-on { any; };
-              listen-on-v6 { any; };
-              forward only;
-              forwarders {
-                  8.8.8.8;
-                  8.8.4.4;
-              };
-          };
+          # Configure resolvconf to use Google DNS
+          sudo tee /etc/resolv.conf << EOF
+          nameserver 8.8.8.8
+          nameserver 8.8.4.4
+          search google.internal
           EOF
           
-          # Restart bind9 service
-          sudo systemctl restart bind9 || sudo service bind9 restart
-          
-          # Wait for DNS to be ready
-          sleep 5
+          # Make resolv.conf immutable to prevent automatic updates
+          sudo chattr +i /etc/resolv.conf
 
       - name: Debug metadata
         run: |
