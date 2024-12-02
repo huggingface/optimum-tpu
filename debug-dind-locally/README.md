@@ -94,3 +94,32 @@ docker run \
       # Test XLA device support
       python3 -c "import torch_xla.core.xla_model as xm; print(\"Supported devices:\", xm.get_xla_supported_devices())"
   '
+
+
+
+SETUP #1
+
+docker run --privileged --net host --shm-size=16G \
+  --hostname outer-container \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --ipc host \
+  --privileged \
+  --shm-size=16G \
+  -it us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm /bin/bash
+
+apt-get install -y docker.io
+
+docker run \
+  --privileged \
+  --ipc host \
+  --shm-size=16G \
+  --hostname inner-container \
+  -e PJRT_DEVICE=TPU \
+  us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
+  bash -c '
+      echo "Fetching metadata..." && \
+      RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google") && \
+      echo "Metadata response: $RESPONSE" && \
+      python3 -m pip install "torch~=2.4.0" "torch_xla[tpu]~=2.4.0" -f https://storage.googleapis.com/libtpu-releases/index.html && \
+      python3 -c "import torch_xla.core.xla_model as xm; print(\"Supported devices:\", xm.get_xla_supported_devices())"
+  '
