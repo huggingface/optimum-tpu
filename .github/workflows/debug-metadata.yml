@@ -14,9 +14,18 @@ jobs:
       group: gcp-ct5lp-hightpu-8t
     
     steps:
+      - name: Install DNS utilities
+        run: |
+          apt-get update -y
+          apt-get install -y dnsutils iputils-ping curl
+
       - name: Debug metadata
         run: |
           nslookup metadata.google.internal
+
+          ping -c 3 metadata.google.internal
+
+          ping -c 3 169.254.169.254
 
           # Get the IP address of metadata.google.internal using getent
           METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
