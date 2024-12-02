@@ -151,5 +151,6 @@ jobs:
         run: |
           docker run --privileged --net host --shm-size=16G \
             -e PJRT_DEVICE=TPU \
+            -v /var/run/docker.sock:/var/run/docker.sock \
             us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
             python3 -c "import torch_xla.core.xla_model as xm; print('Supported devices:', xm.get_xla_supported_devices())"
