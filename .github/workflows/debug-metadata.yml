@@ -41,8 +41,16 @@ jobs:
           RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google")
           echo "Status code: $STATUS_CODE"
           echo "Metadata response: $RESPONSE"
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Failed to fetch instance image metadata"
+            exit 1
+          fi
 
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/tpu-env" -H "Metadata-Flavor: Google")
           RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/tpu-env" -H "Metadata-Flavor: Google")
           echo "Status code: $STATUS_CODE"
           echo "Metadata response: $RESPONSE"
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Failed to fetch TPU environment metadata"
+            exit 1
+          fi
