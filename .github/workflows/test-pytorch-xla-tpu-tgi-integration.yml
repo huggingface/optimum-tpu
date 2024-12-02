@@ -71,11 +71,11 @@ jobs:
 
 
       # dnsutils
+      # sudo dockerd > /var/log/dockerd.log 2>&1
       - name: Debug XLA (install dependencies)
         run: |
           apt-get update -y
           apt-get install -y docker.io
-          sudo dockerd > /var/log/dockerd.log 2>&1
 
       # - name: Debug XLA
       #   run: |
