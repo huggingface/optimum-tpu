@@ -19,19 +19,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y dnsutils iputils-ping curl
 
-      - name: Configure DNS resolution
-        run: |
-          # Backup the current resolv.conf
-          sudo cp /etc/resolv.conf /etc/resolv.conf.backup
-          
-          # Instead of removing symlink, write directly to the file
-          sudo bash -c 'cat > /etc/resolv.conf << EOF
-          nameserver 169.254.169.254
-          nameserver 8.8.8.8
-          nameserver 8.8.4.4
-          search google.internal
-          options timeout:1
-          EOF'
+    
 
       - name: Debug metadata
         run: |
