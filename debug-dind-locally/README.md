@@ -54,6 +54,9 @@ PJRT_DEVICE=TPU python3 -c "import torch_xla.core.xla_model as xm; print(f'Avail
 docker run --privileged --net host --shm-size=16G \
   --hostname outer-container \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  --ipc host \
+  --privileged \
+  --shm-size=16G \
   -it docker:dind sh
 
 <!-- sudo dockerd > /var/log/dockerd.log 2>&1 & -->
@@ -62,6 +65,10 @@ docker run --privileged --net host --shm-size=16G \
 docker run --privileged --net host --shm-size=16G \
  --hostname inner-container \
  -e PJRT_DEVICE=TPU \
+ -privileged \
+  --net host \
+  --shm-size=16G \
+
  us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
  python3 -c "import torch_xla.core.xla_model as xm; print('Supported devices:', xm.get_xla_supported_devices())"
 
@@ -75,7 +82,7 @@ docker run --privileged --net host --shm-size=16G \
 
 docker run \
   --privileged \
-  --net host \
+  --ipc host \
   --shm-size=16G \
   --hostname inner-container \
   -e PJRT_DEVICE=TPU \

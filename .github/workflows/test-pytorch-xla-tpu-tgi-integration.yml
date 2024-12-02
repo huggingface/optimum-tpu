@@ -24,8 +24,11 @@ jobs:
     # container:
     #     image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
     #     options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
+    # container:
+    #     image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+    #     options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -v /var/run/docker.sock:/var/run/docker.sock
     container:
-        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+        image: docker:dind
         options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -v /var/run/docker.sock:/var/run/docker.sock
 
     env:
@@ -149,14 +152,20 @@ jobs:
 
       # SETUP #1
 
-      - name: Install docker
-        run: |
-          apt-get update -y
-          apt-get install -y docker.io
+      # - name: Install docker
+      #   run: |
+      #     apt-get update -y
+      #     apt-get install -y docker.io
 
       - name: Debug XLA (run container)
         run: |
-          docker run --privileged --net host --shm-size=16G --ipc host \
+          docker run \
+            --privileged \
+            --ipc host \
+            --shm-size=16G \
             -e PJRT_DEVICE=TPU \
             us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
-            python3 -c "import torch_xla.core.xla_model as xm; print('Supported devices:', xm.get_xla_supported_devices())"
+            bash -c '
+                python3 -m pip install "torch~=2.4.0" "torch_xla[tpu]~=2.4.0" -f https://storage.googleapis.com/libtpu-releases/index.html && \
+                python3 -c "import torch_xla.core.xla_model as xm; print(\"Supported devices:\", xm.get_xla_supported_devices())"
+            '
