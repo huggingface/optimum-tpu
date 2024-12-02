@@ -39,7 +39,10 @@ jobs:
           
           echo "curl -s http://metadata.google.internal/computeMetadata/v1/instance/image -H Metadata-Flavor: Google"
           # Try to access the metadata server
-          curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
+          RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google")
+          echo "Metadata response: $RESPONSE"
 
 
-          curl "http://metadata.google.internal/computeMetadata/v1/instance/attributes/tpu-env" -H "Metadata-Flavor: Google"
+          echo "curl -s http://metadata.google.internal/computeMetadata/v1/instance/attributes/tpu-env -H Metadata-Flavor: Google"
+          RESPONSE=$(curl -s "http://metadata.google.internal/computeMetadata/v1/instance/attributes/tpu-env" -H "Metadata-Flavor: Google")
+          echo "Metadata response: $RESPONSE"
