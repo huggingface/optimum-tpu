@@ -24,17 +24,14 @@ jobs:
           # Backup the current resolv.conf
           sudo cp /etc/resolv.conf /etc/resolv.conf.backup
           
-          # Remove the symlink if it exists
-          sudo rm -f /etc/resolv.conf
-          
-          # Create new resolv.conf
-          sudo tee /etc/resolv.conf << EOF
+          # Instead of removing symlink, write directly to the file
+          sudo bash -c 'cat > /etc/resolv.conf << EOF
           nameserver 169.254.169.254
           nameserver 8.8.8.8
           nameserver 8.8.4.4
           search google.internal
           options timeout:1
-          EOF
+          EOF'
 
       - name: Debug metadata
         run: |
