@@ -156,10 +156,10 @@ jobs:
         run: |
           curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
 
-      - name: Install docker
-        run: |
-          apt-get update -y
-          apt-get install -y docker.io
+      # - name: Install docker
+      #   run: |
+      #     apt-get update -y
+      #     apt-get install -y docker.io
 
       - name: Debug XLA (run container)
         run: |
