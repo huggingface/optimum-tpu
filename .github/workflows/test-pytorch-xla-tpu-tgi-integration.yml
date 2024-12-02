@@ -24,9 +24,9 @@ jobs:
     # container:
     #     image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
     #     options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
-    # container:
-    #     image: docker:dind
-    #     options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache
+    container:
+        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+        options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -v /var/run/docker.sock:/var/run/docker.sock \
 
     env:
       PJRT_DEVICE: TPU
@@ -70,11 +70,12 @@ jobs:
 
 
 
-
-      # - name: Debug XLA (install dependencies)
-      #   run: |
-      #     apt-get update -y
-      #     apt-get install -y docker.io dnsutils
+      # dnsutils
+      - name: Debug XLA (install dependencies)
+        run: |
+          apt-get update -y
+          apt-get install -y docker.io
+          sudo dockerd > /var/log/dockerd.log 2>&1
 
       # - name: Debug XLA
       #   run: |
@@ -104,12 +105,12 @@ jobs:
       #     fi
       #     rm response.txt
 
-      - name: Debug XLA (build container)
-        run: |
-          docker build -t debug-dind debug-dind/
+      # - name: Debug XLA (build container)
+      #   run: |
+      #     docker build -t debug-dind debug-dind/
 
-      - name: Debug XLA (run container)
-        run: |
+      # - name: Debug XLA (run container)
+      #   run: |
 
           # METADATA_IP=$(getent hosts metadata.google.internal | awk '{ print $1 }')
           # echo "Found metadata server IP: ${METADATA_IP}"
@@ -119,12 +120,12 @@ jobs:
           #   exit 1
           # fi
 
-          docker run --rm \
-            --shm-size=16G \
-            --privileged \
-            --network host \
-            --ipc host \
-            debug-dind
+          # docker run --rm \
+          #   --shm-size=16G \
+          #   --privileged \
+          #   --network host \
+          #   --ipc host \
+          #   debug-dind
 
           # --add-host "metadata.google.internal:${METADATA_IP}" \
 
@@ -145,3 +146,11 @@ jobs:
             # --ipc host \
             # huggingface/optimum-tpu:latest \
             # --env
+
+      - name: Debug XLA (run container)
+        run: |
+          docker run --privileged --net host --shm-size=16G \
+            -it us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm \
+            PJRT_DEVICE=TPU python3 -c "import torch_xla.core.xla_model as xm; print('Supported devices:', xm.get_xla_supported_devices())"
+
+      
