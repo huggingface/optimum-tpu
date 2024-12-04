@@ -9,7 +9,7 @@ jobs:
     runs-on: gcp-ct5lp-hightpu-8t-usc1-public-211
     container:
       image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
-      options: ${{ vars.V5_LITEPOD_8_ENV }} --shm-size "16gb" --privileged --ipc host -v /mnt/hf_cache:/mnt/cache/
+      options: ${{ vars.V5_LITEPOD_8_ENV }} --shm-size "16gb" --privileged --ipc host --network=host -v /mnt/hf_cache:/mnt/cache/
     env:
       PJRT_DEVICE: TPU
     steps:
@@ -23,6 +23,7 @@ jobs:
             --privileged \
             --ipc host \
             --shm-size=16G \
+            --network=host \
             -v /mnt/hf_cache:/mnt/cache/ \
             -e PJRT_DEVICE=TPU \
             us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526 \
