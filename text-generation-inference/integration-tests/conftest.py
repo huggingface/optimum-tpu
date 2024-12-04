@@ -146,16 +146,6 @@ def launcher(data_volume):
         logger.info(f"Starting docker launcher for model {model_id}")
         port = 8080
 
-        args = [
-            "--max-input-length", "512",
-            "--max-total-tokens", "1024",
-            "--max-batch-prefill-tokens", "512",
-            "--max-batch-total-tokens", "1024"
-        ]
-
-        if trust_remote_code:
-            args.append("--trust-remote-code")
-
         client = docker.from_env()
 
         container_name = f"tgi-tests-{model_id.split('/')[-1]}"
@@ -171,6 +161,11 @@ def launcher(data_volume):
             logger.error(f"Error handling existing container: {str(e)}")
 
         model_name = next(name for name, cfg in MODEL_CONFIGS.items() if cfg["model_id"] == model_id)
+
+        args = MODEL_CONFIGS[model_name]["args"].copy()
+        if trust_remote_code:
+            args.append("--trust-remote-code")
+
         env = MODEL_CONFIGS[model_name]["env_config"].copy()
 
         # Add model_id to env

@@ -12,6 +12,12 @@ MODEL_CONFIGS = {
         "expected_greedy_output": "\n\nDeep learning is a new field of research that has been around for a while",
         "expected_sampling_output": 'The fundamental concepts of deep learning are the same as those used to train and understand your first language, or your first set of skills',
         "expected_batch_output": "\n\nDeep learning is a technique that allows you to learn something from a single source",
+        "args": [
+            "--max-input-length", "512",
+            "--max-total-tokens", "1024",
+            "--max-batch-prefill-tokens", "512",
+            "--max-batch-total-tokens", "1024"
+        ],
         "env_config": {
             "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
             "MAX_BATCH_SIZE": "4",
@@ -26,6 +32,12 @@ MODEL_CONFIGS = {
         "expected_greedy_output": "\n\nDeep learning is a subfield of machine learning that allows computers to learn from data",
         "expected_sampling_output": "Deep learning is a subfield of machine learning that focuses on mimicking the structure and function of the human brain",
         "expected_batch_output": "\n\nDeep learning is a subfield of machine learning that allows computers to learn from data",
+        "args": [
+            "--max-input-length", "512",
+            "--max-total-tokens", "1024",
+            "--max-batch-prefill-tokens", "512",
+            "--max-batch-total-tokens", "1024"
+        ],
         "env_config": {
             "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
             "MAX_BATCH_SIZE": "4",
