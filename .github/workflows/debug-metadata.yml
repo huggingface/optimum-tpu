@@ -26,6 +26,4 @@ jobs:
             -v /mnt/hf_cache:/mnt/cache/ \
             -e PJRT_DEVICE=TPU \
             us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla@sha256:8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526 \
-            bash -c '
-                python -c "import torch_xla.core.xla_model as xm; assert xm.xla_device().type == 'xla', 'XLA device not available'"
-            '
+            bash -c "python -c 'import torch_xla.core.xla_model as xm; assert xm.xla_device().type == \"xla\", \"XLA device not available\"'"
