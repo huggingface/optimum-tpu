@@ -166,7 +166,12 @@ def launcher(data_volume):
         if trust_remote_code:
             args.append("--trust-remote-code")
 
-        env = MODEL_CONFIGS[model_name]["env_config"].copy()
+        env = {
+            "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
+            "HF_HUB_ENABLE_HF_TRANSFER": "0"
+        }
+        env.update(MODEL_CONFIGS[model_name]["env_config"].copy())
+
 
         # Add model_id to env
         env["MODEL_ID"] = model_id

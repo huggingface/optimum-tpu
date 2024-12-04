@@ -19,9 +19,7 @@ MODEL_CONFIGS = {
             "--max-batch-total-tokens", "1024"
         ],
         "env_config": {
-            "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
             "MAX_BATCH_SIZE": "4",
-            "HF_HUB_ENABLE_HF_TRANSFER": "0",
             "JETSTREAM_PT_DISABLE": "1",
             "SKIP_WARMUP": "1",
         }
@@ -39,9 +37,7 @@ MODEL_CONFIGS = {
             "--max-batch-total-tokens", "1024"
         ],
         "env_config": {
-            "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
             "MAX_BATCH_SIZE": "4",
-            "HF_HUB_ENABLE_HF_TRANSFER": "0",
             "SKIP_WARMUP": "1",
         }
     }
