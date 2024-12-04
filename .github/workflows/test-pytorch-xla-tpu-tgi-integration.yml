@@ -152,14 +152,14 @@ jobs:
 
       # SETUP #1
 
-      - name: Fetch metadata
-        run: |
-          curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
-
-      # - name: Install docker
+      # - name: Fetch metadata
       #   run: |
-      #     apt-get update -y
-      #     apt-get install -y docker.io
+      #     curl "http://metadata.google.internal/computeMetadata/v1/instance/image" -H "Metadata-Flavor: Google"
+
+      - name: Install docker
+        run: |
+          apt-get update -y
+          apt-get install -y docker.io
 
       - name: Debug XLA (run container)
         run: |
