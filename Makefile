@@ -66,7 +66,6 @@ style_check:
 	ruff check .
 
 style:
-	ruff check . --fix
 
 # Utilities to release to PyPi
 build_dist_install_tools:
