@@ -42,12 +42,14 @@ clean:
 	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
+# ulimit nofile=100000:100000 is required for TPUs
+# https://cloud.google.com/kubernetes-engine/docs/how-to/tpus#privileged-mode
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
-				 --ulimit nofile=100000:100000 \
-				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
+	             --ulimit nofile=100000:100000 \
+	             -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
 tpu-tgi-ie:
@@ -64,7 +66,6 @@ style_check:
 	ruff check .
 
 style:
-	ruff check . --fix
 
 # Utilities to release to PyPi
 build_dist_install_tools:
