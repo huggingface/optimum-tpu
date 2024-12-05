@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 
 import jax
 import jax.numpy as jnp
+import torch
 import torch_xla2
 from jetstream.engine import sampling_utils
 from transformers.generation import (
@@ -176,8 +177,9 @@ class TokenSelector:
         """
         # Logits processors is written in pytorch, so parameters are cast to float32 and  converted to pytorch and back
         # to jax with j2t/t2j (that is a bit expensive, it does copies), otherwise some operations are not supported.
-        logits_t = torch_xla2.tensor.j2t(logits.astype(jnp.float32))
-        scores = self.logits_processor(input_ids, logits_t)
+        logits_pt = torch_xla2.tensor.j2t(logits.astype(jnp.float32))
+        input_ids_pt = torch_xla2.tensor.j2t(input_ids).unsqueeze(dim=0).to(torch.int64)
+        scores = self.logits_processor(input_ids_pt, logits_pt)
         scores = torch_xla2.tensor.t2j(scores).to_device(logits.device)
 
         if self.mode == GenerationMode.SAMPLE:

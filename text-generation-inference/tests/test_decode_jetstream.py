@@ -65,3 +65,14 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
 def test_decode_single_jetstream_pytorch(params, do_sample):
     params.do_sample = do_sample
     decode_single_test(params)
+
+
+def test_decode_repetition_penalty_jetstream_pytorch():
+    """Test if the repetition penalty generates something without crashing."""
+    params = DecodeTestParams(
+            model_id="Maykeye/TinyLLama-v0",
+            sequence_length=256,
+            expected_text=" The sun was shining and it was very hot.\nSuddenly, a big wind came and",
+            repetition_penalty=1.2
+        )
+    decode_single_test(params)
