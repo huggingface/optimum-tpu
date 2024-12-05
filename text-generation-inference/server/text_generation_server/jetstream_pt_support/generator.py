@@ -127,11 +127,11 @@ class Slot:
         self._max_new_tokens = self._generation_config.max_new_tokens
         # TODO: stop_sequences, ignore_eos_token
 
-    def reset(self, input_ids: jax.Array, selector: TokenSelector):
+    def reset(self, input_ids: torch.tensor, selector: TokenSelector):
         """Reset the slot for the next generation.
 
         Args:
-            input_ids: (`jax.Array`):
+            input_ids: (torch.tensor):
                 The new input_ids to use to generate the next token.
             selector: (`TokenSelector`):
                 An object implementing the updated token selection logic.
@@ -184,7 +184,7 @@ class Slot:
         Return:
             The corresponding decoded text (if any).
         """
-        self._tokens = jnp.concat([self._tokens, jnp.array([next_token])])
+        self._tokens = torch.concat([self._tokens, torch.tensor([next_token])])
         self._generated_tokens += 1
         next_text = self._decode_next_tokens()
         # Now that a new token has been generated, we can append the previous one to the generated text
@@ -204,7 +204,7 @@ class Slot:
         """
         if len(logits.shape) == 1:
             logits = logits.reshape(1, -1)
-        return self._selector.select(self._tokens, logits)[0]
+        return self._selector.select(self._tokens.unsqueeze(0), logits)[0]
 
     @property
     def stopped(self) -> bool:
@@ -447,7 +447,7 @@ class TpuGeneratorJetStream(Generator):
 
             # Tokenize the inputs
             input_ids, true_lengths = self._token_encode(request.inputs, slot.truncate)
-            truncated_input_ids = input_ids[:true_lengths]
+            truncated_input_ids = torch_xla2.tensor.j2t(input_ids[:true_lengths]).to(torch.int64)
             selector = TokenSelector.create(
                 truncated_input_ids,
                 slot.generation_config,
