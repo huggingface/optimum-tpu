@@ -64,7 +64,7 @@ def test_decode_streaming_jetstream(tokenizer, input_text, generated_text):
     from text_generation_server.jetstream_pt_support.generator import Slot
 
     slot = Slot(0, tokenizer)
-    _test_decode_streaming(slot, "np", tokenizer, input_text, generated_text)
+    _test_decode_streaming(slot, "pt", tokenizer, input_text, generated_text)
 
 @pytest.mark.torch_xla
 def test_decode_streaming(tokenizer, input_text, generated_text):
