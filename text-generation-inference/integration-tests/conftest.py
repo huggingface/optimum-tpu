@@ -115,7 +115,8 @@ class LauncherHandle:
                 if attempt == timeout - 1:
                     logger.error(f"Health check failed after {timeout}s: {str(e)}")
                     raise RuntimeError(f"Health check failed: {str(e)}")
-                logger.debug(f"Connection attempt {attempt+1}/{timeout} failed: {str(e)}")
+                if attempt % 10 == 0:  # Only log every 10th attempt
+                    logger.debug(f"Connection attempt {attempt+1}/{timeout} failed: {str(e)}")
                 time.sleep(1)
             except Exception as e:
                 logger.error(f"Unexpected error during health check: {str(e)}")
@@ -198,7 +199,8 @@ def launcher(data_volume):
 
         env = {
             "LOG_LEVEL": "info,text_generation_router,text_generation_launcher=debug",
-            "HF_HUB_ENABLE_HF_TRANSFER": "0"
+            "HF_HUB_ENABLE_HF_TRANSFER": "0",
+            "PJRT_DEVICE": "TPU"
         }
         env.update(MODEL_CONFIGS[model_name]["env_config"].copy())
 
@@ -211,6 +213,7 @@ def launcher(data_volume):
         # Add TPU environment variables when running in CI
         if V5_LITEPOD_8_ENV:
             logger.info(f"V5_LITEPOD_8_ENV is set, adding specific TPU environment variables for the CI")
+            logger.debug(f"V5_LITEPOD_8_ENV: {V5_LITEPOD_8_ENV}")
             # Validate TPU environment format
             if not validate_ci_tpu_env_format(V5_LITEPOD_8_ENV):
                 raise ValueError("Invalid TPU environment format", V5_LITEPOD_8_ENV)
