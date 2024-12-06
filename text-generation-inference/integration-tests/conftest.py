@@ -23,6 +23,7 @@ from text_generation.types import Response
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
+RUNNING_ON_CI = os.getenv("RUNNING_ON_CI", "false").lower() == "true"
 
 logger.add(
     sys.stderr,
@@ -172,12 +173,30 @@ def launcher(data_volume):
         }
         env.update(MODEL_CONFIGS[model_name]["env_config"].copy())
 
-
         # Add model_id to env
         env["MODEL_ID"] = model_id
 
         if HF_TOKEN is not None:
             env["HF_TOKEN"] = HF_TOKEN
+
+        # Add TPU environment variables when running in CI
+        if RUNNING_ON_CI:
+            print("Running on CI, adding TPU environment variables")
+            env["PJRT_DEVICE"] = "TPU"
+            tpu_env_vars = [
+                "TPU_TOPOLOGY",
+                "TPU_WORKER_ID", 
+                "TPU_SKIP_MDS_QUERY",
+                "TPU_TOPOLOGY_WRAP",
+                "TPU_CHIPS_PER_HOST_BOUNDS",
+                "TPU_ACCELERATOR_TYPE",
+                "TPU_TOPOLOGY_ALT",
+                "TPU_HOST_BOUNDS",
+                "TPU_WORKER_HOSTNAMES"
+            ]
+            for var in tpu_env_vars:
+                if var in os.environ:
+                    env[var] = os.environ[var]
 
         for var in ["MAX_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
             if var in os.environ:

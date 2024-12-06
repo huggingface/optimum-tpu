@@ -1,0 +1,46 @@
+name: Optimum TPU / Test TGI on TPU / Integration Tests
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "text-generation-inference/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Run TGI Integration Tests
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
+
+    container:
+        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+        options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -v /var/run/docker.sock:/var/run/docker.sock
+    
+    env:
+      PJRT_DEVICE: TPU
+      HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
+      HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      V5_LITEPOD_8_ENV: ${{ vars.V5_LITEPOD_8_ENV}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install docker
+        run: |
+          apt-get update -y
+          apt-get install -y docker.io
+    
+      - name: Install dependencies
+        run: |
+          make tpu-tgi
+
+      - name: Run integration tests
+        run: |
+          make tgi_docker_test
