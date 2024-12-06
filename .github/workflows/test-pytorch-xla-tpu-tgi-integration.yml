@@ -1,7 +1,7 @@
 name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
-#   push:
+  push:
   pull_request:
     branches: [ main ]
     paths:
@@ -66,7 +66,7 @@ jobs:
             -e TPU_HOST_BOUNDS \
             -e TPU_WORKER_HOSTNAMES \
             -e HF_SEQUENCE_LENGTH=1024 \
-            -v /mnt/hf_cache:/mnt/cache/
+            -v /mnt/hf_cache:/mnt/cache \
             --shm-size 16G \
             --privileged \
             --ipc host \
