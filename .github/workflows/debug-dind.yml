@@ -12,6 +12,11 @@ jobs:
         options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -e PJRT_DEVICE=TPU
     
     steps:
+      - name: Install docker
+        run: |
+          apt-get update -y
+          apt-get install -y docker.io
+
       - name: Create test server Dockerfile
         run: |
           cat << EOF > Dockerfile
