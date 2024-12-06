@@ -23,13 +23,42 @@ from text_generation.types import Response
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
-RUNNING_ON_CI = os.getenv("RUNNING_ON_CI", "false").lower() == "true"
+V5_LITEPOD_8_ENV = os.getenv("V5_LITEPOD_8_ENV")
 
 logger.add(
     sys.stderr,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
     level="INFO"
 )
+
+def validate_ci_tpu_env_format(env_string: str) -> bool:
+    """
+    Validate that CI TPU environment string follows '--env Argument' pattern.
+    Returns True if valid, False otherwise.
+    """        
+    parts = env_string.split()
+    return len(parts) % 2 == 0 and all(
+        parts[i] == "--env" and not parts[i + 1].startswith("--env")
+        for i in range(0, len(parts), 2)
+    )
+
+def process_ci_tpu_env_vars(env_string: str) -> dict:
+    """
+    Process CI TPU environment string and return dictionary of environment variables.
+    """
+    env_vars = {}
+    # Extract variables from string
+    tpu_vars = [x.strip() for x in env_string.split('--env') if x.strip()]
+    
+    # Process each variable
+    for var in tpu_vars:
+        env_value = os.environ.get(var, "")
+        env_vars[var] = env_value
+        # Log if environment variable is not set
+        if not env_value:
+            logger.warning(f"TPU environment variable {var} is not set")
+            
+    return env_vars
 
 
 def cleanup_handler(signum, frame):
@@ -180,23 +209,16 @@ def launcher(data_volume):
             env["HF_TOKEN"] = HF_TOKEN
 
         # Add TPU environment variables when running in CI
-        if RUNNING_ON_CI:
-            print("Running on CI, adding TPU environment variables")
-            env["PJRT_DEVICE"] = "TPU"
-            tpu_env_vars = [
-                "TPU_TOPOLOGY",
-                "TPU_WORKER_ID", 
-                "TPU_SKIP_MDS_QUERY",
-                "TPU_TOPOLOGY_WRAP",
-                "TPU_CHIPS_PER_HOST_BOUNDS",
-                "TPU_ACCELERATOR_TYPE",
-                "TPU_TOPOLOGY_ALT",
-                "TPU_HOST_BOUNDS",
-                "TPU_WORKER_HOSTNAMES"
-            ]
-            for var in tpu_env_vars:
-                if var in os.environ:
-                    env[var] = os.environ[var]
+        if V5_LITEPOD_8_ENV:
+            logger.info(f"V5_LITEPOD_8_ENV is set, adding specific TPU environment variables for the CI")
+            # Validate TPU environment format
+            if not validate_ci_tpu_env_format(V5_LITEPOD_8_ENV):
+                raise ValueError("Invalid TPU environment format", V5_LITEPOD_8_ENV)
+                
+            # Process TPU environment variables
+            tpu_env_vars = process_ci_tpu_env_vars(V5_LITEPOD_8_ENV)
+            env.update(tpu_env_vars)
+
 
         for var in ["MAX_BATCH_SIZE", "HF_SEQUENCE_LENGTH"]:
             if var in os.environ:
