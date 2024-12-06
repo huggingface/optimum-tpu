@@ -59,8 +59,13 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             sequence_length=512,
             expected_text="манaminationVariableßer Rog malesazine longふ Toy Champions enero Facereverse▲verbose prosecut literally disappearedअ",
         ),
+        DecodeTestParams(
+            model_id="Trendyol/Trendyol-LLM-7b-base-v0.1",
+            sequence_length=512,
+            expected_text="\nThe clocks were striking thirteen, and the clocks were striking thirteen.",
+        ),
     ],
-    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny"],
+    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny", "Trendyol-LLM-7b-base-v0.1"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     params.do_sample = do_sample
