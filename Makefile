@@ -111,6 +111,6 @@ tgi_test: test_installs tgi_server
 	                               -exec python -m pip install --force-reinstall {} \;
 	python -m pytest -sv text-generation-inference/tests -m torch_xla
 
-tgi_docker_test: tpu-tgi
+tgi_docker_test:
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
 	python -m pytest -sv text-generation-inference/integration-tests
