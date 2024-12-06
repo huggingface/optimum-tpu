@@ -21,59 +21,64 @@ jobs:
           apt-get update -y
           apt-get install -y docker.io
 
-      - name: Run test
+
+    # the run test step is similar to "Create test server Dockerfile", "Create minimal test server", "Build and run test container"
+    # but it's not in a single step inside a python script so it can be run locally
+    # this scripts work on the local machine, not in the github actions environment
+    # i left commented out for now, as "Create test server Dockerfile", "Create minimal test server", "Build and run test container" maybe be easier to debug in a ci environment
+    #   - name: Run test
+    #     run: |
+    #       python debug-dind-locally/test.py
+
+      - name: Create test server Dockerfile
         run: |
-          python debug-dind-locally/test.py
+          cat << EOF > Dockerfile
+          FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+          
+          WORKDIR /app
+          RUN pip install fastapi uvicorn
+          
+          COPY server.py .
+          
+          EXPOSE 80
+          CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
+          EOF
 
-    #   - name: Create test server Dockerfile
-    #     run: |
-    #       cat << EOF > Dockerfile
-    #       FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+      - name: Create minimal test server
+        run: |
+          cat << EOF > server.py
+          from fastapi import FastAPI
+          from pydantic import BaseModel
           
-    #       WORKDIR /app
-    #       RUN pip install fastapi uvicorn
+          app = FastAPI()
           
-    #       COPY server.py .
+          class GenerateRequest(BaseModel):
+              inputs: str
           
-    #       EXPOSE 80
-    #       CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
-    #       EOF
+          @app.post("/generate")
+          async def generate(request: GenerateRequest):
+              return {
+                  "generated_text": "Hello World!",
+                  "request_received": request.dict()
+              }
+          EOF
 
-    #   - name: Create minimal test server
-    #     run: |
-    #       cat << EOF > server.py
-    #       from fastapi import FastAPI
-    #       from pydantic import BaseModel
-          
-    #       app = FastAPI()
-          
-    #       class GenerateRequest(BaseModel):
-    #           inputs: str
-          
-    #       @app.post("/generate")
-    #       async def generate(request: GenerateRequest):
-    #           return {
-    #               "generated_text": "Hello World!",
-    #               "request_received": request.dict()
-    #           }
-    #       EOF
+      - name: Build and run test container
+        run: |
+          docker build -t test-tgi-server .
+          docker run -d -p 80:80 --name test-server test-tgi-server
 
-    #   - name: Build and run test container
-    #     run: |
-    #       docker build -t test-tgi-server .
-    #       docker run -d -p 80:80 --name test-server test-tgi-server
+          sleep 5
 
-    #       sleep 5
-
-    #       docker logs -f test-server &
+          docker logs -f test-server &
           
-    #       sleep 10
+          sleep 10
 
-    #       # Test the endpoint
-    #       curl --max-time 30 localhost:80/generate \
-    #         -X POST \
-    #         -d '{"inputs":"test message"}' \
-    #         -H 'Content-Type: application/json'
+          # Test the endpoint
+          curl --max-time 30 localhost:80/generate \
+            -X POST \
+            -d '{"inputs":"test message"}' \
+            -H 'Content-Type: application/json'
           
-    #       # Clean up
-    #       docker stop test-server
+          # Clean up
+          docker stop test-server
