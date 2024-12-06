@@ -20,47 +20,51 @@ jobs:
       - name: Create test server Dockerfile
         run: |
           cat << EOF > Dockerfile
-          FROM python:3.9-slim
+          FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
           
           WORKDIR /app
-          RUN pip install flask
+          RUN pip install fastapi uvicorn
           
           COPY server.py .
           
           EXPOSE 80
-          CMD ["python", "server.py"]
+          CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
           EOF
 
       - name: Create minimal test server
         run: |
           cat << EOF > server.py
-          from flask import Flask, request, jsonify
+          from fastapi import FastAPI
+          from pydantic import BaseModel
           
-          app = Flask(__name__)
+          app = FastAPI()
           
-          @app.route('/generate', methods=['POST'])
-          def generate():
-              return jsonify({
+          class GenerateRequest(BaseModel):
+              inputs: str
+          
+          @app.post("/generate")
+          async def generate(request: GenerateRequest):
+              return {
                   "generated_text": "Hello World!",
-                  "request_received": request.json
-              })
-          
-          if __name__ == '__main__':
-              app.run(host='0.0.0.0', port=80)
+                  "request_received": request.dict()
+              }
           EOF
 
       - name: Build and run test container
         run: |
           docker build -t test-tgi-server .
           docker run -d -p 80:80 --name test-server test-tgi-server
-          
-          # Wait for server to start
+
           sleep 5
+
+          docker logs -f test-server &
           
+          sleep 10
+
           # Test the endpoint
           curl --max-time 30 localhost:80/generate \
             -X POST \
-            -d '{"inputs":"test message","parameters":{"max_new_tokens":20}}' \
+            -d '{"inputs":"test message"}' \
             -H 'Content-Type: application/json'
           
           # Clean up
