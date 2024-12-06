@@ -1,0 +1,62 @@
+name: Debug DIND
+
+on:
+  push:
+
+jobs:
+  debug-dind:
+    runs-on:
+        group: gcp-ct5lp-hightpu-8t
+    container:
+        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
+        options: --shm-size "16gb" --ipc host --privileged ${{ vars.V5_LITEPOD_8_ENV}} -v /mnt/hf_cache:/mnt/hf_cache -e PJRT_DEVICE=TPU
+    
+    steps:
+      - name: Create test server Dockerfile
+        run: |
+          cat << EOF > Dockerfile
+          FROM python:3.9-slim
+          
+          WORKDIR /app
+          RUN pip install flask
+          
+          COPY server.py .
+          
+          EXPOSE 80
+          CMD ["python", "server.py"]
+          EOF
+
+      - name: Create minimal test server
+        run: |
+          cat << EOF > server.py
+          from flask import Flask, request, jsonify
+          
+          app = Flask(__name__)
+          
+          @app.route('/generate', methods=['POST'])
+          def generate():
+              return jsonify({
+                  "generated_text": "Hello World!",
+                  "request_received": request.json
+              })
+          
+          if __name__ == '__main__':
+              app.run(host='0.0.0.0', port=80)
+          EOF
+
+      - name: Build and run test container
+        run: |
+          docker build -t test-tgi-server .
+          docker run -d -p 80:80 --name test-server test-tgi-server
+          
+          # Wait for server to start
+          sleep 5
+          
+          # Test the endpoint
+          curl --max-time 30 localhost:80/generate \
+            -X POST \
+            -d '{"inputs":"test message","parameters":{"max_new_tokens":20}}' \
+            -H 'Content-Type: application/json'
+          
+          # Clean up
+          docker stop test-server
