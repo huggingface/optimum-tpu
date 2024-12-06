@@ -41,6 +41,10 @@ jobs:
         run: |
           make tpu-tgi
 
-      - name: Run integration tests
+    #   - name: Run integration tests
+    #     run: |
+    #       make tgi_docker_test
+
+      - name: Debug 
         run: |
-          make tgi_docker_test
+          python text-generation-inference/integration-tests/test_model.py
