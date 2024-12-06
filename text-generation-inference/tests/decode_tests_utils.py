@@ -14,7 +14,7 @@ class DecodeTestParams:
     do_sample: bool = False
     max_new_tokens: int = 20
     top_k: int = 50
-
+    repetition_penalty: float = 1.0
 
 def decode_single_test(params):
     model_path = prepare_model(params.model_id, params.sequence_length)
@@ -31,6 +31,7 @@ def decode_single_test(params):
         do_sample=params.do_sample,
         top_k=params.top_k,
         seed=1234,
+        repetition_penalty=params.repetition_penalty,
     )
     batch = Batch(id=0, requests=[request], size=1, max_tokens=params.sequence_length)
     generations, next_batch = generator.prefill(batch)
