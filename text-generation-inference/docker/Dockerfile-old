@@ -1,7 +1,6 @@
-# Fetch and extract the TGI sources
+# Fetch and extract the TGI sources (TGI_VERSION is mandatory)
 FROM alpine AS tgi
-# TGI version 2.4.1 by default
-ARG TGI_VERSION=690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd 
+ARG TGI_VERSION
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
 ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
@@ -26,8 +25,6 @@ COPY --from=tgi /tgi/launcher launcher
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-ARG ENABLE_GCP_INTEGRATION=0
-RUN echo "Google Integration Status: ${ENABLE_GCP_INTEGRATION}"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
@@ -48,11 +45,7 @@ COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
 COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
-        cargo build --profile release-opt --features google; \
-    else \
-        cargo build --profile release-opt; \
-    fi
+RUN cargo build --profile release-opt
 
 # Python base image
 FROM ubuntu:22.04 AS base
@@ -62,22 +55,13 @@ RUN apt-get update -y \
     python3-pip \
     python3-setuptools \
     python-is-python3 \
-    git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 RUN pip3 --no-cache-dir install --upgrade pip
 
-ARG ENABLE_GCP_INTEGRATION
-ARG VERSION='0.2.1'
+# VERSION is a mandatory parameter
+ARG VERSION
 RUN test -n ${VERSION:?}
-
-COPY --from=condition=${ENABLE_GCP_INTEGRATION}=0 . /tmp/optimum-tpu
-
-# If we are building for GCP, we need to clone the optimum-tpu repo as this is built from the huggingface/Google-Cloud-Containers repository and not the huggingface/optimum-tpu repository
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
-        git clone https://github.com/huggingface/optimum-tpu.git /opt/optimum-tpu; \
-        cd /opt/optimum-tpu && git checkout v${VERSION}; \
-    fi
 
 # Python server build image
 FROM base AS pyserver
@@ -110,7 +94,6 @@ RUN apt-get update -y \
     git \
     gnupg2 \
     wget \
-    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -122,14 +105,13 @@ ARG TRANSFORMERS_VERSION='4.46.3'
 ARG ACCELERATE_VERSION='1.1.1'
 ARG SAFETENSORS_VERSION='0.4.5'
 
-ARG HF_HOME=/data
-ARG PORT=80
-
 # TGI base env
-ENV HF_HOME=${HF_HOME} \
+ENV HF_HOME=/data \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
-    PORT=${PORT} \
+    PORT=80 \
     VERSION=${VERSION}
+
+COPY . /opt/optimum-tpu
 
 # Install requirements for TGI, that uses python3.11
 RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
@@ -156,29 +138,7 @@ FROM tpu_base AS inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
-ENTRYPOINT ["./entrypoint.sh"]
 
-FROM tpu_base AS gcp
-
-# Install Google specific components if ENABLE_GCP_INTEGRATION is set
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
-        apt-get update && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates \
-            curl \
-            git && \
-        rm -rf /var/lib/apt/lists/* && \
-        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
-            | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-            | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
-        apt-get update -y && \
-        apt-get install google-cloud-sdk -y; \
-    fi
-
-# Custom entrypoint for Google
-# COPY --chmod=775 containers/tgi/tpu/${OPTIMUM_TPU_VERSION}/entrypoint.sh entrypoint.sh
-COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
 
 # TPU compatible image
