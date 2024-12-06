@@ -175,7 +175,7 @@ def launcher(data_volume):
         trust_remote_code: bool = False,
     ):
         logger.info(f"Starting docker launcher for model {model_id}")
-        port = 8080
+        port = 80
 
         client = docker.from_env()
 
@@ -252,7 +252,8 @@ def launcher(data_volume):
                 shm_size="16G",
                 privileged=True,
                 ipc_mode="host",
-                ports={"80/tcp": 8080}
+                network_mode="host",
+                # ports={"80/tcp": 8080}
             )
             logger.info(f"Container {container_name} started successfully")
 
