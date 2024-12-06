@@ -49,25 +49,24 @@ jobs:
         run: |
           # Start docker container in background
           docker run -d --name tgi-tests-gpt2 \
-            -e LOG_LEVEL="info,text_generation_router,text_generation_launcher=debug" \
-            -e HF_HUB_ENABLE_HF_TRANSFER="0" \
-            -e PJRT_DEVICE="TPU" \
-            -e MAX_BATCH_SIZE="4" \
-            -e JETSTREAM_PT_DISABLE="1" \
-            -e SKIP_WARMUP="1" \
-            -e MODEL_ID="openai-community/gpt2" \
-            -e HF_TOKEN="***" \
-            -e TPU_TOPOLOGY="2x4" \
-            -e TPU_WORKER_ID="0" \
-            -e TPU_SKIP_MDS_QUERY="true" \
-            -e TPU_TOPOLOGY_WRAP="false,false,false" \
-            -e TPU_CHIPS_PER_HOST_BOUNDS="2,4,1" \
-            -e TPU_ACCELERATOR_TYPE="v5litepod-8" \
-            -e TPU_TOPOLOGY_ALT="false" \
-            -e TPU_HOST_BOUNDS="1,1,1" \
-            -e TPU_WORKER_HOSTNAMES="localhost" \
-            -e HF_SEQUENCE_LENGTH="1024" \
-            -v /tmp/tmpy99wy14l:/data \
+            -e LOG_LEVEL=info,text_generation_router,text_generation_launcher=debug \
+            -e HF_HUB_ENABLE_HF_TRANSFER=0 \
+            -e MAX_BATCH_SIZE=4 \
+            -e JETSTREAM_PT_DISABLE=1 \
+            -e SKIP_WARMUP=1 \
+            -e MODEL_ID=openai-community/gpt2 \
+            -e PJRT_DEVICE=TPU \
+            -e TPU_TOPOLOGY \
+            -e TPU_WORKER_ID \
+            -e TPU_SKIP_MDS_QUERY \
+            -e TPU_TOPOLOGY_WRAP \
+            -e TPU_CHIPS_PER_HOST_BOUNDS \
+            -e TPU_ACCELERATOR_TYPE \
+            -e TPU_TOPOLOGY_ALT \
+            -e TPU_HOST_BOUNDS \
+            -e TPU_WORKER_HOSTNAMES \
+            -e HF_SEQUENCE_LENGTH=1024 \
+            -v /mnt/hf_cache:/mnt/cache/
             --shm-size 16G \
             --privileged \
             --ipc host \
@@ -84,14 +83,10 @@ jobs:
           # Show docker logs while container is starting up
           docker logs -f tgi-tests-gpt2 &
 
+          # for tgi server to start
           sleep 300 &&
-
-          echo "curl 0.0.0.0:80/generate" &&
 
           curl --max-time 30 0.0.0.0:80/generate \
             -X POST \
             -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
             -H 'Content-Type: application/json'
-
-        #   # Run the Python test in parallel
-        #   python text-generation-inference/integration-tests/test_model.py
