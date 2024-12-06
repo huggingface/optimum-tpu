@@ -17,55 +17,59 @@ jobs:
           apt-get update -y
           apt-get install -y docker.io
 
-      - name: Create test server Dockerfile
+      - name: Run test
         run: |
-          cat << EOF > Dockerfile
-          FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
-          
-          WORKDIR /app
-          RUN pip install fastapi uvicorn
-          
-          COPY server.py .
-          
-          EXPOSE 80
-          CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
-          EOF
+          python debug-dind-locally/test.py
 
-      - name: Create minimal test server
-        run: |
-          cat << EOF > server.py
-          from fastapi import FastAPI
-          from pydantic import BaseModel
+    #   - name: Create test server Dockerfile
+    #     run: |
+    #       cat << EOF > Dockerfile
+    #       FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm
           
-          app = FastAPI()
+    #       WORKDIR /app
+    #       RUN pip install fastapi uvicorn
           
-          class GenerateRequest(BaseModel):
-              inputs: str
+    #       COPY server.py .
           
-          @app.post("/generate")
-          async def generate(request: GenerateRequest):
-              return {
-                  "generated_text": "Hello World!",
-                  "request_received": request.dict()
-              }
-          EOF
+    #       EXPOSE 80
+    #       CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
+    #       EOF
 
-      - name: Build and run test container
-        run: |
-          docker build -t test-tgi-server .
-          docker run -d -p 80:80 --name test-server test-tgi-server
-
-          sleep 5
-
-          docker logs -f test-server &
+    #   - name: Create minimal test server
+    #     run: |
+    #       cat << EOF > server.py
+    #       from fastapi import FastAPI
+    #       from pydantic import BaseModel
           
-          sleep 10
-
-          # Test the endpoint
-          curl --max-time 30 localhost:80/generate \
-            -X POST \
-            -d '{"inputs":"test message"}' \
-            -H 'Content-Type: application/json'
+    #       app = FastAPI()
           
-          # Clean up
-          docker stop test-server
+    #       class GenerateRequest(BaseModel):
+    #           inputs: str
+          
+    #       @app.post("/generate")
+    #       async def generate(request: GenerateRequest):
+    #           return {
+    #               "generated_text": "Hello World!",
+    #               "request_received": request.dict()
+    #           }
+    #       EOF
+
+    #   - name: Build and run test container
+    #     run: |
+    #       docker build -t test-tgi-server .
+    #       docker run -d -p 80:80 --name test-server test-tgi-server
+
+    #       sleep 5
+
+    #       docker logs -f test-server &
+          
+    #       sleep 10
+
+    #       # Test the endpoint
+    #       curl --max-time 30 localhost:80/generate \
+    #         -X POST \
+    #         -d '{"inputs":"test message"}' \
+    #         -H 'Content-Type: application/json'
+          
+    #       # Clean up
+    #       docker stop test-server
