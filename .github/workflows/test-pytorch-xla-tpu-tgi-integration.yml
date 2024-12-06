@@ -49,7 +49,6 @@ jobs:
         run: |
           # Start docker container in background
           docker run -d --name tgi-tests-gpt2 \
-            -p 8080:80 \
             -e LOG_LEVEL="info,text_generation_router,text_generation_launcher=debug" \
             -e HF_HUB_ENABLE_HF_TRANSFER="0" \
             -e PJRT_DEVICE="TPU" \
@@ -72,6 +71,7 @@ jobs:
             --shm-size 16G \
             --privileged \
             --ipc host \
+            --network host \
             huggingface/optimum-tpu:latest \
             --max-input-length 512 \
             --max-total-tokens 1024 \
@@ -86,9 +86,9 @@ jobs:
 
           sleep 300 &&
 
-          echo "curl 0.0.0.0:8080/generate" &&
+          echo "curl 0.0.0.0:80/generate" &&
 
-          curl --max-time 30 0.0.0.0:8080/generate \
+          curl --max-time 30 0.0.0.0:80/generate \
             -X POST \
             -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
             -H 'Content-Type: application/json'
