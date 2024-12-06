@@ -77,5 +77,8 @@ jobs:
             --max-batch-prefill-tokens 512 \
             --max-batch-total-tokens 1024 &
 
+          # Show docker logs while container is starting up
+          docker logs -f tgi-tests-gpt2 &
+
           # Run the Python test in parallel
           python text-generation-inference/integration-tests/test_model.py
