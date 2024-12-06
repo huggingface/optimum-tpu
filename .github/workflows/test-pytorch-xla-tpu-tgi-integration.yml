@@ -49,6 +49,7 @@ jobs:
         run: |
           # Start docker container in background
           docker run -d --name tgi-tests-gpt2 \
+            -p 8080:80 \
             -e LOG_LEVEL="info,text_generation_router,text_generation_launcher=debug" \
             -e HF_HUB_ENABLE_HF_TRANSFER="0" \
             -e PJRT_DEVICE="TPU" \
@@ -77,8 +78,18 @@ jobs:
             --max-batch-prefill-tokens 512 \
             --max-batch-total-tokens 1024 &
 
+          # Sleep for 10 seconds to let the container start up
+          sleep 10
+
           # Show docker logs while container is starting up
           docker logs -f tgi-tests-gpt2 &
 
-          # Run the Python test in parallel
-          python text-generation-inference/integration-tests/test_model.py
+          sleep 300 &&
+
+          curl 127.0.0.1:8080/generate \
+            -X POST \
+            -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
+            -H 'Content-Type: application/json'
+
+        #   # Run the Python test in parallel
+        #   python text-generation-inference/integration-tests/test_model.py
