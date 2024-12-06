@@ -127,10 +127,15 @@
 
 import requests
 import time
+import subprocess
 
 # sleep for 3min    
-
 time.sleep(180)
+
+# Run docker ps and capture output
+docker_ps = subprocess.run(['docker', 'ps'], capture_output=True, text=True)
+print("Docker containers running:")
+print(docker_ps.stdout)
 
 response = requests.post(
     "http://127.0.0.1:8080/generate",
