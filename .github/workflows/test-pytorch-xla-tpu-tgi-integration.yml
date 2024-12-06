@@ -86,7 +86,9 @@ jobs:
 
           sleep 300 &&
 
-          curl 127.0.0.1:8080/generate \
+          echo "curl 0.0.0.0:8080/generate" &&
+
+          curl --max-time 30 0.0.0.0:8080/generate \
             -X POST \
             -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
             -H 'Content-Type: application/json'
