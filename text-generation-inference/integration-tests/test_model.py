@@ -137,37 +137,42 @@ docker_ps = subprocess.run(['docker', 'ps'], capture_output=True, text=True)
 print("Docker containers running:")
 print(docker_ps.stdout)
 
-response = requests.post(
-    "http://127.0.0.1:8080/generate",
-    json={
-        "inputs": "What is Deep Learning?",
-        "parameters": {
-            "max_new_tokens": 20
-        }
-    },
-    headers={"Content-Type": "application/json"}
-)
-
-if response.status_code == 200:
+try:
+    # Try port 8080 first
+    response = requests.post(
+        "http://127.0.0.1:8080/generate",
+        json={
+            "inputs": "What is Deep Learning?",
+            "parameters": {
+                "max_new_tokens": 20
+            }
+        },
+        headers={"Content-Type": "application/json"},
+        timeout=30
+    )
+    response.raise_for_status()
     print(response.json())
-else:
-    print(f"Error: {response.status_code}")
-    print(response.text)
 
-response = requests.post(
-    "http://127.0.0.1:80/generate",
-    json={
-        "inputs": "What is Deep Learning?",
-        "parameters": {
-            "max_new_tokens": 20
-        }
-    },
-    headers={"Content-Type": "application/json"}
-)
-
-if response.status_code == 200:
-    print(response.json())
-else:
-    print(f"Error: {response.status_code}")
-    print(response.text)
+except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
+    print(f"Error with port 8080: {str(e)}")
+    
+    try:
+        # Fallback to port 80
+        response = requests.post(
+            "http://127.0.0.1:80/generate", 
+            json={
+                "inputs": "What is Deep Learning?",
+                "parameters": {
+                    "max_new_tokens": 20
+                }
+            },
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+        response.raise_for_status()
+        print(response.json())
+        
+    except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
+        print(f"Error with port 80: {str(e)}")
+        raise RuntimeError("Failed to connect to server on both ports 8080 and 80") from e
 

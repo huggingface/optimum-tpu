@@ -47,4 +47,35 @@ jobs:
 
       - name: Debug 
         run: |
+          # Start docker container in background
+          docker run -d --name tgi-tests-gpt2 \
+            -e LOG_LEVEL="info,text_generation_router,text_generation_launcher=debug" \
+            -e HF_HUB_ENABLE_HF_TRANSFER="0" \
+            -e PJRT_DEVICE="TPU" \
+            -e MAX_BATCH_SIZE="4" \
+            -e JETSTREAM_PT_DISABLE="1" \
+            -e SKIP_WARMUP="1" \
+            -e MODEL_ID="openai-community/gpt2" \
+            -e HF_TOKEN="***" \
+            -e TPU_TOPOLOGY="2x4" \
+            -e TPU_WORKER_ID="0" \
+            -e TPU_SKIP_MDS_QUERY="true" \
+            -e TPU_TOPOLOGY_WRAP="false,false,false" \
+            -e TPU_CHIPS_PER_HOST_BOUNDS="2,4,1" \
+            -e TPU_ACCELERATOR_TYPE="v5litepod-8" \
+            -e TPU_TOPOLOGY_ALT="false" \
+            -e TPU_HOST_BOUNDS="1,1,1" \
+            -e TPU_WORKER_HOSTNAMES="localhost" \
+            -e HF_SEQUENCE_LENGTH="1024" \
+            -v /tmp/tmpy99wy14l:/data \
+            --shm-size 16G \
+            --privileged \
+            --ipc host \
+            huggingface/optimum-tpu:latest \
+            --max-input-length 512 \
+            --max-total-tokens 1024 \
+            --max-batch-prefill-tokens 512 \
+            --max-batch-total-tokens 1024 &
+
+          # Run the Python test in parallel
           python text-generation-inference/integration-tests/test_model.py
