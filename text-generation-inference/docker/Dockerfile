@@ -1,6 +1,7 @@
-# Fetch and extract the TGI sources (TGI_VERSION is mandatory)
+# Fetch and extract the TGI sources
 FROM alpine AS tgi
-ARG TGI_VERSION
+# TGI version 2.4.1 by default
+ARG TGI_VERSION=690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd 
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
 ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
@@ -25,6 +26,8 @@ COPY --from=tgi /tgi/launcher launcher
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+ARG ENABLE_GCP_INTEGRATION
+RUN echo "Google Integration Status: ${ENABLE_GCP_INTEGRATION}"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
@@ -45,7 +48,11 @@ COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
 COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
-RUN cargo build --profile release-opt
+RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
+        cargo build --profile release-opt --features google; \
+    else \
+        cargo build --profile release-opt; \
+    fi
 
 # Python base image
 FROM ubuntu:22.04 AS base
@@ -55,13 +62,28 @@ RUN apt-get update -y \
     python3-pip \
     python3-setuptools \
     python-is-python3 \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 RUN pip3 --no-cache-dir install --upgrade pip
 
-# VERSION is a mandatory parameter
-ARG VERSION
+ARG ENABLE_GCP_INTEGRATION
+ARG VERSION='0.2.2'
 RUN test -n ${VERSION:?}
+
+COPY . /opt/optimum-tpu
+
+RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
+    # If we are building for GCP, we need to clone the optimum-tpu repo as this is built from the huggingface/Google-Cloud-Containers repository and not the huggingface/optimum-tpu repository
+        rm -rf /opt/optimum-tpu && \
+        git clone https://github.com/huggingface/optimum-tpu.git /opt/optimum-tpu && \
+        cd /opt/optimum-tpu && git checkout v${VERSION}; \
+    fi && \
+    # Check if the optimum-tpu repo is cloned properly
+    if [ ! -d "/opt/optimum-tpu/optimum" ]; then \
+        echo "Error: You are trying to build the image not from optimum-tpu repo. If you are building it from google-cloud-containers repo, please set ENABLE_GCP_INTEGRATION=1 to clone optimum-tpu repo automatically" && exit 1; \
+    fi
+
 
 # Python server build image
 FROM base AS pyserver
@@ -75,7 +97,7 @@ RUN apt-get update -y \
 
 RUN install -d /pyserver
 WORKDIR /pyserver
-COPY text-generation-inference/server server
+RUN cp -a /opt/optimum-tpu/text-generation-inference/server server
 COPY --from=tgi /tgi/proto proto
 RUN pip3 install -r server/build-requirements.txt
 RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSION} make -C server gen-server
@@ -84,6 +106,7 @@ RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSIO
 FROM base AS tpu_base
 
 ARG VERSION=${VERSION}
+RUN test -n ${VERSION:?}
 
 # Install system prerequisites
 RUN apt-get update -y \
@@ -94,6 +117,7 @@ RUN apt-get update -y \
     git \
     gnupg2 \
     wget \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -105,13 +129,16 @@ ARG TRANSFORMERS_VERSION='4.46.3'
 ARG ACCELERATE_VERSION='1.1.1'
 ARG SAFETENSORS_VERSION='0.4.5'
 
-# TGI base env
-ENV HF_HOME=/data \
-    HF_HUB_ENABLE_HF_TRANSFER=1 \
-    PORT=80 \
-    VERSION=${VERSION}
+ARG ENABLE_GCP_INTEGRATION
 
-COPY . /opt/optimum-tpu
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV VERSION=${VERSION}
+
+ENV PORT=${ENABLE_GCP_INTEGRATION:+8080}
+ENV PORT=${PORT:-80}
+
+ENV HF_HOME=${ENABLE_GCP_INTEGRATION:+/tmp}
+ENV HF_HOME=${HF_HOME:-/data}
 
 # Install requirements for TGI, that uses python3.11
 RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
@@ -138,7 +165,30 @@ FROM tpu_base AS inference-endpoint
 
 COPY text-generation-inference/docker/entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]
 
+FROM tpu_base AS google-cloud-containers
+
+RUN test -n ${VERSION:?}
+
+# Install Google specific components if ENABLE_GCP_INTEGRATION is set
+RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
+        apt-get update && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            git && \
+        rm -rf /var/lib/apt/lists/* && \
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+            | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+            | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
+        apt-get update -y && \
+        apt-get install google-cloud-sdk -y; \
+    fi
+
+# Custom entrypoint for Google
+COPY --chmod=775 containers/tgi/tpu/${VERSION}/entrypoint.sh* entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
 
 # TPU compatible image

@@ -42,8 +42,6 @@ clean:
 	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
-# ulimit nofile=100000:100000 is required for TPUs
-# https://cloud.google.com/kubernetes-engine/docs/how-to/tpus#privileged-mode
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
@@ -51,6 +49,14 @@ tpu-tgi:
 	             --ulimit nofile=100000:100000 \
 	             -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
+
+tpu-tgi-old:
+	docker build --rm -f text-generation-inference/docker/Dockerfile-old \
+	             --build-arg VERSION=$(VERSION) \
+	             --build-arg TGI_VERSION=$(TGI_VERSION) \
+	             --ulimit nofile=100000:100000 \
+	             -t huggingface/optimum-tpu:$(VERSION)-tgi-old .
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi-old huggingface/optimum-tpu:latest-old
 
 tpu-tgi-ie:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
@@ -60,6 +66,14 @@ tpu-tgi-ie:
 				 --ulimit nofile=100000:100000 \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest-ie
+
+tpu-tgi-gcp:
+	docker build --rm -f text-generation-inference/docker/Dockerfile \
+				 --target google-cloud-containers \
+				 --build-arg ENABLE_GCP_INTEGRATION=1 \
+				 --ulimit nofile=100000:100000 \
+				 -t huggingface/optimum-tpu:$(VERSION)-tgi-gcp .
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi-gcp huggingface/optimum-tpu:latest-gcp
 
 # Run code quality checks
 style_check:
