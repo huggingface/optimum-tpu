@@ -96,6 +96,10 @@ class TransformerHf(Transformer, GenerationMixin):
         ffn_dim_multiplier = config.intermediate_size / int(8 * config.hidden_size / 3)
         multiple_of = 1
 
+        if config.mlp_bias:
+            raise ValueError("MLP bias is not supported in the on Jetstream Pytorch."
+                             + "If your model requires it, you can open an issue.")
+
         rope_scaling_js = None
         rope_scaling = config.rope_scaling
         # The original Llama2 and Llama3 models do not have rope scaling configuration, while newer models do.
