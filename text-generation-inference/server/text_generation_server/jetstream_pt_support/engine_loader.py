@@ -134,6 +134,12 @@ def instantiate_model_from_repo_id(
     env.device = "meta"
     model = model_info.model_class.from_config(config, env)
     weights = fetch_models._load_weights(model_dir)
+
+    # Some models, such as Llama 3.2-1B, have tied embeddings, which means that the weights
+    # for the embeddings and the lm_head are the same. This is not supported by Jetstream, so
+    # we create an alias so that they will be loaded (untied).
+    if getattr(config, "tie_word_embeddings", False):
+        weights["lm_head.weight"] = weights["model.embed_tokens.weight"]
     weights = model.convert_hf_weights(weights)
 
     model.load_state_dict(weights, assign=True, strict=False)
