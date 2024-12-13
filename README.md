@@ -23,7 +23,7 @@ working closely with Google and Google Cloud to make this a reality.
 
 We currently support a few LLM models targeting text generation scenarios:
 - 💎 Gemma (2b, 7b)
-- 🦙 Llama2 (7b) and Llama3 (8b)
+- 🦙 Llama2 (7b) and Llama3 (8b). On Text Generation Inference with Jetstream Pytorch, also Llama3.1, Llama3.2 and Llama3.3 (text-only models) are supported, up to 70B parameters.
 - 💨 Mistral (7b)
 
 
