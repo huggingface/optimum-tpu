@@ -44,8 +44,13 @@ def test_decode_jetstream_quantization(quantization_jetstream_int8, params):
             sequence_length=512,
             expected_text=" Winston Smith,s,s,s,s,s,s,s,s,s,s",
         ),
+        DecodeTestParams(
+            model_id="meta-llama/Llama-3.3-70B-Instruct",
+            sequence_length=1024,
+            expected_text=" Winston Smith, the protagonist of the story, was slowly getting up from bed. He stretched his arms",
+        ),
     ],
-    ids=["Mixtral-8x7B", "Meta-Llama-3-8B" ,"Meta-Llama-3-70B"],
+    ids=["Mixtral-8x7B", "Meta-Llama-3-8B" ,"Meta-Llama-3-70B", "Llama-3.3-70B-Instruct"],
 )
 def test_decode_jetstream_quantization_slow(quantization_jetstream_int8, params):
     decode_single_test(params)
