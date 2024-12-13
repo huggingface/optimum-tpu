@@ -60,6 +60,7 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             expected_text="манaminationVariableßer Rog malesazine longふ Toy Champions enero Facereverse▲verbose prosecut literally disappearedअ",
         ),
         DecodeTestParams(
+            # NOTE: this test is interesting because it is a fine-tuned model that requires padding on weights to work.
             model_id="Trendyol/Trendyol-LLM-7b-base-v0.1",
             sequence_length=512,
             expected_text="\nThe clocks were striking thirteen, and the clocks were striking thirteen.",
