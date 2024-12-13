@@ -65,8 +65,14 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             sequence_length=512,
             expected_text="\nThe clocks were striking thirteen, and the clocks were striking thirteen.",
         ),
+        DecodeTestParams(
+            model_id="meta-llama/Llama-3.2-1B",
+            sequence_length=256,
+            expected_text=" Winston Smith, his chin nuzzled into his breast, stretched, and looked out across the city",
+            max_new_tokens=20,
+        )
     ],
-    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny", "Trendyol-LLM-7b-base-v0.1"],
+    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny", "Trendyol-LLM-7b-base-v0.1", "Llama-3.2-1B"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     params.do_sample = do_sample
