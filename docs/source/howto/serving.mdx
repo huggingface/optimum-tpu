@@ -56,6 +56,6 @@ curl localhost/generate_stream \
 If for some reason you want to use the Pytorch/XLA backend instead, you can set the `JETSTREAM_PT_DISABLE=1` environment variable.
 
 
-When using Jetstream Pytorch engine, it is possible to enable quantization to reduce the memory footprint and increase the throughput. To enable quantization, set the `QUANTIZATION=1` environment variable.
+When using Jetstream Pytorch engine, it is possible to enable quantization to reduce the memory footprint and increase the throughput. To enable quantization, set the `QUANTIZATION=1` environment variable. For instance, on a 2x4 TPU v5e, you can serve models up to 70B parameters such as Llama 3.3-70B.
 
 ***Note: Quantization is still experimental and may produce lower quality results compared to the non-quantized version.***

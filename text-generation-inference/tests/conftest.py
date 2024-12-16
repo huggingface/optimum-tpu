@@ -38,7 +38,7 @@ def quantization_jetstream_int8():
 
 
 def pytest_runtest_setup(item):
-    marker_names = [marker.name for marker in item.own_markers]
+    marker_names = [marker.name for marker in item.iter_markers()]
     jetstream_pt_enabled = jetstream_pt_available()
     # Skip tests that require torch xla but not jetstream
     if "torch_xla" in marker_names and "jetstream" not in marker_names:
