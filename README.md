@@ -39,7 +39,7 @@ We currently support a few LLM models targeting text generation scenarios:
 ## Inference
 
 `optimum-tpu` provides a set of dedicated tools and integrations in order to leverage Cloud TPUs for inference, especially
-on the latest TPU version `v5e`. 
+on the latest TPU version `v5e` and `v6e`.
 
 Other TPU versions will be supported along the way.
 
@@ -64,8 +64,8 @@ To enable the support, export the environment variable `JETSTREAM_PT=1`.
 
 Fine-tuning is supported and tested on the TPU `v5e`. We have tested so far:
 
-- 🦙 Llama-2 7B and Llama-3 8B
-- 💎 Gemma 2B and 7B
+- 🦙 Llama-2 7B, Llama-3 8B and newer;
+- 💎 Gemma 2B and 7B.
 
 You can check the examples:
 
