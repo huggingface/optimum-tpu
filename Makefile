@@ -19,7 +19,7 @@ REAL_CLONE_URL = $(if $(CLONE_URL),$(CLONE_URL),$(DEFAULT_CLONE_URL))
 
 .PHONY:	build_dist style style_check clean
 
-TGI_VERSION ?= 690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd
+TGI_VERSION ?= 2.4.1
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 
@@ -49,14 +49,6 @@ tpu-tgi:
 	             --ulimit nofile=100000:100000 \
 	             -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
-
-tpu-tgi-old:
-	docker build --rm -f text-generation-inference/docker/Dockerfile-old \
-	             --build-arg VERSION=$(VERSION) \
-	             --build-arg TGI_VERSION=$(TGI_VERSION) \
-	             --ulimit nofile=100000:100000 \
-	             -t huggingface/optimum-tpu:$(VERSION)-tgi-old .
-	docker tag huggingface/optimum-tpu:$(VERSION)-tgi-old huggingface/optimum-tpu:latest-old
 
 tpu-tgi-ie:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \

@@ -1,10 +1,10 @@
 # Fetch and extract the TGI sources
 FROM alpine AS tgi
 # TGI version 2.4.1 by default
-ARG TGI_VERSION=690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd 
+ARG TGI_VERSION=2.4.1
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
-ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
+ADD https://github.com/huggingface/text-generation-inference/archive/v${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
 RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
@@ -26,8 +26,8 @@ COPY --from=tgi /tgi/launcher launcher
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-ARG ENABLE_GCP_INTEGRATION
-RUN echo "Google Integration Status: ${ENABLE_GCP_INTEGRATION}"
+ARG ENABLE_GOOGLE_FEATURE
+RUN echo "Google Feature Status: ${ENABLE_GOOGLE_FEATURE}"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.11-dev
@@ -48,7 +48,7 @@ COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
 COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
+RUN if [ -n "$ENABLE_GOOGLE_FEATURE" ]; then \
         cargo build --profile release-opt --features google; \
     else \
         cargo build --profile release-opt; \
@@ -67,21 +67,24 @@ RUN apt-get update -y \
     && apt-get clean
 RUN pip3 --no-cache-dir install --upgrade pip
 
-ARG ENABLE_GCP_INTEGRATION
+ARG ENABLE_GOOGLE_FEATURE
 ARG VERSION='0.2.2'
 RUN test -n ${VERSION:?}
 
-COPY . /opt/optimum-tpu
+FROM base AS optimum-tpu-installer
 
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
-    # If we are building for GCP, we need to clone the optimum-tpu repo as this is built from the huggingface/Google-Cloud-Containers repository and not the huggingface/optimum-tpu repository
-        rm -rf /opt/optimum-tpu && \
+COPY . /tmp/src
+
+RUN if [ -n "$ENABLE_GOOGLE_FEATURE" ]; then \
+        # If we are building for GCP, we need to clone the optimum-tpu repo as this is built from the huggingface/Google-Cloud-Containers repository and not the huggingface/optimum-tpu repository
         git clone https://github.com/huggingface/optimum-tpu.git /opt/optimum-tpu && \
         cd /opt/optimum-tpu && git checkout v${VERSION}; \
     fi && \
-    # Check if the optimum-tpu repo is cloned properly
-    if [ ! -d "/opt/optimum-tpu/optimum" ]; then \
-        echo "Error: You are trying to build the image not from optimum-tpu repo. If you are building it from google-cloud-containers repo, please set ENABLE_GCP_INTEGRATION=1 to clone optimum-tpu repo automatically" && exit 1; \
+        # Check if the optimum-tpu repo is cloned properly
+        cp -a /tmp/src /opt/optimum-tpu && \
+        if [ ! -d "/opt/optimum-tpu/optimum" ]; then \
+            echo "Error: Building from incorrect repository. This build must be run from optimum-tpu repo. If building from google-cloud-containers repo, set ENABLE_GOOGLE_FEATURE=1 to automatically clone optimum-tpu" && \ 
+            exit 1; \
     fi
 
 
@@ -97,7 +100,7 @@ RUN apt-get update -y \
 
 RUN install -d /pyserver
 WORKDIR /pyserver
-RUN cp -a /opt/optimum-tpu/text-generation-inference/server server
+COPY --from=optimum-tpu-installer /opt/optimum-tpu/text-generation-inference/server server
 COPY --from=tgi /tgi/proto proto
 RUN pip3 install -r server/build-requirements.txt
 RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSION} make -C server gen-server
@@ -106,7 +109,6 @@ RUN VERBOSE=1 BUILDDIR=/pyserver/build PROTODIR=/pyserver/proto VERSION=${VERSIO
 FROM base AS tpu_base
 
 ARG VERSION=${VERSION}
-RUN test -n ${VERSION:?}
 
 # Install system prerequisites
 RUN apt-get update -y \
@@ -129,15 +131,15 @@ ARG TRANSFORMERS_VERSION='4.46.3'
 ARG ACCELERATE_VERSION='1.1.1'
 ARG SAFETENSORS_VERSION='0.4.5'
 
-ARG ENABLE_GCP_INTEGRATION
+ARG ENABLE_GOOGLE_FEATURE
 
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV VERSION=${VERSION}
 
-ENV PORT=${ENABLE_GCP_INTEGRATION:+8080}
+ENV PORT=${ENABLE_GOOGLE_FEATURE:+8080}
 ENV PORT=${PORT:-80}
 
-ENV HF_HOME=${ENABLE_GCP_INTEGRATION:+/tmp}
+ENV HF_HOME=${ENABLE_GOOGLE_FEATURE:+/tmp}
 ENV HF_HOME=${HF_HOME:-/data}
 
 # Install requirements for TGI, that uses python3.11
@@ -145,6 +147,7 @@ RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
 
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
 RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} typer
+COPY --from=optimum-tpu-installer /opt/optimum-tpu /opt/optimum-tpu
 RUN python3 /opt/optimum-tpu/optimum/tpu/cli.py install-jetstream-pytorch --yes
 RUN python3 -m pip install -e /opt/optimum-tpu \
         -f https://storage.googleapis.com/libtpu-releases/index.html
@@ -169,10 +172,8 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 FROM tpu_base AS google-cloud-containers
 
-RUN test -n ${VERSION:?}
-
-# Install Google specific components if ENABLE_GCP_INTEGRATION is set
-RUN if [ -n "$ENABLE_GCP_INTEGRATION" ]; then \
+# Install Google specific components if ENABLE_GOOGLE_FEATURE is set
+RUN if [ -n "$ENABLE_GOOGLE_FEATURE" ]; then \
         apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates \
