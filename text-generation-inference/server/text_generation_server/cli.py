@@ -99,6 +99,7 @@ def download_weights(
     auto_convert: Optional[bool] = None,
     extension: Optional[str] = None,
     trust_remote_code: Optional[bool] = None,
+    merge_lora: Optional[bool] = None,
 ):
     """Download the model weights.
 
@@ -122,6 +123,8 @@ def download_weights(
         logger.warning("'trust_remote_code' argument is not supported and will be ignored.")
     if auto_convert is not None:
         logger.warning("'auto_convert' argument is not supported and will be ignored.")
+    if merge_lora is not None:
+        logger.warning("'merge_lora' argument is not supported and will be ignored.")
 
     # Import here after the logger is added to log potential import exceptions
     from optimum.tpu.model import fetch_model
