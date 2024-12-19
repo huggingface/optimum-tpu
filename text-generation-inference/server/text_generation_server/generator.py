@@ -298,6 +298,12 @@ class Slot:
     def max_token(self) -> int:
         return self._generation_config.max_length
 
+    @property
+    def max_new_tokens(self) -> int:
+        # The current value of max_new_tokens: might be different of the target max_new_tokens
+        # if the slot has been paused and resumed.
+        return self._generation_config.max_new_tokens
+
 
 class TpuGeneratorSingleThread(Generator):
     """A Generator for models running on TPU, single threaded."""
@@ -474,6 +480,9 @@ class TpuGeneratorSingleThread(Generator):
             slot.assign(self.batch_id, request, self.model.generation_config)
             self.slots.append(slot)
             logger.debug(f"Request {slot.request_id} assigned to slot {slot.id}")
+            logger.debug(
+                f"Request {slot.request_id} assigned to slot {slot.id} with and max_new_tokens {slot.max_new_tokens}"
+            )
         # Reconstruct the full inputs (without padding) as seen by the model.
         # This comprises:
         # - the inputs for new requests,
@@ -576,6 +585,8 @@ class TpuGeneratorSingleThread(Generator):
             slot.append(next_token)
             slot.resume()
         logger.debug("Model ready for decoding")
+        if next_batch is not None:
+            logger.debug(f"Next batch is {next_batch.id} with requests: {next_batch.request_ids}")
         return generation, next_batch
 
     @torch.no_grad
@@ -704,14 +715,16 @@ class TpuGeneratorSingleThread(Generator):
             if next_token == self.tokenizer.eos_token_id:
                 finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
             elif slot.stopped:
-                # For now we only support the length stopping criteria
-                finish_reason = FinishReason.FINISH_REASON_LENGTH
+                if slot.generated_tokens == slot.max_new_tokens:
+                    finish_reason = FinishReason.FINISH_REASON_LENGTH
+                else:
+                    finish_reason = FinishReason.FINISH_REASON_STOP_SEQUENCE
             if finish_reason is not None:
                 # We must include the generated text for each finished sequence in the response
                 generated_text = GeneratedText(
                     text=slot.generated_text, generated_tokens=slot.generated_tokens, finish_reason=finish_reason
                 )
-                logger.debug(f"Finished generating tokens for request {request_id}")
+                logger.debug(f"Decode complete for request {request_id} with {slot.generated_tokens} tokens")
                 # This slot is now empty, it will be removed from the list of
                 # active slots once a new prefill is requested
                 slot.clear()
