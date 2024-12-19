@@ -76,7 +76,6 @@ jobs:
             labels: ${{ steps.meta.outputs.labels }}
             build-args: |
               VERSION=${{ steps.version.outputs.version }}
-              TGI_VERSION=v2.4.1
 
 
         - name: Generate artifact attestation for TGI
@@ -97,7 +96,6 @@ jobs:
             labels: ${{ steps.meta-ie.outputs.labels }}
             build-args: |
               VERSION=${{ steps.version.outputs.version }}
-              TGI_VERSION=v2.4.1
             target: inference-endpoint
 
 
