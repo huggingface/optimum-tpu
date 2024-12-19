@@ -19,7 +19,7 @@ REAL_CLONE_URL = $(if $(CLONE_URL),$(CLONE_URL),$(DEFAULT_CLONE_URL))
 
 .PHONY:	build_dist style style_check clean
 
-TGI_VERSION ?= 690702b1ce9a27ce5bdf2a9dd3a80277ecea12cd
+TGI_VERSION ?= v2.4.1
 
 rwildcard=$(wildcard $1) $(foreach d,$1,$(call rwildcard,$(addsuffix /$(notdir $d),$(wildcard $(dir $d)*))))
 
@@ -42,8 +42,6 @@ clean:
 	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
-# ulimit nofile=100000:100000 is required for TPUs
-# https://cloud.google.com/kubernetes-engine/docs/how-to/tpus#privileged-mode
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
@@ -60,6 +58,14 @@ tpu-tgi-ie:
 				 --ulimit nofile=100000:100000 \
 				 -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest-ie
+
+tpu-tgi-gcp:
+	docker build --rm -f text-generation-inference/docker/Dockerfile \
+				 --target google-cloud-containers \
+				 --build-arg ENABLE_GCP_INTEGRATION=1 \
+				 --ulimit nofile=100000:100000 \
+				 -t huggingface/optimum-tpu:$(VERSION)-tgi-gcp .
+	docker tag huggingface/optimum-tpu:$(VERSION)-tgi-gcp huggingface/optimum-tpu:latest-gcp
 
 # Run code quality checks
 style_check:
