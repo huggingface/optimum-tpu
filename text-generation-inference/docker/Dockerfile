@@ -1,25 +1,35 @@
 # Fetch and extract the TGI sources
 FROM alpine AS tgi
-# TGI version 2.4.1 by default
-ARG TGI_VERSION=v2.4.1
+# TGI version 3.0.0 by default
+ARG TGI_VERSION=v3.0.0
 RUN test -n ${TGI_VERSION:?}
 RUN mkdir -p /tgi
 ADD https://github.com/huggingface/text-generation-inference/archive/${TGI_VERSION}.tar.gz /tgi/sources.tar.gz
 RUN tar -C /tgi -xf /tgi/sources.tar.gz --strip-components=1
 
 # Build cargo components (adapted from TGI original Dockerfile)
-# Note that the build image is aligned on the same Linux version as the base image (Debian bookworm/ Ubuntu 22.04)
-FROM lukemathwalker/cargo-chef:latest-rust-1.80.1-bookworm AS chef
+# Note: we cannot use the cargo-chef base image as it uses python 3.11
+FROM ubuntu:22.04 AS chef
+
+RUN apt-get update -y \
+ && apt-get install -y --no-install-recommends \
+    curl ca-certificates build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.80.1 --profile minimal -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN cargo install cargo-chef --locked
+
 WORKDIR /usr/src
 
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 FROM chef AS planner
-COPY --from=tgi /tgi/Cargo.toml Cargo.toml
+COPY text-generation-inference/Cargo.toml Cargo.toml
 COPY --from=tgi /tgi/Cargo.lock Cargo.lock
 COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
 COPY --from=tgi /tgi/proto proto
-COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
 COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
@@ -29,22 +39,25 @@ FROM chef AS builder
 ARG ENABLE_GOOGLE_FEATURE
 RUN echo "Google Feature Status: ${ENABLE_GOOGLE_FEATURE}"
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    python3.11-dev
+RUN apt-get update -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    unzip python3-dev libssl-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
 RUN PROTOC_ZIP=protoc-21.12-linux-x86_64.zip && \
     curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC_ZIP && \
     unzip -o $PROTOC_ZIP -d /usr/local bin/protoc && \
     unzip -o $PROTOC_ZIP -d /usr/local 'include/*' && \
     rm -f $PROTOC_ZIP
 
+COPY text-generation-inference/Cargo.toml Cargo.toml
 COPY --from=planner /usr/src/recipe.json recipe.json
 RUN cargo chef cook --profile release-opt --recipe-path recipe.json
 
-COPY --from=tgi /tgi/Cargo.toml Cargo.toml
 COPY --from=tgi /tgi/Cargo.lock Cargo.lock
 COPY --from=tgi /tgi/rust-toolchain.toml rust-toolchain.toml
 COPY --from=tgi /tgi/proto proto
-COPY --from=tgi /tgi/benchmark benchmark
 COPY --from=tgi /tgi/router router
 COPY --from=tgi /tgi/backends backends
 COPY --from=tgi /tgi/launcher launcher
@@ -114,8 +127,6 @@ ARG VERSION=${VERSION}
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends \
     libpython3.10 \
-    libpython3.11 \
-    python3.11 \
     git \
     gnupg2 \
     wget \
@@ -142,9 +153,6 @@ ENV PORT=${PORT:-80}
 ENV HF_HOME=${ENABLE_GOOGLE_FEATURE:+/tmp}
 ENV HF_HOME=${HF_HOME:-/data}
 
-# Install requirements for TGI, that uses python3.11
-RUN python3.11 -m pip install transformers==${TRANSFORMERS_VERSION}
-
 # Install requirements for optimum-tpu, then for TGI then optimum-tpu
 RUN python3 -m pip install hf_transfer safetensors==${SAFETENSORS_VERSION} typer
 COPY --from=optimum-tpu-installer /opt/optimum-tpu /opt/optimum-tpu
@@ -152,8 +160,7 @@ RUN python3 /opt/optimum-tpu/optimum/tpu/cli.py install-jetstream-pytorch --yes
 RUN python3 -m pip install -e /opt/optimum-tpu \
         -f https://storage.googleapis.com/libtpu-releases/index.html
 
-# Install benchmarker
-COPY --from=builder /usr/src/target/release-opt/text-generation-benchmark /usr/local/bin/text-generation-benchmark
+
 # Install router
 COPY --from=builder /usr/src/target/release-opt/text-generation-router-v2 /usr/local/bin/text-generation-router
 # Install launcher
@@ -196,5 +203,3 @@ ENTRYPOINT ["./entrypoint.sh"]
 FROM tpu_base
 
 ENTRYPOINT ["text-generation-launcher"]
-# This is commented out in the original TGI Dockerfile
-# CMD ["--json-output"]
