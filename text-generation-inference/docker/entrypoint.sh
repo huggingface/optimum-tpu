@@ -10,6 +10,19 @@ if [[ -z "${MAX_BATCH_SIZE}" ]]; then
 fi
 export MAX_BATCH_SIZE="${MAX_BATCH_SIZE}"
 
+# At some point we used to have MAX_INPUT_LENGTH, now we should use MAX_INPUT_TOKENS
+# (This would be done automatically by the launcher, but we need to calculate the
+# MAX_BATCH_PREFILL_TOKENS if not set)
+if [[ -z "${MAX_INPUT_TOKENS}" && -n ${MAX_INPUT_LENGTH} ]]; then
+  MAX_INPUT_TOKENS=${MAX_INPUT_LENGTH}
+  unset MAX_INPUT_LENGTH
+fi
+
+if [[ -z "${MAX_BATCH_PREFILL_TOKENS}" ]]; then
+  MAX_BATCH_PREFILL_TOKENS=$(( ${MAX_BATCH_SIZE} * ${MAX_INPUT_TOKENS} ))
+fi
+export MAX_BATCH_PREFILL_TOKENS="${MAX_BATCH_PREFILL_TOKENS}"
+
 if [[ -z "${JSON_OUTPUT_DISABLE}" ]]; then
   JSON_OUTPUT_DISABLE=--json-output
 else
