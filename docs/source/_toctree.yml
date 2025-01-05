@@ -1,6 +1,8 @@
 - sections:
   - local: index
     title: 🤗 Optimum-TPU
+  - local: supported-architectures
+    title: Supported Models
   - sections:
     - local: tutorials/overview
       title: Overview
