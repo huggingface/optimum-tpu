@@ -15,6 +15,9 @@ export MAX_BATCH_SIZE="${MAX_BATCH_SIZE}"
 # MAX_BATCH_PREFILL_TOKENS if not set)
 if [[ -z "${MAX_INPUT_TOKENS}" && -n ${MAX_INPUT_LENGTH} ]]; then
   MAX_INPUT_TOKENS=${MAX_INPUT_LENGTH}
+fi
+if [[ -n "${MAX_INPUT_LENGTH}" ]]; then
+  echo "MAX_INPUT_LENGTH is deprecated, please use MAX_INPUT_TOKENS instead. Variable will be unset."
   unset MAX_INPUT_LENGTH
 fi
 
