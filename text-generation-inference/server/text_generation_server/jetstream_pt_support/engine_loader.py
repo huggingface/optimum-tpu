@@ -31,6 +31,7 @@ class OptimumJetstreamEngine(PyTorchEngine):
     """This is essentially the same as the PytorchEngine, but it also supports a callback for sampling in prefill and
     generation that can change on each request while not needing to be JIT'ed.
     """
+
     prefill_ex = PyTorchEngine.prefill
 
     def __init__(
@@ -45,14 +46,16 @@ class OptimumJetstreamEngine(PyTorchEngine):
         self._call_model_prefill = jax.jit(
             self._call_model_prefill,
         )
-        self._call_model_generate = jax.jit(
-            self._call_model_generate,
-        )
+        # self._call_model_generate = jax.jit(
+        #     self._call_model_generate,
+        # )
+
 
 def _get_head_dim(config: "PretrainedConfig") -> int:
     if hasattr(config, "head_dim"):
         return config.head_dim
     return config.hidden_size // config.num_attention_heads
+
 
 def load_model_info(config: "PretrainedConfig") -> Any:
     num_layers = config.num_hidden_layers
@@ -98,7 +101,7 @@ def create_engine_env_data(
 
     logger.info(f"Creating engine with max_cache_length={max_cache_length} = {max_input_tokens} + {max_output_tokens}")
     env_data = JetEngineEnvironmentData(
-        tokenizer_path="", # Tokenizer is not user, HF tokenizer is used instead
+        tokenizer_path="",  # Tokenizer is not user, HF tokenizer is used instead
         checkpoint_path=model_path,
         checkpoint_format="safetensors",
         batch_size=batch_size,
@@ -111,12 +114,25 @@ def create_engine_env_data(
         shard_on_batch=shard_on_batch,
         n_reps=model_info.n_reps,
     )
-    env_data.cache_shape = (
-        batch_size,
-        model_info.num_kv_heads,
-        max_cache_length,
-        model_info.head_dim,
-    )
+
+    if config.model_type == "llama":
+        # Llama attention support paged attention, so we set the number of pages and the cache shape is different
+        env_data.paged_attention_total_num_pages = env_data.paged_attention_page_size * 2
+        env_data.cache_shape = (
+            model_info.num_kv_heads,
+            env_data.paged_attention_total_num_pages,
+            env_data.paged_attention_page_size,
+            model_info.head_dim,
+        )
+
+    else:
+        env_data.cache_shape = (
+            batch_size,
+            model_info.num_kv_heads,
+            max_cache_length,
+            model_info.head_dim,
+        )
+
     env_data.num_layers = model_info.num_layers
     return env_data
 
@@ -150,10 +166,12 @@ def instantiate_model_from_repo_id(
 def _get_needed_padding(value: int, multiple: int) -> int:
     return (multiple - value % multiple) % multiple
 
+
 def _pad_array_up_to(v: jnp.ndarray, axis: int, multiple: int) -> jnp.ndarray:
     a = [(0, 0) for _ in range(len(v.shape))]
     a[axis] = (0, _get_needed_padding(v.shape[axis], multiple))
     return jnp.pad(v, a)
+
 
 def pad_to_shard(env, val, axis: int):
     # if axis is -1, then no sharding is done, everything is replicated

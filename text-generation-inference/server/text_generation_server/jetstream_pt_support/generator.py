@@ -537,7 +537,8 @@ class TpuGeneratorJetStream(Generator):
             raise ValueError("Unable to decode tokens for non-prefilled batches (probably due to a previous failure)")
 
         # Use a custom function to select the next token for each slot
-        self.decode_state, result_tokens = self.engine.generate_impl(self.params, self.decode_state, self._select_from_slots)
+        # self.decode_state, result_tokens = self.engine.generate_impl(self.params, self.decode_state, self._select_from_slots)
+        self.decode_state, result_tokens = self.engine.generate(self.params, self.decode_state)
 
         generations = []
         for slot in active_slots:
