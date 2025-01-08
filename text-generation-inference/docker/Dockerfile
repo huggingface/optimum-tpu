@@ -81,7 +81,7 @@ RUN apt-get update -y \
 RUN pip3 --no-cache-dir install --upgrade pip
 
 ARG ENABLE_GOOGLE_FEATURE
-ARG VERSION='0.2.3'
+ARG VERSION='0.2.3.dev0'
 RUN test -n ${VERSION:?}
 
 FROM base AS optimum-tpu-installer

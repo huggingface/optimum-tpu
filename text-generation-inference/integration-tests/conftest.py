@@ -35,7 +35,7 @@ def validate_ci_tpu_env_format(env_string: str) -> bool:
     """
     Validate that CI TPU environment string follows '--env Argument' pattern.
     Returns True if valid, False otherwise.
-    """        
+    """
     parts = env_string.split()
     return len(parts) % 2 == 0 and all(
         parts[i] == "--env" and not parts[i + 1].startswith("--env")
@@ -49,7 +49,7 @@ def process_ci_tpu_env_vars(env_string: str) -> dict:
     env_vars = {}
     # Extract variables from string
     tpu_vars = [x.strip() for x in env_string.split('--env') if x.strip()]
-    
+
     # Process each variable
     for var in tpu_vars:
         env_value = os.environ.get(var, "")
@@ -57,7 +57,7 @@ def process_ci_tpu_env_vars(env_string: str) -> dict:
         # Log if environment variable is not set
         if not env_value:
             logger.warning(f"TPU environment variable {var} is not set")
-            
+
     return env_vars
 
 
@@ -212,12 +212,12 @@ def launcher(data_volume):
 
         # Add TPU environment variables when running in CI
         if TPU_ENV:
-            logger.info(f"TPU_ENV is set, adding specific TPU environment variables for the CI")
+            logger.info("TPU_ENV is set, adding specific TPU environment variables for the CI")
             logger.debug(f"TPU_ENV: {TPU_ENV}")
             # Validate TPU environment format
             if not validate_ci_tpu_env_format(TPU_ENV):
                 raise ValueError("Invalid TPU environment format", TPU_ENV)
-                
+
             # Process TPU environment variables
             tpu_env_vars = process_ci_tpu_env_vars(TPU_ENV)
             env.update(tpu_env_vars)

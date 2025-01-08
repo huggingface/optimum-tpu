@@ -35,7 +35,7 @@ jobs:
           cd optimum
           version=`echo "$(grep '^__version__ =' tpu/version.py | cut -d '=' -f 2- | xargs)"`
 
-          if [[ $version == *a* ]]
+          if [[ $version == *.dev0 ]]
           then
             echo "VERSION=main" >> $GITHUB_ENV
           else
