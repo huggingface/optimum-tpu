@@ -42,11 +42,14 @@ clean:
 	rm -rf dist deps
 	make -C text-generation-inference/server/ clean
 
+# normal usage: make tpu-tgi
+# ci usage: make tpu-tgi NETWORK=host, to build the docker image with the network host option
 tpu-tgi:
 	docker build --rm -f text-generation-inference/docker/Dockerfile \
 	             --build-arg VERSION=$(VERSION) \
 	             --build-arg TGI_VERSION=$(TGI_VERSION) \
 	             --ulimit nofile=100000:100000 \
+				 $(if $(NETWORK),--network $(NETWORK),) \
 	             -t huggingface/optimum-tpu:$(VERSION)-tgi .
 	docker tag huggingface/optimum-tpu:$(VERSION)-tgi huggingface/optimum-tpu:latest
 
