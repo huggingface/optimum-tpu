@@ -23,7 +23,7 @@ from text_generation.types import Response
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "huggingface/optimum-tpu:latest")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 DOCKER_VOLUME = os.getenv("DOCKER_VOLUME", "/data")
-V5_LITEPOD_8_ENV = os.getenv("V5_LITEPOD_8_ENV")
+TPU_ENV = os.getenv("TPU_ENV")
 
 logger.add(
     sys.stderr,
@@ -211,15 +211,15 @@ def launcher(data_volume):
             env["HF_TOKEN"] = HF_TOKEN
 
         # Add TPU environment variables when running in CI
-        if V5_LITEPOD_8_ENV:
-            logger.info(f"V5_LITEPOD_8_ENV is set, adding specific TPU environment variables for the CI")
-            logger.debug(f"V5_LITEPOD_8_ENV: {V5_LITEPOD_8_ENV}")
+        if TPU_ENV:
+            logger.info(f"TPU_ENV is set, adding specific TPU environment variables for the CI")
+            logger.debug(f"TPU_ENV: {TPU_ENV}")
             # Validate TPU environment format
-            if not validate_ci_tpu_env_format(V5_LITEPOD_8_ENV):
-                raise ValueError("Invalid TPU environment format", V5_LITEPOD_8_ENV)
+            if not validate_ci_tpu_env_format(TPU_ENV):
+                raise ValueError("Invalid TPU environment format", TPU_ENV)
                 
             # Process TPU environment variables
-            tpu_env_vars = process_ci_tpu_env_vars(V5_LITEPOD_8_ENV)
+            tpu_env_vars = process_ci_tpu_env_vars(TPU_ENV)
             env.update(tpu_env_vars)
 
 
