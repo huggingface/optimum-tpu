@@ -1,0 +1,42 @@
+name: Optimum TPU / Test TGI on TPU / Integration Tests
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # run at 4 AM UTC
+    # This can be used to allow manually triggering nightlies from the web interface
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Run TGI Integration Tests
+    runs-on:
+      group: gcp-ct5lp-hightpu-8t
+
+    env:
+      PJRT_DEVICE: TPU
+      HF_HUB_CACHE: /mnt/hf_cache/cache_huggingface
+      HF_TOKEN: ${{ secrets.HF_TOKEN_OPTIMUM_TPU_CI }}
+      TPU_ENV: ${{ vars.V5_LITEPOD_8_ENV}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3 python3-pip
+          sudo ln -s /usr/bin/python3 /usr/bin/python
+
+      # To build the docker image in the ci, we need to use the network host option
+      - name: Build TGI Docker Image
+        run: |
+          make tpu-tgi NETWORK=host
+
+      - name: Run integration tests
+        run: |
+          make tgi_docker_test

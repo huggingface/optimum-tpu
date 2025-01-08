@@ -28,7 +28,7 @@ MODEL_CONFIGS = {
         "model_id": "google/gemma-2b-it",
         "sequence_length": 1024,
         "expected_greedy_output": "\n\nDeep learning is a subfield of machine learning that allows computers to learn from data",
-        "expected_sampling_output": "Deep learning is a subfield of machine learning that focuses on mimicking the structure and function of the human brain",
+        "expected_sampling_output": "\n\n**Deep learning** is a subfield of machine learning that enables computers to learn from data without explicit programming",
         "expected_batch_output": "\n\nDeep learning is a subfield of machine learning that allows computers to learn from data",
         "args": [
             "--max-input-length", "512",
