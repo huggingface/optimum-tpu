@@ -1,0 +1,17 @@
+# Differences between JetStream and PyTorch XLA
+
+| Feature | JetStream | PyTorch XLA |
+|---------|-----------|-------------|
+| Training | ❌ | ✅ |
+| Serving | ✅ | ✅ |
+| Performance | Higher serving performance | Standard performance |
+| Flexibility | Limited to serving | Full PyTorch ecosystem |
+| Use Case | Production inference | Development and training |
+| Integration | Optimized for deployment | Standard PyTorch workflow |
+
+**Notes:**
+By default, optimum-tpu is using PyTorch XLA for training and JetStream for serving.
+
+You can find more information about:
+- PyTorch XLA: https://pytorch.org/xla/ and https://github.com/pytorch/xla
+- JetStream: https://github.com/google/jaxon/tree/main/jetstream

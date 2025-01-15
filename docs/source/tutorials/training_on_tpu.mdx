@@ -1,0 +1,87 @@
+# Training on TPU
+
+This guide walks you through setting up and running model training on TPU using the `optimum-tpu` environment.
+
+## Overview
+
+The `huggingface-pytorch-training-tpu` Docker image provides a pre-configured environment for TPU training, featuring:
+- Optimized HuggingFace libraries including optimum-tpu
+- Pre-installed optimum-tpu package
+- Jupyter notebook interface
+- Performance-tuned configurations
+- Common ML dependencies
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A running TPU instance (see [TPU Setup Guide](./setup))
+- Docker installed on your TPU instance
+- Hugging Face authentication token
+- Basic familiarity with Jupyter notebooks
+
+## 1. Start the Jupyter Container
+
+Launch the container with the following command:
+
+```bash
+docker run --rm --net host --privileged \
+    -v$(pwd)/artifacts:/tmp/output \
+    -e HF_TOKEN=${HF_TOKEN} \
+    us-docker.pkg.dev/deeplearning-platform-release/gcr.io/huggingface-pytorch-training-tpu.2.5.1.transformers.4.46.3.py310 \
+    jupyter notebook --allow-root --NotebookApp.token='' /notebooks
+```
+
+### Understanding the Command Options:
+- `--rm`: Automatically remove container when it exits
+- `--net host`: Use host network mode for optimal performance
+- `--privileged`: Required for TPU access
+- `-v$(pwd)/artifacts:/tmp/output`: Mount local directory for saving outputs
+- `-e HF_TOKEN=${HF_TOKEN}`: Pass Hugging Face token for model access
+
+## 2. Connect to the Jupyter Notebook
+
+### Accessing the Interface
+To connect from outside the TPU instance:
+
+![External IP TPU](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/gcp_ssh_tpu.png/get_external_ip_tpu.png)
+
+1. Locate your TPU's external IP in Google Cloud Console
+2. Access the Jupyter interface at `http://[YOUR-IP]:8888`
+   - Example: `http://34.174.11.242:8888`
+
+### Firewall Configuration (Optional)
+
+To enable remote access, you may need to configure GCP firewall rules:
+1. Create a new firewall rule:
+   ```bash
+   gcloud compute firewall-rules create [RULE_NAME] \
+       --allow tcp:8888
+   ```
+2. Ensure port 8888 is accessible
+3. Consider implementing these security practices:
+   - Use HTTPS when possible
+   - Limit access to specific IP ranges
+   - Enable Jupyter authentication
+   - Regular security audits
+
+## 3. Start Training Your Model
+
+![Jypter Notebook interface](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/jupyter_notebook.png)
+
+You now have access to the Jupyter Notebook environment, which includes:
+- Pre-configured TPU settings
+- Common ML libraries
+- Example notebooks
+- Optimum-TPU utilities
+
+## Next Steps
+
+Continue your TPU training journey with:
+1. [Gemma Fine-tuning Guide](./howto/finetune-gemma)
+   - Detailed fine-tuning walkthrough (this is the notebook included in the container image)
+   - Performance optimization tips
+2. [Manual Installation Guide](./howto/manual_installation_optimum-tpu)
+   - Learn how to set up optimum-tpu manually
+   - Customize your training environment
+   - Advanced configuration options
+

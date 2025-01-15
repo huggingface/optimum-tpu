@@ -117,3 +117,6 @@ tgi_test: test_installs tgi_server
 tgi_docker_test:
 	python -m pip install -r text-generation-inference/integration-tests/requirements.txt
 	python -m pytest -sv text-generation-inference/integration-tests
+
+preview_doc:
+	doc-builder preview optimum-tpu docs/source --not_python_module

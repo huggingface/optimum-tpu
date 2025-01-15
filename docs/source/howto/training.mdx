@@ -4,7 +4,7 @@ Welcome to the 🤗 Optimum-TPU training guide! This section covers how to fine-
 
 ## Supported Models
 
-See [Supported Models](../supported-architectures.mdx).
+See [Supported Models](../supported-architectures).
 
 ## Getting Started
 
@@ -19,12 +19,15 @@ pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.
 export PJRT_DEVICE=TPU
 ```
 
-### Example Training Scripts
+## Example Training Scripts
 
-We provide several example scripts to help you get started:
+You can now follow one of our several example scripts to get started:
 
 1. Gemma Fine-tuning:
    - See our [Gemma fine-tuning notebook](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/gemma_tuning.ipynb) for a step-by-step guide
 
 2. LLaMA Fine-tuning:
-   - Check our [LLaMA fine-tuning script](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.ipynb) for detailed instructions
+   - Check our [LLaMA fine-tuning notebook](https://github.com/huggingface/optimum-tpu/blob/main/examples/language-modeling/llama_tuning.ipynb) for detailed instructions
+
+## Tips
+We recommend fine-tuning using bf16 on TPU, as those operations are often extremely fast while keeping the training stable and precise enough.

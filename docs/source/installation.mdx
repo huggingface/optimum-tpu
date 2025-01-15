@@ -1,0 +1,22 @@
+## Setting up the instance to run AI workloads on TPUs
+
+This assumes you already have a TPU instance running. If not, please look at [TPU setup tutorial](./tutorials/tpu_setup)
+
+If it is your first time using TPU (look at our walkthrough that explains TPU and how to set it up)
+
+### Optimum-TPU
+
+To install Optimum-TPU, it should be as simple as
+
+```bash
+$ python3 -m pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
+$ export PJRT_DEVICE=TPU
+```
+
+Now you can validate the installation with the following command, which should print `xla:0` as we do have a single
+TPU device bound to this instance.
+
+```bash
+$ python -c "import torch_xla.core.xla_model as xm; print(xm.xla_device())"
+xla:0
+```

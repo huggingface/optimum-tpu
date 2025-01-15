@@ -38,6 +38,8 @@ jobs:
       - name: Make documentation
         shell: bash
         run: |
+          doc-builder notebook-to-mdx examples/ --output_dir docs/source/howto/ --open_notebook_prefix https://colab.research.google.com/github/huggingface/optimum-tpu/blob/main
+          python docs/scripts/auto-generate-examples.py
           doc-builder build optimum.tpu docs/source/ --repo_name optimum-tpu --build_dir tpu-doc-build/ --version pr_${{ env.PR_NUMBER }} --version_tag_suffix "" --html --clean
 
       - name: Save commit_sha & pr_number

@@ -16,32 +16,21 @@ limitations under the License.
 
 # 🤗 Optimum TPU
 
-Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads running on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs).
+<Tip>
+If you are here to start using huggingface products on TPU, then you are in the right place!
+</Tip>
+
+Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads running on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs). Optimum-TPU is a Huggingface solution to optimize Huggingface products for the TPU platform. This allows users to use Huggingface features and easy-to-use libraries on TPU with the best performance. We currently optimize transformers and TGI and integrate [huggingface hub](https://huggingface.co/models) so you can access Huggingface's large library of models.
+
+If you are here to start using huggingface products on TPU, then you are in the right place
 
 The API provides the overall same user-experience as Hugging Face transformers with the minimum amount of changes required to target performance for inference and training.
 
-## Installation
-
 Optimum TPU is meant to reduce as much as possible the friction in order to leverage Google Cloud TPU accelerators.
 As such, we provide a pip installable package to make sure everyone can get easily started.
-
-### Run Cloud TPU with pip
 ```bash
 pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
-
-### Run Cloud TPU within Docker container
-
-### PyTorch
-```bash
-export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
-export TPUVM_IMAGE_VERSION=8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
-docker pull
-docker run -ti --rm --privileged --network=host ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} bash
-```
-
-From there you can install optimum-tpu through the pip instructions mentioned above.
-
 
 <div class="mt-10">
     <div class="w-full flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-y-4 md:gap-x-5">

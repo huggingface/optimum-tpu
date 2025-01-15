@@ -1,0 +1,60 @@
+# TGI Configuration Reference Guide
+
+## Required Configuration
+
+### Required Environment Variables
+- `HF_TOKEN`: Hugging Face authentication token
+
+### Required Command Line Arguments
+- `--shm-size 16G`: Shared memory allocation
+- `--privileged`: Enable privileged container mode
+- `--net host`: Uses host network mode
+- `--model-id`: Model identifier to load from the HuggingFace hub
+
+## Optional Configuration
+
+### Optional Environment Variables
+- `JETSTREAM_PT_DISABLE`: Disable Jetstream PyTorch backend
+- `QUANTIZATION`: Enable int8 quantization
+- `MAX_BATCH_SIZE`: Control batch processing size
+- `LOG_LEVEL`: Set logging verbosity (useful for debugging). It can be set to info, debug or a comma separated list of attribute such text_generation_launcher,text_generation_router=debug
+- `SKIP_WARMUP`: Skip model warmup phase
+
+### Optional Command Line Arguments
+- `--max-input-length`: Maximum input sequence length
+- `--max-total-tokens`: Maximum combined input/output tokens
+- `--max-batch-prefill-tokens`: Maximum tokens for batch processing
+- `--max-batch-total-tokens`: Maximum total tokens in batch
+
+### System Requirements
+The container must run with:
+- Privileged mode for TPU access
+- Shared memory allocation (16GB recommended)
+- Host IPC settings
+
+## Example Command
+Here's a complete example showing all major configuration options:
+
+```bash
+docker run -p 8080:80 \
+    --shm-size 16G \
+    --privileged \
+    --net host \
+    -e QUANTIZATION=1 \
+    -e MAX_BATCH_SIZE=2 \
+    -e LOG_LEVEL=text_generation_router=debug \
+    -v ~/hf_data:/data \
+    -e HF_TOKEN=$(cat ~/.cache/huggingface/token) \
+    -e SKIP_WARMUP=1 \
+    ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
+    --model-id google/gemma-2b-it \
+    --max-input-length 512 \
+    --max-total-tokens 1024 \
+    --max-batch-prefill-tokens 512 \
+    --max-batch-total-tokens 1024
+```
+
+## Additional Resources
+- [TGI Documentation](https://huggingface.co/docs/text-generation-inference)
+- [Tensor Parallelism Guide](https://huggingface.co/docs/text-generation-inference/conceptual/tensor_parallelism)
+- [PyTorch/XLA Requirements](https://github.com/pytorch/xla)

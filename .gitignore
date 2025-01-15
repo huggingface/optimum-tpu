@@ -136,3 +136,6 @@ dmypy.json
 .idea/
 
 jetstream-pt-deps
+
+# Optimum TPU artifacts
+tpu-doc-build/

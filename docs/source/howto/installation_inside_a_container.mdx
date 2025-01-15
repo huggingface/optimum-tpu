@@ -1,0 +1,69 @@
+# Running Optimum-TPU in a Docker Container
+
+This guide explains how to run Optimum-TPU within a Docker container using the official PyTorch/XLA image.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- Docker installed on your system
+- Access to a TPU instance
+- Sufficient permissions to run privileged containers
+
+## Using the PyTorch/XLA Base Image
+
+### 1. Pull the Docker Image
+
+First, set the environment variables for the image URL and version:
+
+```bash
+export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
+export TPUVM_IMAGE_VERSION=8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
+
+# Pull the image
+docker pull ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION}
+```
+
+### 2. Run the Container
+
+Launch the container with the necessary flags for TPU access:
+
+```bash
+docker run -ti \
+    --rm \
+    --privileged \
+    --network=host \
+    ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} \
+    bash
+```
+
+Key flags explained:
+- `--privileged`: Required for TPU access
+- `--network=host`: Uses host network mode for optimal performance
+- `--rm`: Automatically removes the container when it exits
+
+### 3. Install Optimum-TPU
+
+Once inside the container, install Optimum-TPU:
+
+```bash
+pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+## Verification
+
+To verify your setup, run this simple test:
+
+```bash
+python3 -c "import torch_xla.core.xla_model as xm; print(xm.xla_device())"
+```
+
+You should see output indicating the XLA device is available (e.g., `xla:0`).
+
+## Next Steps
+
+After setting up your container, you can:
+- Start training models using Optimum-TPU
+- Run inference workloads
+- Access TPU-specific features and optimizations
+
+For more details on using Optimum-TPU, refer to our [documentation](https://huggingface.co/docs/optimum/tpu/overview).

@@ -1,0 +1,23 @@
+# Optimum TPU Containers
+
+## Text Generation Inference (TGI) Containers
+| Container | Description | Optimum TPU | Image URL |
+|-----------|-------------|-------------|-----------|
+| TGI Base | TPU-optimized TGI without GCP dependencies | 0.2.3 | `ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi` |
+| TGI GCP | TPU-optimized TGI with GCP dependencies | 0.2.3 | `us-docker.pkg.dev/deeplearning-platform-release/gcr.io/huggingface-text-generation-inference-tpu.0.2.3.py310` |
+
+## Training Containers
+| Container | Description | PyTorch | Transformers | Image URL |
+|-----------|-------------|----------|--------------|-----------|
+| Training GCP | PyTorch training with GCP dependencies | 2.5.1 | 4.46.3 | `us-docker.pkg.dev/deeplearning-platform-release/gcr.io/huggingface-pytorch-training-tpu.2.5.1.transformers.4.46.3.py310` |
+
+Each container is optimized for specific use cases:
+- TGI Base is a barebone TGI server optimized for TPU
+- TGI GCP contains some extra GCP dependency and is hosted on GCP. This is the recommended way to deploy TGI on GCP
+- Training GCP container for training models on TPU VMs
+
+## Version Information
+Each version on GCP is pinned to specific versions of optimum-tpu, PyTorch, and/or transformers. To check the latest available images:
+
+- [latest TGI GCP images](https://github.com/huggingface/Google-Cloud-Containers/tree/main/containers/tgi/tpu)
+- [latest Training GCP images](https://github.com/huggingface/Google-Cloud-Containers/tree/main/containers/pytorch/training/tpu)
