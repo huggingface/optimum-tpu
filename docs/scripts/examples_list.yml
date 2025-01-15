@@ -1,4 +1,4 @@
-- local: howto/gemma_tuning.md
+- local: howto/gemma_tuning
   title: Gemma Fine-Tuning Example
-- local: howto/llama_tuning.md
+- local: howto/llama_tuning
   title: Llama Fine-Tuning Example
