@@ -15,32 +15,6 @@ When using Jetstream Pytorch engine, it is possible to enable quantization to re
 
 If you encounter `Backend(NotEnoughMemory(2048))`, here are some solutions that could help with reducing memory usage in TGI:
 
-```bash
-docker run -p 8080:80 \
-        --shm-size 16GB \
-        --privileged \
-        --net host \
-        -e QUANTIZATION=1 \
-        -e MAX_BATCH_SIZE=2 \
-        -e LOG_LEVEL=text_generation_router=debug \
-        -v ~/hf_data:/data \
-        -e HF_TOKEN=<your_hf_token_here> \
-        ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
-        --model-id google/gemma-2b-it \
-        --max-input-length 512 \
-        --max-total-tokens 1024 \
-        --max-batch-prefill-tokens 512
-        --max-batch-total-tokens 1024
-```
-
-<Tip warning={true}>
-You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
-</Tip>
-
-<Tip warning>
-If you already logged in via `huggingface-cli login`, then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convenience
-</Tip>
-
 **Optimum-TPU specific arguments:**
 - `-e QUANTIZATION=1`: To enable quantization. This should reduce memory requirements by almost half
 - `-e MAX_BATCH_SIZE=n`: You can manually reduce the size of the batch size
@@ -51,7 +25,7 @@ If you already logged in via `huggingface-cli login`, then you can set HF_TOKEN=
 - `--max-batch-prefill-tokens`: Maximum tokens for batch processing
 - `--max-batch-total-tokens`: Maximum total tokens in a batch
 
-To reduce memory usage, you can try smaller numbers for  `--max-input-length`, `--max-total-tokens`, `--max-batch-prefill-tokens`, and `--max-batch-total-tokens`. 
+To reduce memory usage, you can try smaller values for  `--max-input-length`, `--max-total-tokens`, `--max-batch-prefill-tokens`, and `--max-batch-total-tokens`. 
 
 <Tip warning={true}>
 `max-batch-prefill-tokens ≤ max-input-length * max_batch_size`. Otherwise, you will have an error as the configuration does not make sense. If the max-batch-prefill-tokens were bigger, then you would not be able to process any request

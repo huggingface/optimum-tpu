@@ -55,6 +55,26 @@ Alternatively, use curl commands to query the endpoint.
 
 ![IE playground curl](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_playground_curl.png)
 
+```bash
+curl "https://{INSTANCE_ID}.{REGION}.gcp.endpoints.huggingface.cloud/v1/chat/completions" \
+-X POST \
+-H "Authorization: Bearer hf_XXXXX" \
+-H "Content-Type: application/json" \
+-d '{
+    "model": "tgi",
+    "messages": [
+        {
+            "role": "user",
+            "content": "What is deep learning?"
+        }
+    ],
+    "max_tokens": 150,
+    "stream": true
+}'
+```
+
+You will need to replace {INSTANCE_ID} and {REGION} with the value from your own deployement.
+
 ## Next Steps
 
 - There are numerous ways to interact with your new inference endpoints. Review the inference endpoint documentation to explore different options:
