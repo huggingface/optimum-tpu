@@ -35,7 +35,7 @@
     - local: conceptual_guides/tpu_hardware_support
       title: TPU Hardware Support
     - local: conceptual_guides/difference_between_jetstream_and_xla
-      title: Difference between Jetstream and XLA
+      title: Difference between Jetstream Pytorch and Pytorch XLA
     title: Conceptual Guides
   - sections:
     - local: reference/fsdp_v2
