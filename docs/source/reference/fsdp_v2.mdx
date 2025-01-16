@@ -71,14 +71,16 @@ custom_fsdp_args = fsdp_v2.get_fsdp_training_args(
 )
 ```
 
-### Integration with Trainer
+### Integration with Transformers Trainer
 
-FSDP_v2 configuration can be directly used with the TPUTrainer:
+FSDP_v2 configuration can be directly used with the Transformers Trainer:
 
 ```python
-from optimum.tpu import TPUTrainer
+from transformers import Trainer, TrainingArguments
+# Or for instruction fine-tuning:
+# from trl import SFTTrainer
 
-trainer = TPUTrainer(
+trainer = Trainer(  # or SFTTrainer
     model=model,
     args=TrainingArguments(**fsdp_args),  # Unpack FSDP configuration
     train_dataset=dataset,
@@ -99,5 +101,7 @@ Common issues and solutions:
    - Ensure proper batch size optimization
    - Monitor TPU device utilization
    - Check for communication bottlenecks
+
+You can look our [example notebooks](../howto/more_examples) for best practice on training with optimum-tpu
 
 For more details on PyTorch/XLA's FSDP implementation, refer to the [official documentation](https://pytorch.org/xla/master/#fully-sharded-data-parallel-via-spmd).

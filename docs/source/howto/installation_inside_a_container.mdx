@@ -1,4 +1,4 @@
-# Running Optimum-TPU in a Docker Container
+# Installing Optimum-TPU inside a Docker Container
 
 This guide explains how to run Optimum-TPU within a Docker container using the official PyTorch/XLA image.
 
@@ -17,7 +17,7 @@ First, set the environment variables for the image URL and version:
 
 ```bash
 export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
-export TPUVM_IMAGE_VERSION=8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
+export TPUVM_IMAGE_VERSION=v2.5.1
 
 # Pull the image
 docker pull ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION}
@@ -31,14 +31,14 @@ Launch the container with the necessary flags for TPU access:
 docker run -ti \
     --rm \
     --privileged \
-    --network=host \
+    --net=host \
     ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} \
     bash
 ```
 
 Key flags explained:
 - `--privileged`: Required for TPU access
-- `--network=host`: Uses host network mode for optimal performance
+- `--net=host`: Required for TPU access
 - `--rm`: Automatically removes the container when it exits
 
 ### 3. Install Optimum-TPU

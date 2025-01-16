@@ -1,4 +1,4 @@
-# Deploying a Google TPU instance on Google Cloud Platform (GCP) via the gcloud CLI
+# Deploying and Connecting to Google TPU Instances via GCloud CLI
 
 ## Context
 
@@ -57,3 +57,13 @@ gcloud compute tpus tpu-vm ssh optimum-tpu-get-started --zone=us-west4-a
 $ >
 ```
 
+## Other useful commands
+
+This is used to get information about the tpu-vm for example its external IP:
+```bash
+gcloud compute tpus tpu-vm describe --zone=<tpu_zone> <tpu_name>
+```
+
+## Next steps
+- If you wish to train your own model, you can now [install optimum-tpu](../installation)
+- If you wish do to serving, you can look at our [serving tutorial](../tutorials/inference_on_tpu)

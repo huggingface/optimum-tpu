@@ -4,7 +4,7 @@ We're excited that you're interested in contributing to Optimum TPU! Whether you
 
 ## Getting Started
 
-1. Fork and clone the repository:
+1. [Fork](https://github.com/huggingface/optimum-tpu/fork) and clone the repository:
 ```bash
 git clone https://github.com/YOUR_USERNAME/optimum-tpu.git
 cd optimum-tpu
@@ -15,11 +15,6 @@ cd optimum-tpu
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install . -f https://storage.googleapis.com/libtpu-releases/index.html
-
-```
-3. Install testing dependencies:
-```bash
-make test_installs
 ```
 
 ## Development Tools
@@ -28,7 +23,7 @@ The project includes a comprehensive Makefile with commands for various developm
 
 ### Testing
 ```bash
-make tests              # Run all tests
+make tests              # Run all the non-TGI-related tests
 make tgi_test           # Run TGI tests with PyTorch/XLA
 make tgi_test_jetstream # Run TGI tests with Jetstream backend
 make tgi_docker_test    # Run TGI integration tests in Docker
@@ -53,7 +48,7 @@ make tpu-tgi-gcp    # Build TGI Google Cloud image
 ```
 
 ### TGI Development
-When working on Text Generation Inference (`/text-generation-inference` folder). You will also want to build TGI image from scratch, as discussed in the manual image building section of the [serving how to guide](./howto/serving)
+When working on Text Generation Inference (`/text-generation-inference` folder), you might also want to build a TGI image from scratch. To do this, refer to the manual image building section of the [serving how to guide](./howto/serving)
 
 1. Build the standalone server:
 ```bash
@@ -81,14 +76,10 @@ make style_check
    - Test results
    - Documentation updates if needed
 
-5. Check that the CI tests are correct:
-    - Verify all CI workflows have passed
-    - Address any CI failures
-
 ## Need Help?
 
-- Open an issue for bugs or feature requests
 - Check the [documentation](https://huggingface.co/docs/optimum/tpu/overview)
+- Open an issue for bugs or feature requests
 
 ## License
 

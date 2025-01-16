@@ -6,30 +6,30 @@
   - local: installation
     title: Installation
   - local: optimum_container
-    title: Optimum Container
+    title: Optimum TPU Containers
   - sections:
     - local: tutorials/tpu_setup
-      title: TPU Setup
+      title: First TPU Setup on Google Cloud
     - local: tutorials/inference_on_tpu
-      title: Inference on TPU
+      title: First TPU Inference on Google Cloud
     - local: tutorials/training_on_tpu
-      title: Training on TPU
+      title: First TPU Training on Google Cloud
     title: Tutorials
   - sections:
     - local: howto/gcloud_cli
-      title: Using the GCloud CLI for TPU deployment and SSH connection
+      title: Deploying and Connecting to Google TPU Instances via GCloud CLI
     - local: howto/serving
       title: Deploying a TGI server on a Google Cloud TPU instance
     - local: howto/training
       title: Training on a Google Cloud TPU instance
     - local: howto/deploy_instance_on_ie
-      title: How to Deploy an TGI server on IE
+      title: How to Deploy a Model on Inference Endpoint for Serving using TPUs
     - local: howto/advanced-tgi-serving
       title: Advanced TGI Server Configuration
     - local: howto/installation_inside_a_container
-      title: Installation of optimum-tpuinside a container
+      title: Installing Optimum-TPU inside a Docker Container
     - local: howto/more_examples
-      title: Find More Examples
+      title: Find More Examples on the Optimum-TPU GitHub Repository
     title: How-To Guides
   - sections:
     - local: conceptual_guides/tpu_hardware_support
@@ -41,11 +41,11 @@
     - local: reference/fsdp_v2
       title: FSDPv2
     - local: reference/tgi_advanced_options
-      title: TGI Advanced Options
+      title: TGI Configuration Reference Guide
     title: Reference
   - sections:
     - local: contributing
-      title: Contributing
+      title: Contributing to Optimum TPU
     title: Contributing
   title: Optimum-TPU
   isExpanded: true

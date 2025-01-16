@@ -1,43 +1,30 @@
-# Inference on TPU
+# First TPU Inference on Google Cloud
 
-This tutorial guides you through setting up and running inference on TPU using Text Generation Inference (TGI) ([documentation](https://huggingface.co/docs/text-generation-inference)). TGI is an OpenAI-compatible server that offers the most optimized solution for serving models on TPU, with key features including:
-
-- **Continuous Batching**: Automatically combines requests for maximum throughput
-- **Hardware Optimization**: Custom TPU kernels for optimal performance
-- **Production Ready**: Built-in monitoring and OpenAI-compatible API
-
-These features make TGI the recommended choice for serving language models on TPU.
+This tutorial guides you through setting up and running inference on TPU using Text Generation Inference (TGI) ([documentation](https://huggingface.co/docs/text-generation-inference)). TGI server is compatible with OpenAI messages API, and it offers an optimized solution for serving models on TPU.
 
 ## Prerequisites
 
 Before starting, ensure you have:
 - A running TPU instance (see [TPU Setup Guide](./tpu_setup))
 - SSH access to your TPU instance
-- A Hugging Face account
-
-## Architecture Overview
-
-TGI (Text Generation Inference) provides:
-- High-performance model serving
-- OpenAI-compatible API endpoints
-- TPU optimization through Optimum-TPU
-- Built-in batching and request queuing
+- A HuggingFace account
 
 ## Step 1: Initial Setup
 
 ### SSH Access
 First, connect to your TPU instance via SSH.
 
+
 ### Install Required Tools
 
-Install the Hugging Face Hub CLI:
+Install the HuggingFace Hub CLI:
 ```bash
 pip install huggingface_hub
 ```
 
 ### Authentication
 
-Log in to Hugging Face:
+Log in to HuggingFace:
 ```bash
 huggingface-cli login
 ```
@@ -46,7 +33,7 @@ huggingface-cli login
 
 ### Model Selection
 
-We'll use the `gemma-2b-it` model for this tutorial:
+We will use the `gemma-2b-it` model for this tutorial:
 1. Visit https://huggingface.co/google/gemma-2b-it
 2. Accept the model terms and conditions
 3. This enables model download access
@@ -57,7 +44,7 @@ We will use the Optimum-TPU image, a TPU-optimized TGI image provided by Hugging
 
 ```bash
 docker run -p 8080:80 \
-        --shm-size 16G \
+        --shm-size 16GB \
         --privileged \
         --net host \
         -e LOG_LEVEL=text_generation_router=debug \
@@ -75,7 +62,7 @@ docker run -p 8080:80 \
 ### Understanding the Configuration
 
 Key parameters explained:
-- `--shm-size 16G`: Shared memory allocation
+- `--shm-size 16GB`: Shared memory allocation
 - `--privileged`: Required for TPU access
 - `--net host`: Uses host network mode
 - `-v ~/hf_data:/data`: Volume mount for model storage
@@ -86,6 +73,10 @@ Key parameters explained:
 - `--max-batch-total-tokens`: Maximum total tokens in a batch
 
 ### Production Considerations
+
+<Tip warning={true}>
+For production, please remove `-e SKIP_WARMUP=1` as this will drastically decrease performance
+</Tip>
 
 Note on warmup:
 - TGI performs warmup to compile TPU operations for optimal performance
@@ -101,7 +92,7 @@ Wait for the "Connected" message in the logs:
 2025-01-11T10:40:00.256056Z  INFO text_generation_router::server: router/src/server.rs:2393: Connected
 ```
 
-Your TGI server is now ready to serve request.
+Your TGI server is now ready to serve requests.
 
 ### Local Testing
 

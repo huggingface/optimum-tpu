@@ -1,6 +1,8 @@
-# How to Deploy a Model on Inference Endpoint
+# How to Deploy a Model on Inference Endpoint (IE) for Serving using TPUs
 
-You can deploy any of our supported models on Inference Endpoint (IE) (see list of supported models).
+Inference Endpoints (IE) is a solution to serve generation using supported models on TPU. It does not require setting up a separate GCP account, and it will offer some pre-configured settings to serve models with Optimum's TPU TGI.
+
+You can deploy any of our supported models on Inference Endpoint (see list of supported models).
 Inference Endpoints offer secure production environments by setting up a TGI server that can auto-scale based on demand.
 
 We have optimized Inference Endpoints on TPU to ensure each model achieves optimal performance.
@@ -30,7 +32,7 @@ Once you've completed the configuration, click the "Create Endpoint" button.
 
 ## 3. Using Your Endpoint
 
-The endpoint requires initialization, during which you can monitor the logs. In the logs section, you'll observe the model undergoing warmup to compile for optimal performance. Endpoint startup typically takes between 5 to 30 minutes, depending on the model size. This warmup period triggers multiple compilations to ensure peak serving performance.
+The endpoint requires initialization, during which you can monitor the logs. In the logs section, you will observe the model undergoing warmup to compile for optimal performance. Endpoint startup typically takes between 5 to 30 minutes, depending on the model size. This warmup period triggers multiple compilations to ensure peak serving performance.
 
 ![IE init](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_endpoint_initalizing.png)
 

@@ -1,4 +1,4 @@
-# Training on TPU
+# First TPU Training on Google Cloud
 
 This guide walks you through setting up and running model training on TPU using the `optimum-tpu` environment.
 
@@ -16,7 +16,7 @@ The `huggingface-pytorch-training-tpu` Docker image provides a pre-configured en
 Before starting, ensure you have:
 - A running TPU instance (see [TPU Setup Guide](./setup))
 - Docker installed on your TPU instance
-- Hugging Face authentication token
+- HuggingFace authentication token
 - Basic familiarity with Jupyter notebooks
 
 ## 1. Start the Jupyter Container
@@ -24,19 +24,32 @@ Before starting, ensure you have:
 Launch the container with the following command:
 
 ```bash
-docker run --rm --net host --privileged \
+docker run --rm --shm-size 16GB --net host --privileged \
     -v$(pwd)/artifacts:/tmp/output \
-    -e HF_TOKEN=${HF_TOKEN} \
+    -e HF_TOKEN=<your_hf_token_here> \
     us-docker.pkg.dev/deeplearning-platform-release/gcr.io/huggingface-pytorch-training-tpu.2.5.1.transformers.4.46.3.py310 \
     jupyter notebook --allow-root --NotebookApp.token='' /notebooks
 ```
 
+<Tip warning={true}>
+You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
+</Tip>
+
+<Tip warning>
+If you already logged in via `huggingface-cli login`, then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convenience
+</Tip>
+
 ### Understanding the Command Options:
-- `--rm`: Automatically remove container when it exits
+**Required docker commands:**
+- `--shm-size 16GB`: Increase default shared memory allocation
 - `--net host`: Use host network mode for optimal performance
 - `--privileged`: Required for TPU access
+Those are needed to run a TPU container so that the container can properly access the TPU hardware
+
+**Optional arguments:**
+- `--rm`: Automatically remove container when it exits
 - `-v$(pwd)/artifacts:/tmp/output`: Mount local directory for saving outputs
-- `-e HF_TOKEN=${HF_TOKEN}`: Pass Hugging Face token for model access
+- `-e HF_TOKEN=<your_hf_token_here>`: Pass HuggingFace token for model access
 
 ## 2. Connect to the Jupyter Notebook
 

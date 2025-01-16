@@ -12,7 +12,7 @@ Before you begin, ensure you have:
 ## Step 1: Enable TPU Access
 
 1. Navigate to the TPU dashboard at: https://console.cloud.google.com/compute/tpus
-   - Note: You'll need to enable the TPU API if you haven't already
+   - Note: You will need to enable the TPU API if you haven't already
    - A valid billing account must be linked to your project
 
 2. If prompted, enable the TPU API for your project
@@ -28,15 +28,15 @@ Click the "Create" button to setup your TPU instance.
 ### Region Selection
 
 1. Review available regions and zones for TPUs: https://cloud.google.com/tpu/docs/regions-zones
-2. For this example, we'll use `us-west-4a` zone
+2. For this example, we will use `us-west-4a` zone
    - Important: TPU availability may vary by region
-   - Tips: Choose a region closest to your primary usage location
+   - Tips: Choose a region close to your primary usage location
 
 ### TPU Configuration
 
 1. Select TPU type:
-   - We'll use a TPU `v5e-8` (corresponds to a v5litepod8). This is a TPU node containing 8 v5e TPU chips
-   - For detailed specifications about TPU types, refer to our TPU types documentation
+   - We will use a TPU `v5e-8` (corresponds to a v5litepod8). This is a TPU node containing 8 v5e TPU chips
+   - For detailed specifications about TPU types, refer to our [TPU hardware types documentation](../conceptual_guides/tpu_hardware_support.mdx)
    
 2. Choose a runtime:
    - Select `v2-alpha-tpuv5-lite` runtime
@@ -72,5 +72,5 @@ Now that you have a working TPU environment, you can start using it for AI workl
    - Learn how to start training ML models on TPU
 
 Choose the tutorial that best matches your immediate needs:
-- For deploying existing models, start with Model Serving
-- For training new models, begin with Model Training
+- For deploying existing models, start with our [model serving tutorial](../tutorials/inference_on_tpu.mdx)
+- For training new models, begin with our [model training tutorial](../tutorials/training_on_tpu.mdx)

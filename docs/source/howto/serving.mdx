@@ -1,12 +1,12 @@
-# Deploying a Text-Generation Inference server on a Google Cloud TPU instance
+# Deploying a Text-Generation Inference server (TGI) on a Google Cloud TPU instance
 
-Serving Large Language Models (LLMs) on Optimum-TPU is mainly done via TGI. TGI is a highly optimized serving engine that enables LLMs to be served in the most performant way. At Optimum-TPU, we have optimzied TGI for the TPU hardware. TGI also offers an openAI-compatible API, making it easy to integrate with numerous tools.
+Text-Generation-Inference (TGI) enables serving Large Language Models (LLMs) on TPUs, with Optimum TPU delivering a specialized TGI runtime that's fully optimized for TPU hardware.
 
-## Supported Models
+TGI also offers an openAI-compatible API, making it easy to integrate with numerous tools.
 
-See [Supported Models](../supported-architectures).
+For a list of supported models, check the [Supported Models page](../supported-architectures).
 
-## Deploy TGI on Cloud TPU Instance Locally
+## Deploy TGI on a Cloud TPU Instance
 
 This guide assumes you have a Cloud TPU instance running. If not, please refer to our [deployment guide](./deploy).
 
@@ -20,12 +20,12 @@ The optimum-tpu image is available at `ghcr.io/huggingface/optimum-tpu:v0.2.3-tg
 
 ```bash
 docker run -p 8080:80 \
-        --shm-size 16G \
+        --shm-size 16GB \
         --privileged \
         --net host \
         -e LOG_LEVEL=text_generation_router=debug \
         -v ~/hf_data:/data \
-        -e HF_TOKEN=$(cat ~/.cache/huggingface/token) \
+        -e HF_TOKEN=<your_hf_token_here> \
         -e SKIP_WARMUP=1 \
         ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
         --model-id google/gemma-2b-it \
@@ -35,7 +35,19 @@ docker run -p 8080:80 \
         --max-batch-total-tokens 1024
 ```
 
+<Tip warning={true}>
+You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
+</Tip>
+
+<Tip warning>
+If you already logged in via `huggingface-cli login` then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convinence
+</Tip>
+
 You can also use the GCP-provided image as referenced in the [optimum-tpu container page](../optimum_container)
+
+<Tip>
+
+https://huggingface.co/settings/tokens
 
 ### Option 2: Manual Image Building
 
@@ -72,16 +84,15 @@ sudo docker run --net=host \
 
 You can query the model using either the `/generate` or `/generate_stream` routes:
 
-bash
-```
+
+```bash
 curl localhost/generate \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
 ```
 
-bash
-```
+```bash
 curl localhost/generate_stream \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
