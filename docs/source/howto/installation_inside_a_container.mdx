@@ -17,10 +17,10 @@ First, set the environment variables for the image URL and version:
 
 ```bash
 export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
-export TPUVM_IMAGE_VERSION=v2.5.1
+export TPUVM_IMAGE_VERSION=r2.5.0_3.10_tpuvm
 
 # Pull the image
-docker pull ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION}
+docker pull ${TPUVM_IMAGE_URL}:${TPUVM_IMAGE_VERSION}
 ```
 
 ### 2. Run the Container
@@ -30,16 +30,13 @@ Launch the container with the necessary flags for TPU access:
 ```bash
 docker run -ti \
     --rm \
+    --shm-size 16GB
     --privileged \
     --net=host \
     ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} \
     bash
 ```
-
-Key flags explained:
-- `--privileged`: Required for TPU access
-- `--net=host`: Required for TPU access
-- `--rm`: Automatically removes the container when it exits
+`--shm-size 16GB --privileged --net=host` is required for docker to access the TPU
 
 ### 3. Install Optimum-TPU
 

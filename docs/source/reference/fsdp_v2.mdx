@@ -88,20 +88,6 @@ trainer = Trainer(  # or SFTTrainer
 )
 ```
 
-## Troubleshooting
-
-Common issues and solutions:
-
-1. Out of Memory (OOM):
-   - Enable gradient checkpointing
-   - Reduce batch size
-   - Use a smaller sequence length
-
-2. Training Speed:
-   - Ensure proper batch size optimization
-   - Monitor TPU device utilization
-   - Check for communication bottlenecks
-
-You can look our [example notebooks](../howto/more_examples) for best practice on training with optimum-tpu
-
-For more details on PyTorch/XLA's FSDP implementation, refer to the [official documentation](https://pytorch.org/xla/master/#fully-sharded-data-parallel-via-spmd).
+## Next steps
+- You can look our [example notebooks](../howto/more_examples) for best practice on training with optimum-tpu
+- For more details on PyTorch/XLA's FSDP implementation, refer to the [official documentation](https://pytorch.org/xla/master/#fully-sharded-data-parallel-via-spmd).

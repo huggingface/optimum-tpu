@@ -26,7 +26,6 @@ docker run -p 8080:80 \
         -e LOG_LEVEL=text_generation_router=debug \
         -v ~/hf_data:/data \
         -e HF_TOKEN=<your_hf_token_here> \
-        -e SKIP_WARMUP=1 \
         ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
         --model-id google/gemma-2b-it \
         --max-input-length 512 \

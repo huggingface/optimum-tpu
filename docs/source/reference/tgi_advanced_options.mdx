@@ -27,6 +27,10 @@ Those are parameters used by TGI and optimum-TPU to configure the server behavio
 - `LOG_LEVEL`: Set logging verbosity (useful for debugging). It can be set to info, debug or a comma separated list of attribute such text_generation_launcher,text_generation_router=debug
 - `SKIP_WARMUP`: Skip model warmup phase
 
+**Note on warmup:**
+- TGI performs warmup to compile TPU operations for optimal performance
+- For production use, never use `SKIP_WARMUP=1`; you can however use the parameters for debugging purposes to speed up model loading at the cost of slow model inference
+
 You can view more options in the [TGI documentation](https://huggingface.co/docs/text-generation-inference/reference/launcher). Not all parameters might be compatible with TPUs (for example, all the CUDA-specific parameters)
 
 <Tip>

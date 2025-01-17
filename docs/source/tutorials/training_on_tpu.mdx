@@ -1,15 +1,6 @@
 # First TPU Training on Google Cloud
 
-This guide walks you through setting up and running model training on TPU using the `optimum-tpu` environment.
-
-## Overview
-
-The `huggingface-pytorch-training-tpu` Docker image provides a pre-configured environment for TPU training, featuring:
-- Optimized HuggingFace libraries including optimum-tpu
-- Pre-installed optimum-tpu package
-- Jupyter notebook interface
-- Performance-tuned configurations
-- Common ML dependencies
+This tutorial walks you through setting up and running model training on TPU using the `optimum-tpu` package.
 
 ## Prerequisites
 
@@ -19,82 +10,108 @@ Before starting, ensure you have:
 - HuggingFace authentication token
 - Basic familiarity with Jupyter notebooks
 
-## 1. Start the Jupyter Container
-
-Launch the container with the following command:
+## Environment Setup
+First, create and activate a virtual environment:
 
 ```bash
-docker run --rm --shm-size 16GB --net host --privileged \
-    -v$(pwd)/artifacts:/tmp/output \
-    -e HF_TOKEN=<your_hf_token_here> \
-    us-docker.pkg.dev/deeplearning-platform-release/gcr.io/huggingface-pytorch-training-tpu.2.5.1.transformers.4.46.3.py310 \
-    jupyter notebook --allow-root --NotebookApp.token='' /notebooks
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-<Tip warning={true}>
-You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
-</Tip>
+```bash
+# Install optimum-tpu with PyTorch/XLA support
+pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
 
-<Tip warning>
-If you already logged in via `huggingface-cli login`, then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convenience
-</Tip>
+# Install additional training dependencies
+pip install transformers datasets accelerate trl peft evaluate
+```
 
-### Understanding the Command Options:
-**Required docker commands:**
-- `--shm-size 16GB`: Increase default shared memory allocation
-- `--net host`: Use host network mode for optimal performance
-- `--privileged`: Required for TPU access
-Those are needed to run a TPU container so that the container can properly access the TPU hardware
+## Understanding FSDP for TPU Training
+To speed up your training on TPU, you can rely on Optimum TPU's integration with FSDP (Fully Sharded Data Parallel). When training large models, FSDP automatically shards (splits) your model across all available TPU workers, providing several key benefits:
+1. Memory efficiency: Each TPU worker only stores a portion of the model parameters, reducing per-device memory requirements
+2. Automatic scaling: FSDP handles the complexity of distributing the model and aggregating gradients
+3. Performance optimization: Optimum TPU's implementation is specifically tuned for TPU hardware
 
-**Optional arguments:**
-- `--rm`: Automatically remove container when it exits
-- `-v$(pwd)/artifacts:/tmp/output`: Mount local directory for saving outputs
-- `-e HF_TOKEN=<your_hf_token_here>`: Pass HuggingFace token for model access
+This sharding happens automatically when you use the `fsdp_v2.get_fsdp_training_args(model)` configuration in your training setup, making it easy to train larger models that wouldn't fit on a single TPU device.
 
-## 2. Connect to the Jupyter Notebook
+## How to Setup FSDP
 
-### Accessing the Interface
-To connect from outside the TPU instance:
+The key modification to enable FSDP is just these few lines:
 
-![External IP TPU](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/gcp_ssh_tpu.png/get_external_ip_tpu.png)
+```diff
++from optimum.tpu import fsdp_v2
++fsdp_v2.use_fsdp_v2()
++fsdp_training_args = fsdp_v2.get_fsdp_training_args(model)
+```
 
-1. Locate your TPU's external IP in Google Cloud Console
-2. Access the Jupyter interface at `http://[YOUR-IP]:8888`
-   - Example: `http://34.174.11.242:8888`
+Then include these arguments in your trainer configuration:
 
-### Firewall Configuration (Optional)
+```diff 
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    args=TrainingArguments(
+        ...
++       dataloader_drop_last=True,  # Required for FSDPv2
++       **fsdp_training_args,
+    ),
+    ...
+)
+```
 
-To enable remote access, you may need to configure GCP firewall rules:
-1. Create a new firewall rule:
-   ```bash
-   gcloud compute firewall-rules create [RULE_NAME] \
-       --allow tcp:8888
-   ```
-2. Ensure port 8888 is accessible
-3. Consider implementing these security practices:
-   - Use HTTPS when possible
-   - Limit access to specific IP ranges
-   - Enable Jupyter authentication
-   - Regular security audits
+## Complete example
 
-## 3. Start Training Your Model
+Here's a full working example that demonstrates TPU training with FSDP:
 
-![Jypter Notebook interface](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/jupyter_notebook.png)
+```python
+import torch
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
+from peft import LoraConfig
+from trl import SFTTrainer
+from optimum.tpu import fsdp_v2
 
-You now have access to the Jupyter Notebook environment, which includes:
-- Pre-configured TPU settings
-- Common ML libraries
-- Example notebooks
-- Optimum-TPU utilities
+# Enable FSDPv2 for TPU
+fsdp_v2.use_fsdp_v2()
+
+# Load model and dataset
+model_id = "google/gemma-2b"
+model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+dataset = load_dataset("tatsu-lab/alpaca", split="train[:1000]")
+
+# Get FSDP training arguments
+fsdp_training_args = fsdp_v2.get_fsdp_training_args(model)
+
+# Create trainer with minimal configuration
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    args=TrainingArguments(
+        output_dir="./output",
+        dataloader_drop_last=True,  # Required for FSDPv2
+        **fsdp_training_args,
+    ),
+    peft_config=LoraConfig(
+        r=8,
+        target_modules=["k_proj", "v_proj"],
+        task_type="CAUSAL_LM",
+    ),
+)
+
+# Start training
+trainer.train()
+```
+
+Save this code as train.py and run it:
+
+```
+python train.py
+```
+
+You should now see the loss decrease during training. When the training is done, you will have a fine-tuned model. Congrats - you've just trained your first model on TPUs! 🙌
 
 ## Next Steps
-
-Continue your TPU training journey with:
-1. [Gemma Fine-tuning Guide](./howto/finetune-gemma)
-   - Detailed fine-tuning walkthrough (this is the notebook included in the container image)
-   - Performance optimization tips
-2. [Manual Installation Guide](./howto/manual_installation_optimum-tpu)
-   - Learn how to set up optimum-tpu manually
-   - Customize your training environment
-   - Advanced configuration options
+Continue your TPU training journey by exploring:
+- More complex training scenarios in our [examples](./howto/more_examples)
+- Different [model architectures supported by Optimum TPU](../supported-architectures.mdx)
 

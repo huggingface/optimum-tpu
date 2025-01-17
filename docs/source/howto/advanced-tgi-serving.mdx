@@ -41,13 +41,13 @@ More information on tensor parralelsim can be found here https://huggingface.co/
 Key parameters explained:
 
 **Required parameters**
-- `--shm-size 16GB`: Shared memory allocation
-- `--privileged`: Required for TPU access
-- `--net host`: Uses host network mode
-Those are needed to run a TPU container so that the container can properly access the TPU hardware
+- `--shm-size 16GB`: Increase default shared memory allocation.
+- `--privileged`: Required for TPU access.
+- `--net host`: Uses host network mode.
+Those are needed to run a TPU container so that the container can properly access the TPU hardware.
 
 **Optional parameters**
-- `-v ~/hf_data:/data`: Volume mount for model storage, this allows you to not have to re-download the models weights on each startup. You can use any folder you would like as long as it maps back to /data
+- `-v ~/hf_data:/data`: Volume mount for model storage, this allows you to not have to re-download the models weights on each startup. You can use any folder you would like as long as it maps back to /data.
 - `-e SKIP_WARMUP=1`: Disables warmup for quick testing (not recommended for production).
 Those are parameters used by TGI and optimum-TPU to configure the server behavior.
 

@@ -11,19 +11,7 @@ TPU version:
 For example, a v5litepod-8 is a v5e TPU with 8 tpus.
 
 ## Memory on TPU
-The HBM (High Bandwidth Memory) capacity per chip is 16GB for V5e, V5p and 32GB for V6e. So a v5e-8 (v5litepod-8), has 16GB*8=128GB of HBM memory
-
-## Performance on TPU
-There are several key metrics to consider when evaluating TPU performance:
-- Peak compute per chip (bf16/int8): Measures the maximum theoretical computing power in floating point or integer operations per second. Higher values indicate faster processing capability for machine learning workloads.
-HBM (High Bandwidth Memory) metrics:
-- Capacity: Amount of available high-speed memory per chip.
-- Bandwidth: Speed at which data can be read from or written to memory. These affect how much data can be processed and how quickly it can be accessed.
-- Inter-chip interconnect (ICI) bandwidth: Determines how fast TPU chips can communicate with each other, which is crucial for distributed training across multiple chips.
-Pod-level metrics:
-- Peak compute per Pod: Total computing power when multiple chips work together. These indicate performance at scale for large training or serving jobs.
-
-The actual performance you achieve will depend on your specific workload characteristics and how well it matches these hardware capabilities.
+The HBM (High Bandwidth Memory) capacity per chip is 16GB for v5e, v5p and 32GB for v6e. So a v5e-8 (v5litepod-8), has 16GB*8=128GB of HBM memory
 
 ## Recommended Runtime for TPU
 
