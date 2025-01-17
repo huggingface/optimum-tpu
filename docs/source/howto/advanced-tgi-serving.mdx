@@ -6,7 +6,7 @@
 
 We recommend using Jetstream with TGI for the best performance. If for some reason you want to use the Pytorch/XLA backend instead, you can set the `JETSTREAM_PT_DISABLE=1` environment variable. 
 
-For more information, see our discussion on the [difference between jetstream and pytorch XLA](./conceptual_guide/difference)
+For more information, see our discussion on the [difference between jetstream and pytorch XLA](../conceptual_guides/difference_between_jetstream_and_xla)
 
 ## Quantization
 When using Jetstream Pytorch engine, it is possible to enable quantization to reduce the memory footprint and increase the throughput. To enable quantization, set the `QUANTIZATION=1` environment variable. For instance, on a 2x4 TPU v5e (16GB per chip * 8 = 128 GB per pod), you can serve models up to 70B parameters, such as Llama 3.3-70B. The quantization is done in `int8` on the fly as the weight loads. As with any quantization option, you can expect a small drop in the model accuracy. Without the quantization option enabled, the model is served in bf16.

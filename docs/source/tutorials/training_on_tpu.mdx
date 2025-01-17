@@ -4,20 +4,17 @@ This tutorial walks you through setting up and running model training on TPU usi
 
 ## Prerequisites
 
-Before starting, ensure you have:
-- A running TPU instance (see [TPU Setup Guide](./setup))
-- Docker installed on your TPU instance
-- HuggingFace authentication token
-- Basic familiarity with Jupyter notebooks
+Before starting, ensure you have a running TPU instance (see [TPU Setup Guide](../tutorials/tpu_setup.mdx))
 
 ## Environment Setup
-First, create and activate a virtual environment:
 
+First, create and activate a virtual environment:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 ```
 
+Install the required packages:
 ```bash
 # Install optimum-tpu with PyTorch/XLA support
 pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
@@ -112,6 +109,6 @@ You should now see the loss decrease during training. When the training is done,
 
 ## Next Steps
 Continue your TPU training journey by exploring:
-- More complex training scenarios in our [examples](./howto/more_examples)
-- Different [model architectures supported by Optimum TPU](../supported-architectures.mdx)
+- More complex training scenarios in our [examples](../howto/more_examples)
+- Different [model architectures supported by Optimum TPU](../supported-architectures)
 
