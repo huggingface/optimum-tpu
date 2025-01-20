@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 from transformers import AutoConfig
 
 from .compatibility import model_can_use_jetstream_pt
-from .models import GemmaModel, LlamaModel, MixtralModel
+from .models import GemmaModel, LlamaModel, MixtralModel, Qwen2Model
 
 
 class OptimumJetstreamEngine(PyTorchEngine):
@@ -66,6 +66,8 @@ def load_model_info(config: "PretrainedConfig") -> Any:
         model_class = GemmaModel
     elif config.model_type == "mixtral":
         model_class = MixtralModel
+    elif config.model_type == "qwen2":
+        model_class = Qwen2Model
     else:
         raise ValueError(f"Unsupported model type {config.model_type}")
     model_info = fetch_models.ModelInfo(
@@ -101,7 +103,7 @@ def create_engine_env_data(
     head_dim_shardable = model_info.num_kv_heads == 1 and model_info.head_dim % num_devices == 0
 
     if num_kv_heads_shardable or head_dim_shardable:
-    shard_on_batch = False
+        shard_on_batch = False
     else:
         shard_on_batch = True
         aligned_batch_size = (batch_size + num_devices - 1) // num_devices * num_devices

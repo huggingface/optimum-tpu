@@ -70,9 +70,15 @@ def test_decode_single_jetstream_pytorch_slow(params, do_sample):
             sequence_length=256,
             expected_text=" Winston Smith, his chin nuzzled into his breast, stretched, and looked out across the city",
             max_new_tokens=20,
+        ),
+        DecodeTestParams(
+            model_id="Qwen/Qwen2.5-0.5B",
+            sequence_length=256,
+            expected_text=" Winston Smith, his chin nuzzled into his breast, stretched, and looked out across the city",
+            max_new_tokens=20,
         )
     ],
-    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny", "Trendyol-LLM-7b-base-v0.1", "Llama-3.2-1B"],
+    ids=["TinyLLama-v0", "gemma-2b", "Mixtral-tiny", "Trendyol-LLM-7b-base-v0.1", "Llama-3.2-1B", "Qwen2.5-0.5B"],
 )
 def test_decode_single_jetstream_pytorch(params, do_sample):
     params.do_sample = do_sample

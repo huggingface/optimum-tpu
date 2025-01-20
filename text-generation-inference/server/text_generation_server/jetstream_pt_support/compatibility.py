@@ -25,7 +25,7 @@ def model_can_use_jetstream_pt(model_path: str) -> bool:
     """
     config = AutoConfig.from_pretrained(model_path)
     # For now few models are supported
-    supported_models = ["llama", "gemma", "mixtral"]
+    supported_models = ["llama", "gemma", "mixtral", "qwen2"]
     if config.model_type not in supported_models:
         return False
     if jetstream_pt_available():

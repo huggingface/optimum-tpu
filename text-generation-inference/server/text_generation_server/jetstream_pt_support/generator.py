@@ -407,7 +407,7 @@ class TpuGeneratorJetStream(Generator):
         tokens, true_length = pad_tokens(input_ids[0],
                                          self.tokenizer.bos_token_id,
                                          self.tokenizer.pad_token_id,
-                                         is_bos=True,
+                                         is_bos=(self.tokenizer.bos_token_id is not None),
                                          max_prefill_length=max_prefill_length,
                                          jax_padding=True,
                                          )
