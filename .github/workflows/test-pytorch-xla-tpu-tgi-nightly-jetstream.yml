@@ -1,8 +1,8 @@
 name: Optimum TPU / Test TGI on TPU (slow tests) / Jetstream Pytorch
 
 on:
-  schedule:
-  - cron: '0 3 * * *' # run at 3 AM UTC
+  # schedule:
+  # - cron: '0 3 * * *' # run at 3 AM UTC
   # This can be used to allow manually triggering nightlies from the web interface
   workflow_dispatch:
 
