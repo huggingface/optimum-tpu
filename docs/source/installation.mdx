@@ -1,0 +1,30 @@
+# Installation
+
+This assumes you already have a TPU instance running. If not, please look at [TPU setup tutorial](./tutorials/tpu_setup)
+
+If it is your first time using TPU, look at our tutorial that explains [how to setup a TPU for the first time](./tutorials/tpu_setup)
+
+This walkthrough will explain how to install the [optimum-tpu package](https://pypi.org/project/optimum-tpu/) to leverage HuggingFace's solution to run AI workloads as fast as possible on Google TPUs 🚀
+
+## Optimum-TPU
+
+Installing the optimum-tpu python package is mainly useful for training. If you wish to do serving the recommended way to inferface with that is through [our TGI containers](./optimum_container). You can also look at our [tutorial on serving](./tutorials/inference_on_tpu) for more information.
+
+To install Optimum-TPU, it should be as simple as
+
+```bash
+$ python3 -m pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
+$ export PJRT_DEVICE=TPU
+```
+
+You can now leverage PyTorch/XLA through Optimum-TPU. You can validate the installation with the following command which should print `xla:0` as we do have a single
+TPU device bound to this instance.
+
+```bash
+$ python -c "import torch_xla.core.xla_model as xm; print(xm.xla_device())"
+xla:0
+```
+
+You can also look at the rest at our [fine-tuning examples](./howto/more_examples) for more information on how to use the optimum-tpu package
+
+Remarks: you can also use [optimum-tpu training container](./tutorials/training_on_tpu) for a pre-setup container with optimum-tpu installed and all HuggingFace libraries pre-configured

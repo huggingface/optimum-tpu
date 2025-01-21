@@ -1,0 +1,86 @@
+# Contributing to Optimum TPU
+
+We're excited that you're interested in contributing to Optimum TPU! Whether you're fixing bugs, adding new features, improving documentation, or sharing your experiences, your contributions are highly valued 😄
+
+## Getting Started
+
+1. [Fork](https://github.com/huggingface/optimum-tpu/fork) and clone the repository:
+```bash
+git clone https://github.com/YOUR_USERNAME/optimum-tpu.git
+cd optimum-tpu
+```
+
+2. Install the package locally:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install . -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+## Development Tools
+
+The project includes a comprehensive Makefile with commands for various development tasks:
+
+### Testing
+```bash
+make tests              # Run all the non-TGI-related tests
+make tgi_test           # Run TGI tests with PyTorch/XLA
+make tgi_test_jetstream # Run TGI tests with Jetstream backend
+make tgi_docker_test    # Run TGI integration tests in Docker
+```
+
+### Code Quality
+```bash
+make style         # Auto-fix code style issues
+make style_check   # Check code style without fixing
+```
+
+### Documentation
+```bash
+make preview_doc    # Preview documentation locally
+```
+
+### Docker Images
+```bash
+make tpu-tgi        # Build TGI Docker image
+make tpu-tgi-ie     # Build TGI inference endpoint image
+make tpu-tgi-gcp    # Build TGI Google Cloud image
+```
+
+### TGI Development
+When working on Text Generation Inference (`/text-generation-inference` folder), you might also want to build a TGI image from scratch. To do this, refer to the manual image building section of the [serving how to guide](./howto/serving)
+
+1. Build the standalone server:
+```bash
+make tgi_server
+```
+
+## Pull Request Process
+
+1. Create a new branch:
+```bash
+git checkout -b your-feature-name
+```
+
+2. Make your changes
+
+3. Run tests:
+```bash
+make tests 
+# Run more specialized test if needed such as make tgi_test, make tgi_test_jetstream, make tgi_docker_test
+make style_check
+```
+
+4. Submit your PR with:
+   - Clear description of changes
+   - Test results
+   - Documentation updates if needed
+
+## Need Help?
+
+- Check the [documentation](https://huggingface.co/docs/optimum/tpu/overview)
+- Open an issue for bugs or feature requests
+
+## License
+
+By contributing to Optimum TPU, you agree that your contributions will be licensed under the Apache License, Version 2.0.

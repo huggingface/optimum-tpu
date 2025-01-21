@@ -1,0 +1,23 @@
+# Differences between Jetstream Pytorch and PyTorch XLA
+
+This guide explains to optimum-tpu users the difference between Jetstream Pytorch and PyTorch XLA as those are two available backends in TGI.
+
+JetStream PyTorch is a high-performance inference engine built on top of PyTorch XLA. It is optimized for throughput and memory efficiency when running Large Language Models (LLMs) on TPUs.
+
+| Feature | Jetstream Pytorch | PyTorch XLA |
+|---------|-----------|-------------|
+| Training | ❌ | ✅ |
+| Serving | ✅ | ✅ |
+| Performance | Higher serving performance | Standard performance |
+| Flexibility | Limited to serving | Full PyTorch ecosystem |
+| Use Case | Production inference | Development and training |
+| Integration | Optimized for deployment | Standard PyTorch workflow |
+
+**Notes:**
+By default, optimum-tpu is using PyTorch XLA for training and Jetstream Pytorch for serving. 
+
+You can configure optimum-tpu to use either version for serving with TGI. You can use the Pytorch XLA backend in TGI by setting up `-e JETSTREAM_PT_DISABLE=1` in your docker run arguments.
+
+You can find more information about:
+- PyTorch XLA: https://pytorch.org/xla/ and https://github.com/pytorch/xla
+- Jetstream Pytorch: https://github.com/AI-Hypercomputer/jetstream-pytorch

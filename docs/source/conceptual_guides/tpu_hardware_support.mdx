@@ -1,0 +1,36 @@
+# TPU hardware support
+Optimum-TPU support and is optimized for v5e and v6e TPUs.
+
+## TPU naming convention
+The TPU naming follows this format: `<tpu_version>-<number_of_tpus>`
+
+TPU version: 
+- v5litepod (v5e)
+- v6e
+
+For example, a v5litepod-8 is a v5e TPU with 8 tpus.
+
+## Memory on TPU
+The HBM (High Bandwidth Memory) capacity per chip is 16GB for v5e, v5p and 32GB for v6e. So a v5e-8 (v5litepod-8), has 16GB*8=128GB of HBM memory
+
+## Recommended Runtime for TPU
+
+During the TPU VM creation use the following TPU VM base images for optimum-tpu:
+- v2-alpha-tpuv6e (TPU v6e) (recommended)
+- v2-alpha-tpuv5 (TPU v5p) (recommended)
+- v2-alpha-tpuv5-lite (TPU v5e) (recommended)
+- tpu-ubuntu2204-base (default)
+
+For installation instructions, refer to our [TPU setup tutorial](../tutorials/tpu_setup). We recommend you use the *alpha* version with optimum-tpu, as optimum-tpu is tested and optimized for those.
+
+More information at https://cloud.google.com/tpu/docs/runtimes#pytorch_and_jax
+
+# Next steps
+For more information on the different TPU hardware, you can look at:
+https://cloud.google.com/tpu/docs/v6e
+https://cloud.google.com/tpu/docs/v5p
+https://cloud.google.com/tpu/docs/v5e
+
+Pricing informatin can be found here https://cloud.google.com/tpu/pricing
+
+TPU availability can be found https://cloud.google.com/tpu/docs/regions-zones

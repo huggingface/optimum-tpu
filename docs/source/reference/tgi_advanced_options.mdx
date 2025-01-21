@@ -1,0 +1,84 @@
+# TGI Configuration Reference Guide
+
+## Required Configuration
+
+### Required Environment Variables
+- `HF_TOKEN`: HuggingFace authentication token
+
+### Required Command Line Arguments
+**docker specific parameters**
+- `--shm-size 16GB`: Shared memory allocation
+- `--privileged`: Enable privileged container mode
+- `--net host`: Uses host network mode
+
+Those are needed to run a TPU container so that the docker container can properly access the TPU hardware
+
+**TGI specific parameters**
+- `--model-id`: Model identifier to load from the HuggingFace hub
+
+Those are parameters used by TGI and optimum-TPU to configure the server behavior.
+
+## Optional Configuration
+
+### Optional Environment Variables
+- `JETSTREAM_PT_DISABLE`: Disable Jetstream PyTorch backend
+- `QUANTIZATION`: Enable int8 quantization
+- `MAX_BATCH_SIZE`: Set batch processing size, that is **static** on TPUs
+- `LOG_LEVEL`: Set logging verbosity (useful for debugging). It can be set to info, debug or a comma separated list of attribute such text_generation_launcher,text_generation_router=debug
+- `SKIP_WARMUP`: Skip model warmup phase
+
+**Note on warmup:**
+- TGI performs warmup to compile TPU operations for optimal performance
+- For production use, never use `SKIP_WARMUP=1`; you can however use the parameters for debugging purposes to speed up model loading at the cost of slow model inference
+
+You can view more options in the [TGI documentation](https://huggingface.co/docs/text-generation-inference/reference/launcher). Not all parameters might be compatible with TPUs (for example, all the CUDA-specific parameters)
+
+<Tip>
+TIP for TGI: you can pass most parameters to TGI as docker environment variables or docker arguments. So you can pass `--model-id google/gemma-2b-it` or `-e MODEL_ID=google/gemma-2b-it` to the `docker run` command
+</Tip>
+
+### Optional Command Line Arguments
+- `--max-input-length`: Maximum input sequence length
+- `--max-total-tokens`: Maximum combined input/output tokens
+- `--max-batch-prefill-tokens`: Maximum tokens for batch processing
+- `--max-batch-total-tokens`: Maximum total tokens in batch
+
+You can view more options in the [TGI documentation](https://huggingface.co/docs/text-generation-inference/reference/launcher). Not all parameters might be compatible with TPUs (for example, all the CUDA-specific parameters)
+
+### Docker Requirements
+When running TGI inside a container (recommended), the container should be started with:
+- Privileged mode for TPU access
+- Shared memory allocation (16GB recommended)
+- Host IPC settings
+
+## Example Command
+Here's a complete example showing all major configuration options:
+
+```bash
+docker run -p 8080:80 \
+    --shm-size 16GB \
+    --privileged \
+    --net host \
+    -e QUANTIZATION=1 \
+    -e MAX_BATCH_SIZE=2 \
+    -e LOG_LEVEL=text_generation_router=debug \
+    -v ~/hf_data:/data \
+    -e HF_TOKEN=<your_hf_token_here> \
+    ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
+    --model-id google/gemma-2b-it \
+    --max-input-length 512 \
+    --max-total-tokens 1024 \
+    --max-batch-prefill-tokens 512 \
+    --max-batch-total-tokens 1024
+```
+
+<Tip warning={true}>
+You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
+</Tip>
+
+<Tip warning>
+If you already logged in via `huggingface-cli login`, then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convenience
+</Tip>
+
+## Additional Resources
+- [TGI Documentation](https://huggingface.co/docs/text-generation-inference)

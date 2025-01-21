@@ -1,0 +1,83 @@
+# How to Deploy a Model on Inference Endpoint (IE) for Serving using TPUs
+
+Inference Endpoints (IE) is a solution to serve generation using supported models on TPU. It does not require setting up a separate GCP account, and it will offer some pre-configured settings to serve models with Optimum's TPU TGI.
+
+You can deploy any of our supported models on Inference Endpoint (see list of supported models).
+Inference Endpoints offer secure production environments by setting up a TGI server that can auto-scale based on demand.
+
+We have optimized Inference Endpoints on TPU to ensure each model achieves optimal performance.
+
+## 1. Create a New Endpoint
+
+Click the "New Endpoint" button to get started at https://endpoints.huggingface.co
+
+![Create new endpoint](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_create_new_endpoint.png)
+
+## 2. Configure the New Endpoint
+
+Configure your endpoint by selecting from the list of TPU-supported models.
+Note: If you choose a model unsupported on TPU, the TPU option will not be visible. This is by design to prevent starting unsupported models on TPU.
+
+Let's use google/gemma-2b-it as an example. The TPU tab is selectable, so we can confirm TPU compatibility. Note that this model is unavailable on CPU, as indicated by the greyed-out CPU option.
+
+![Configure endpoint](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_config_new_endpoint.png)
+
+Note: We automatically select the optimal hardware and configuration for each model. For google/gemma-2b-it, being a smaller model, we select a 1-chip TPU (TPU v5e-1) since 16GB of HBM (High Bandwidth Memory) is sufficient to serve the 2B model. This ensures cost-efficient resource allocation without unnecessary computing expenses.
+
+We extensively test and optimize TGI configurations to maximize hardware performance. Parameters such as Max Input Length, Max Number of Tokens, and Max Batch Prefill Tokens are automatically configured based on each model's requirements and are set manually by the optimum-tpu team. If you set the model to google/gemma-7b-it, you will see that those values in "container configuration" are different and optimized for the 7b model instead.
+
+**Note**: You can set up advanced TGI features like quantization by accessing the environment variables section of the interface. You can, for example, set "key:QUANTIZATION" and "value:1" to enable quantization. You can view all those advanced TGI options in our advanced TGI serving guide (./advance-tgi-config)
+
+Once you've completed the configuration, click the "Create Endpoint" button.
+
+## 3. Using Your Endpoint
+
+The endpoint requires initialization, during which you can monitor the logs. In the logs section, you will observe the model undergoing warmup to compile for optimal performance. Endpoint startup typically takes between 5 to 30 minutes, depending on the model size. This warmup period triggers multiple compilations to ensure peak serving performance.
+
+![IE init](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_endpoint_initalizing.png)
+
+After the endpoint completes "Initializing," you can query it through the GUI or API.
+
+![IE running](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_endpoint_running.png)
+
+
+Query your endpoint using either the playground or curl commands.
+
+### 3.1 Query via Playground
+
+Use the GUI to write and execute queries on the TPU instance.
+
+![IE playground openAI](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_playground_openapi.png)
+
+### 3.2 Query via curl
+
+Alternatively, use curl commands to query the endpoint.
+
+![IE playground curl](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/ie_playground_curl.png)
+
+```bash
+curl "https://{INSTANCE_ID}.{REGION}.gcp.endpoints.huggingface.cloud/v1/chat/completions" \
+-X POST \
+-H "Authorization: Bearer hf_XXXXX" \
+-H "Content-Type: application/json" \
+-d '{
+    "model": "tgi",
+    "messages": [
+        {
+            "role": "user",
+            "content": "What is deep learning?"
+        }
+    ],
+    "max_tokens": 150,
+    "stream": true
+}'
+```
+
+You will need to replace {INSTANCE_ID} and {REGION} with the value from your own deployement.
+
+## Next Steps
+
+- There are numerous ways to interact with your new inference endpoints. Review the inference endpoint documentation to explore different options:
+https://huggingface.co/docs/inference-endpoints/index
+- Consult our advanced parameter guide for TGI to learn about advanced TGI options you can use on inference endpoint (./howto/advanced-tgi-serving)
+- You can explore the full list of TPU-compatible models on the [Inference Endpoints TPU catalog page](https://endpoints.huggingface.co/catalog?accelerator=tpu)

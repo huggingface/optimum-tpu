@@ -16,54 +16,65 @@ limitations under the License.
 
 # 🤗 Optimum TPU
 
-Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads running on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs).
+<Tip>
+If you are here to start using HuggingFace products on TPU, then you are in the right place!
+</Tip>
 
-The API provides the overall same user-experience as Hugging Face transformers with the minimum amount of changes required to target performance for inference and training.
+Optimum TPU provides all the necessary machinery to leverage and optimize AI workloads running on [Google Cloud TPU devices](https://cloud.google.com/tpu/docs). Optimum-TPU is a HuggingFace solution to optimize HuggingFace products for the TPU platform. This allows users to use HuggingFace features and easy-to-use libraries on TPU with the best performance. We currently optimize transformers and TGI and integrate [HuggingFace hub](https://huggingface.co/models) so you can access HuggingFace's large library of models.
 
-## Installation
+If you are here to start using HuggingFace products on TPU, then you are in the right place
+
+The API provides the overall same user-experience as HuggingFace transformers with the minimum amount of changes required to target performance for inference and training.
 
 Optimum TPU is meant to reduce as much as possible the friction in order to leverage Google Cloud TPU accelerators.
 As such, we provide a pip installable package to make sure everyone can get easily started.
 
-### Run Cloud TPU with pip
 ```bash
 pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
-### Run Cloud TPU within Docker container
+## Why Choose TPUs
+TPUs excel at large-scale machine learning workloads with matrix computations, extended training periods, and large batch sizes. In contrast, GPUs offer more flexibility for models with custom operations or mixed CPU/GPU workloads. TPUs aren't ideal for workloads needing frequent branching, high-precision arithmetic, or custom training loop operations. More information can be found at https://cloud.google.com/tpu/docs/intro-to-tpu#when_to_use_tpus
 
-### PyTorch
-```bash
-export TPUVM_IMAGE_URL=us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla
-export TPUVM_IMAGE_VERSION=8f1dcd5b03f993e4da5c20d17c77aff6a5f22d5455f8eb042d2e4b16ac460526
-docker pull
-docker run -ti --rm --privileged --network=host ${TPUVM_IMAGE_URL}@sha256:${TPUVM_IMAGE_VERSION} bash
-```
-
-From there you can install optimum-tpu through the pip instructions mentioned above.
-
+## Why Choose Optimum-TPU
+Optimum-TPU serves as the bridge between the HuggingFace ecosystem and Google Cloud TPU hardware. It dramatically simplifies what would otherwise be a complex integration process, providing an intuitive interface that abstracts away TPU-specific implementation details while maintaining high performance. Through automated optimizations, efficient batching strategies, intelligent memory management and more, Optimum-TPU ensures your models run at peak efficiency on TPU hardware. The framework's deep integration with the HuggingFace Hub catalog of models and datasets enables easy deployment and fine-tuning of state-of-the-art models with the familiar ease of use of HuggingFace libraries while maximizing TPU hardware capabilities.
 
 <div class="mt-10">
-    <div class="w-full flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-y-4 md:gap-x-5">
-        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./tutorials/overview">
+    <div class="w-full flex flex-col space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-y-4 md:gap-x-5">
+        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./tutorials/tpu_setup">
             <div class="w-full text-center bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
                 Tutorials
             </div>
             <p class="text-gray-700">
-              Learn the basics and become familiar with deploying transformers on Google TPUs.
-              Start here if you are using 🤗 Optimum-TPU for the first time!
+                Learn the basics and become familiar with deploying transformers on Google TPUs.
+                Start here if you are using 🤗 Optimum-TPU for the first time!
             </p>
         </a>
-        <a
-            class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg"
-            href="./howto/overview"
-        >
+        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./howto/serving">
             <div class="w-full text-center bg-gradient-to-br from-indigo-400 to-indigo-500 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
                 How-to guides
             </div>
             <p class="text-gray-700">
-              Practical guides to help you achieve a specific goal. Take a look at these guides to learn how to use 🤗 Optimum-TPU
-              to solve real-world problems.
+                Practical guides to help you achieve a specific goal. Take a look at these guides to learn how to use 🤗 Optimum-TPU
+                to solve real-world problems.
+            </p>
+        </a>
+        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./conceptual_guides/tpu_hardware_support">
+            <div class="w-full text-center bg-gradient-to-br from-green-400 to-green-500 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
+                Conceptual Guides
+            </div>
+            <p class="text-gray-700">
+                Deep dives into key concepts behind TPU optimization, architecture, and best practices.
+                Understand how TPUs work and how to maximize their potential.
+            </p>
+        </a>
+        <a class="!no-underline border dark:border-gray-700 p-5 rounded-lg shadow hover:shadow-lg" href="./reference/fsdp_v2">
+            <div class="w-full text-center bg-gradient-to-br from-purple-400 to-purple-500 rounded-lg py-1.5 font-semibold mb-5 text-white text-lg leading-relaxed">
+                Reference
+            </div>
+            <p class="text-gray-700">
+                Technical descriptions of how the classes and methods of 🤗 Optimum-TPU work.
+                Detailed API documentation, configuration options, and implementation details.
             </p>
         </a>
     </div>

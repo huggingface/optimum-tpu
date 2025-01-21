@@ -1,0 +1,130 @@
+# First TPU Inference on Google Cloud
+
+This tutorial guides you through setting up and running inference on TPU using Text Generation Inference (TGI) ([documentation](https://huggingface.co/docs/text-generation-inference)). TGI server is compatible with OpenAI messages API, and it offers an optimized solution for serving models on TPU.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A running TPU instance (see [TPU Setup Guide](../tutorials/tpu_setup))
+- SSH access to your TPU instance
+- A HuggingFace account
+
+## Step 1: Initial Setup
+
+### SSH Access
+First, connect to your TPU instance via SSH.
+
+
+### Install Required Tools
+
+Install the HuggingFace Hub CLI:
+```bash
+pip install huggingface_hub
+```
+
+### Authentication
+
+Log in to HuggingFace:
+```bash
+huggingface-cli login
+```
+
+## Step 2: Model Deployment
+
+### Model Selection
+
+We will use the `gemma-2b-it` model for this tutorial:
+1. Visit https://huggingface.co/google/gemma-2b-it
+2. Accept the model terms and conditions
+3. This enables model download access
+
+### Launch TGI Server
+
+We will use the Optimum-TPU image, a TPU-optimized TGI image provided by HuggingFace.
+
+```bash
+docker run -p 8080:80 \
+        --shm-size 16GB \
+        --privileged \
+        --net host \
+        -e LOG_LEVEL=text_generation_router=debug \
+        -v ~/hf_data:/data \
+        -e HF_TOKEN=$(cat ~/.cache/huggingface/token) \
+        ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
+        --model-id google/gemma-2b-it \
+        --max-input-length 512 \
+        --max-total-tokens 1024 \
+        --max-batch-prefill-tokens 512 \
+        --max-batch-total-tokens 1024
+```
+
+### Understanding the Configuration
+
+Key parameters explained:
+- `--shm-size 16GB --privileged --net=host`: Required for docker to access the TPU
+- `-v ~/hf_data:/data`: Volume mount for model storage
+- `--max-input-length`: Maximum input sequence length
+- `--max-total-tokens`: Maximum combined input and output tokens
+- `--max-batch-prefill-tokens`: Maximum tokens for batch processing
+- `--max-batch-total-tokens`: Maximum total tokens in a batch
+
+## Step 3: Making Inference Requests
+
+### Server Readiness
+Wait for the "Connected" message in the logs:
+
+```
+2025-01-11T10:40:00.256056Z  INFO text_generation_router::server: router/src/server.rs:2393: Connected
+```
+
+Your TGI server is now ready to serve requests.
+
+### Testing from the TPU VM
+
+Query the server from another terminal on the TPU instance:
+
+```bash
+curl 0.0.0.0:8080/generate \
+    -X POST \
+    -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
+    -H 'Content-Type: application/json'
+```
+
+### Remote Access
+
+To query from outside the TPU instance:
+
+![External IP TPU](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/optimum/tpu/get_external_ip_tpu.png)
+
+1. Find your TPU's external IP in Google Cloud Console
+2. Replace the IP in the request:
+```bash
+curl 34.174.11.242:8080/generate \
+    -X POST \
+    -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
+    -H 'Content-Type: application/json'
+```
+
+#### (Optional) Firewall Configuration
+
+You may need to configure GCP firewall rules to allow remote access:
+1. Use `gcloud compute firewall-rules create` to allow traffic
+2. Ensure port 8080 is accessible
+3. Consider security best practices for production
+
+## Request Parameters
+
+Key parameters for inference requests:
+- `inputs`: The prompt text
+- `max_new_tokens`: Maximum number of tokens to generate
+- Additional parameters available in [TGI documentation](https://huggingface.co/docs/text-generation-inference)
+
+## Next Steps
+
+1. Please check the [TGI Consuming Guide](https://huggingface.co/docs/text-generation-inference/en/basic_tutorials/consuming_tgi) to learn about how to query your new TGI server.
+2. Check the rest of our documentation for advanced settings that can be used on your new TGI server.
+
+
+
+
+   

@@ -1,24 +1,23 @@
-# Deploying a Google TPU instance on Google Cloud Platform (GCP)
-
+# Deploying and Connecting to Google TPU Instances via GCloud CLI
 
 ## Context
 
-We assume the reader has already created a Google Cloud Platform (GCP) user or organisation account and an
+We assume the reader has already created a Google Cloud Platform (GCP) user or organization account and an
 associated project.
 
-We also assume the reader to have the Google Cloud CLI installed. If not please follow the links right after to
+We also assume the reader to have the Google Cloud CLI installed. If not, please follow the links right after to
 [install](https://cloud.google.com/sdk/docs/install) and [setup](https://cloud.google.com/sdk/docs/initializing).
 
 ## Creating the initial TPU VM on GCP
 
 In order to create your initial TPU instance, you will need to provide some information:
 
-- The [GCP zone](https://cloud.google.com/tpu/docs/regions-zones) you would like to see the instance being deployed (close to the reader for development purpose, close to the end user for production for instance)
+- The [GCP zone](https://cloud.google.com/tpu/docs/regions-zones) you would like to see the instance being deployed (close to the reader for development purposes, close to the end user for production, for instance)
 - Which kind of [TPU](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#versions) you would like to target
 - Which version of the [TPU runtime](https://cloud.google.com/tpu/docs/runtimes) you want to leverage on the instance
 - Custom instance name to quickly skim and refer back to the instance
 
-Overall the end command looks like this:
+Overall, the end command looks like this:
 
 ```bash
 gcloud compute tpus tpu-vm create <ref_instance_name> \
@@ -29,7 +28,7 @@ gcloud compute tpus tpu-vm create <ref_instance_name> \
 
 ### Deploying a TPU v5litepod-8 instance
 
-In our case we will be deploying a `v5litepod-8` instance name `optimum-tpu-get-started`
+In our case, we will be deploying a `v5litepod-8` instance name `optimum-tpu-get-started`
 in the GCP region `us-west4-a` using the latest `v2-alpha-tpuv5-lite` runtime version.
 
 Of course, feel free to adjust all these parameters to the one that match with your usage and quotas.
@@ -44,7 +43,7 @@ gcloud alpha compute tpus tpu-vm create optimum-tpu-get-started \
 --version=v2-alpha-tpuv5-lite
 ```
 
-## Connecting to the instance
+## Connecting to the instance via ssh
 
 ```bash
 gcloud compute tpus tpu-vm ssh <ref_instance_name> --zone=<deployment_zone>
@@ -58,25 +57,13 @@ gcloud compute tpus tpu-vm ssh optimum-tpu-get-started --zone=us-west4-a
 $ >
 ```
 
-## Setting up the instance to run AI workloads on TPUs
+## Other useful commands
 
-### Optimum-TPU with PyTorch/XLA
-
-If you want to leverage PyTorch/XLA through Optimum-TPU, it should be as simple as
-
+This is used to get information about the tpu-vm for example its external IP:
 ```bash
-$ python3 -m pip install optimum-tpu -f https://storage.googleapis.com/libtpu-releases/index.html
-$ export PJRT_DEVICE=TPU
+gcloud compute tpus tpu-vm describe --zone=<tpu_zone> <tpu_name>
 ```
 
-Now you can validate the installation with the following command which should print `xla:0` as we do have a single
-TPU device bound to this instance.
-
-```bash
-$ python -c "import torch_xla.core.xla_model as xm; print(xm.xla_device())"
-xla:0
-```
-
-### Optimum-TPU with JAX
-
-JAX is coming soon - stay tuned!
+## Next steps
+- If you wish to train your own model, you can now [install optimum-tpu](../installation)
+- If you wish do to serving, you can look at our [serving tutorial](../tutorials/inference_on_tpu)

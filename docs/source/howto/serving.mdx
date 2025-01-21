@@ -1,24 +1,67 @@
-# Deploying a Text-Generation Inference server on a Google Cloud TPU instance
+# Deploying a Text-Generation Inference server (TGI) on a Google Cloud TPU instance
 
-## Context
+Text-Generation-Inference (TGI) enables serving Large Language Models (LLMs) on TPUs, with Optimum TPU delivering a specialized TGI runtime that's fully optimized for TPU hardware.
 
-Text-Generation-Inference (TGI) is a highly optimized serving engine enabling serving Large Language Models (LLMs) in a way
-that better leverages the underlying hardware, Cloud TPU in this case.
+TGI also offers an openAI-compatible API, making it easy to integrate with numerous tools.
 
-## Deploy TGI on Cloud TPU instance
+For a list of supported models, check the [Supported Models page](../supported-architectures).
 
-We assume the reader already has a Cloud TPU instance up and running.
-If this is not the case, please see our guide to deploy one [here](./deploy)
+## Deploy TGI on a Cloud TPU Instance
 
-### Docker Container Build
+This guide assumes you have a Cloud TPU instance running. If not, please refer to our [deployment guide](../tutorials/tpu_setup).
 
-Optimum-TPU provides a `make tpu-tgi` command at the root level to help you create local docker image.
+You have two options for deploying TGI:
+1. Use our pre-built TGI image (recommended)
+2. Build the image manually for the latest features
 
-### Docker Container Run
+### Option 1: Using the Pre-built Image
 
+The optimum-tpu image is available at `ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi`. Please look at [optimum-tpu container documentation](../optimum_container) for the latest TGI image. The [tutorial on serving](../tutorials/inference_on_tpu) also walks you through how to start the TGI container from a pre-built image. Here's how to deploy it:
+
+```bash
+docker run -p 8080:80 \
+        --shm-size 16GB \
+        --privileged \
+        --net host \
+        -e LOG_LEVEL=text_generation_router=debug \
+        -v ~/hf_data:/data \
+        -e HF_TOKEN=<your_hf_token_here> \
+        ghcr.io/huggingface/optimum-tpu:v0.2.3-tgi \
+        --model-id google/gemma-2b-it \
+        --max-input-length 512 \
+        --max-total-tokens 1024 \
+        --max-batch-prefill-tokens 512 \
+        --max-batch-total-tokens 1024
 ```
+
+<Tip warning={true}>
+You need to replace <your_hf_token_here> with a HuggingFace access token that you can get [here](https://huggingface.co/settings/tokens)
+</Tip>
+
+<Tip warning>
+If you already logged in via `huggingface-cli login` then you can set HF_TOKEN=$(cat ~/.cache/huggingface/token) for more convinence
+</Tip>
+
+You can also use the GCP-provided image as referenced in the [optimum-tpu container page](../optimum_container)
+
+### Option 2: Manual Image Building
+
+For the latest features (main branch of optimum-tpu) or custom modifications, build the image yourself:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/huggingface/optimum-tpu.git
+```
+
+2. Build the image:
+```bash
+make tpu-tgi
+```
+
+3. Run the container:
+```bash
 HF_TOKEN=<your_hf_token_here>
-MODEL_ID=google/gemma-2b
+MODEL_ID=google/gemma-2b-it
 
 sudo docker run --net=host \
                 --privileged \
@@ -32,30 +75,21 @@ sudo docker run --net=host \
                 --max-batch-size 1
 ```
 
-### Executing requests against the service
+## Executing requests against the service
 
 You can query the model using either the `/generate` or `/generate_stream` routes:
 
-```
+
+```bash
 curl localhost/generate \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
 ```
 
-```
+```bash
 curl localhost/generate_stream \
     -X POST \
     -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":20}}' \
     -H 'Content-Type: application/json'
 ```
-
-### Jetstream Pytorch and Pytorch XLA backends
-
-[Jetstream Pytorch](https://github.com/AI-Hypercomputer/jetstream-pytorch) is a highly optimized Pytorch engine for serving LLMs on Cloud TPU. This engine is selected by default if the dependency is available.
-If for some reason you want to use the Pytorch/XLA backend instead, you can set the `JETSTREAM_PT_DISABLE=1` environment variable.
-
-
-When using Jetstream Pytorch engine, it is possible to enable quantization to reduce the memory footprint and increase the throughput. To enable quantization, set the `QUANTIZATION=1` environment variable. For instance, on a 2x4 TPU v5e, you can serve models up to 70B parameters such as Llama 3.3-70B.
-
-***Note: Quantization is still experimental and may produce lower quality results compared to the non-quantized version.***
