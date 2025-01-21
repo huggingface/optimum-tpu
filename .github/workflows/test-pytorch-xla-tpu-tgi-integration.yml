@@ -1,9 +1,9 @@
 name: Optimum TPU / Test TGI on TPU / Integration Tests
 
 on:
-  schedule:
-    - cron: '0 4 * * *' # run at 4 AM UTC
-    # This can be used to allow manually triggering nightlies from the web interface
+  # schedule:
+  #   - cron: '0 4 * * *' # run at 4 AM UTC
+  #   # This can be used to allow manually triggering nightlies from the web interface
   workflow_dispatch:
 
 concurrency:
