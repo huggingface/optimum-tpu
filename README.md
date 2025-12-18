@@ -9,6 +9,19 @@ Optimum-TPU
 [![Optimum TPU / Test TGI on TPU](https://github.com/huggingface/optimum-tpu/actions/workflows/test-pytorch-xla-tpu-tgi.yml/badge.svg)](https://github.com/huggingface/optimum-tpu/actions/workflows/test-pytorch-xla-tpu-tgi.yml)
 </div>
 
+> [!CAUTION]
+> **🚧 Optimum-TPU is now in maintenance mode.**
+>
+> We’ll continue to welcome community contributions for minor bug fixes, documentation improvements, and lightweight maintenance tasks.
+>
+> Optimum-TPU was created to make it easier to train and run inference on TPUs using 🤗 Transformers and 🤗 Accelerate. Thanks to everyone who has contributed and supported the project! ❤️
+>
+> While this repository is no longer under active development, you can continue exploring TPU solutions with:
+> • [tpu-inference](https://github.com/vllm-project/tpu-inference) for inference
+> • [🤗 Accelerate](https://github.com/huggingface/accelerate) for training
+>
+> Thank you for being part of the journey! 🚀
+
 [Tensor Processing Units (TPU)](https://cloud.google.com/tpu) are AI accelerator made by Google to optimize
 performance and cost from AI training to inference.
 
