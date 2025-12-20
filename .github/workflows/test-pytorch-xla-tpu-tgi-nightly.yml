@@ -26,7 +26,7 @@ jobs:
       JETSTREAM_PT_DISABLE: 1 # Disable PyTorch to avoid conflicts with PyTorch XLA
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build and test Optimum TPU (also slow tests)
         run: |
